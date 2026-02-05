@@ -178,3 +178,37 @@ The data is unambiguous:
 ---
 
 *This document is my working memory. Updated with each significant change.*
+## Slippage Investigation (2026-02-05)
+
+### The Mystery
+Dashboard showed $3,270 total slippage on $7,550 volume — 43% slippage rate. Impossible.
+
+### The Truth
+ONE corrupted trade (MSTR, Feb 1) had $3,263.61 "slippage" on a $4.89 position (66,803%). 
+A parsing error in the exit execution created a nonsensical fee record.
+
+**Real numbers (632 trades, excluding outlier):**
+- Total fees: $14.17
+- Total slippage: $6.70
+- Average fee/trade: $0.02
+- Execution is efficient — Jupiter routing works fine
+
+### Entry Threshold Validation
+| Entry Spread | Trades | Net PnL | Win Rate |
+|---|---|---|---|
+| <1% | 86 | -$2.42 | 23% |
+| 1-2% | 280 | -$6.35 | 17% |
+| 2-3% | 115 | -$1.37 | 23% |
+| 3-4% | 33 | -$0.83 | 12% |
+| **4%+** | **119** | **+$2.17** | **30%** |
+
+Only 4%+ entries are profitable. The old 1-2% entries bled money. New 4% MIN_FLOOR is correct.
+
+### Opportunity Frequency (last 3 days, % of time above 4%)
+- AMBRx: 80% (avg 5.2% discount)
+- LINx: 30% (avg 4.2%)
+- COINx: 24% (avg 2.2%)
+- CRCLx: 16%
+- HOODx: 9%
+- SPYr: 3.4%
+- TSLA/NVDA/META/AMZN: 0% — never hit 4%
