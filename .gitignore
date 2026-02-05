@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Data files
+data/
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Sensitive test files
+twitter-cookie-test.js
+check_wallet.js
+
+# Marketing/draft assets
+twitter-image.html
+twitter-post-draft.md

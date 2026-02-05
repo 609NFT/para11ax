@@ -1,0 +1,512 @@
+{
+  "mode": "paper",
+  "meanReversionExitSpreadPct": 0.8,
+  "meanReversionStopLossSpreadPct": -3.0,
+  "maxHoldTimeMs": 86400000,
+  "entryCooldownMs": 30000,
+  "maxUsdPerTrade": 50,
+  "liquidityFraction": 0.01,
+  "maxSlippageBps": 300,
+  "maxDailyLossUsd": 20,
+  "maxDailyTrades": 50,
+  "maxConsecutiveFailures": 3,
+  "priceStalenessMs": 90000,
+  "exitPriceStalenessMs": 180000,
+  "jupiterApiUrl": "https://api.jup.ag/swap/v1",
+  "tokens": [
+    {
+      "symbol": "xSPY",
+      "mint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
+      "stockTicker": "SPY",
+      "enabled": true,
+      "poolAddress": "7sHMnvE7WqP7vQFWJGEnMT4vZg6Za9K7PpddDoXJCqME",
+      "decimals": 8
+    },
+    {
+      "symbol": "xNVDA",
+      "mint": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+      "stockTicker": "NVDA",
+      "enabled": true,
+      "poolAddress": "4KqQN6u1pFKroFE2jVEhoepAMRKPcuAzWVDCgm9zRBYN",
+      "decimals": 8
+    },
+    {
+      "symbol": "xTSLA",
+      "mint": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
+      "stockTicker": "TSLA",
+      "enabled": true,
+      "poolAddress": "HHQUnUbmWLrYzkscDY1C3deEFbGtiGBGoHjpANogmvum",
+      "decimals": 8
+    },
+    {
+      "symbol": "xCRCL",
+      "mint": "XsueG8BtpquVJX9LVLLEGuViXUungE6WmK5YZ3p3bd1",
+      "stockTicker": "CRCL",
+      "enabled": true,
+      "poolAddress": "G39wywquKbHK8F2wZZZFX3fcsyG91VCCbbr6WEVp5axy",
+      "decimals": 8
+    },
+    {
+      "symbol": "xQQQ",
+      "mint": "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ",
+      "stockTicker": "QQQ",
+      "enabled": true,
+      "poolAddress": "FknDV1F5n6QaA7rLmjquDjuU6wcPMNm5RYq7zWbqhpZw",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMSTR",
+      "mint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
+      "stockTicker": "MSTR",
+      "enabled": true,
+      "poolAddress": "RyhF4cksVZY7vcqJpoytHcxcGNKRp27PEGhSnEPpbGv",
+      "decimals": 8
+    },
+    {
+      "symbol": "xCOIN",
+      "mint": "Xs7ZdzSHLU9ftNJsii5fCeJhoRWSC32SQGzGQtePxNu",
+      "stockTicker": "COIN",
+      "enabled": true,
+      "poolAddress": "DxTorTipsoy8sGb8uY6s7yrTwQLiNH1yvYemBWMtTiSB",
+      "decimals": 8
+    },
+    {
+      "symbol": "xAAPL",
+      "mint": "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
+      "stockTicker": "AAPL",
+      "enabled": true,
+      "poolAddress": "CKwJZwm7oj3nu4653N1EpDrqXbXAYXoPFiPeEnLouF8y",
+      "decimals": 8
+    },
+    {
+      "symbol": "xGOOGL",
+      "mint": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+      "stockTicker": "GOOGL",
+      "enabled": true,
+      "poolAddress": "B8YAwjGYk6qidWzGBXMAxP7nYfG8g74EZ3Y4gFSsobRw",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMETA",
+      "mint": "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu",
+      "stockTicker": "META",
+      "enabled": true,
+      "poolAddress": "3L7KbPVaAQA4UTecaGQYsm6UCq5F3sZM9zAYkxqYt63j",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMSFT",
+      "mint": "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX",
+      "stockTicker": "MSFT",
+      "enabled": true,
+      "poolAddress": "CLu4kFM4nb67xrdN7vJnMxXXir8Z5hA4HJUzPFccXjsL",
+      "decimals": 8
+    },
+    {
+      "symbol": "xHOOD",
+      "mint": "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg",
+      "stockTicker": "HOOD",
+      "enabled": true,
+      "poolAddress": "DXWbip5LducMAbDSSpLYz9Xik3253EPeAYQufQtx7LXs",
+      "decimals": 8
+    },
+    {
+      "symbol": "xTQQQ",
+      "mint": "XsjQP3iMAaQ3kQScQKthQpx9ALRbjKAjQtHg6TFomoc",
+      "stockTicker": "TQQQ",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xNFLX",
+      "mint": "XsEH7wWfJJu2ZT3UCFeVfALnVA6CP5ur7Ee11KmzVpL",
+      "stockTicker": "NFLX",
+      "enabled": true,
+      "poolAddress": "7RQXW5KEBgHCcy1eSNs1Kh7BWaEL46q8jb9t18S151bL",
+      "decimals": 8
+    },
+    {
+      "symbol": "xDFDV",
+      "mint": "Xs2yquAgsHByNzx68WJC55WHjHBvG9JsMB7CWjTLyPy",
+      "stockTicker": "DFDV",
+      "enabled": true,
+      "poolAddress": "GGzXhXAELEJbuwqZ2HXekAm9nP5QyJvArzEv5GfGP1cK",
+      "decimals": 8
+    },
+    {
+      "symbol": "xAZN",
+      "mint": "Xs3ZFkPYT2BN7qBMqf1j1bfTeTm1rFzEFSsQ1z3wAKU",
+      "stockTicker": "AZN",
+      "enabled": true,
+      "poolAddress": "BpqSiDKD3PKhg65M35wGML84r2kkV4MFEhikGbLNM5sc",
+      "decimals": 8
+    },
+    {
+      "symbol": "xBRKB",
+      "mint": "Xs6B6zawENwAbWVi7w92rjazLuAr5Az59qgWKcNb45x",
+      "stockTicker": "BRK.B",
+      "enabled": true,
+      "poolAddress": "B4UdLnvzCrnfRndLdgGTYZjcKTDsaFKB54cmKb2GoSne",
+      "decimals": 8
+    },
+    {
+      "symbol": "xJNJ",
+      "mint": "XsGVi5eo1Dh2zUpic4qACcjuWGjNv8GCt3dm5XcX6Dn",
+      "stockTicker": "JNJ",
+      "enabled": true,
+      "poolAddress": "HesBHBAuMEz7m4iFvqpGWf3amSR68RcX7r9onUmEV5jJ",
+      "decimals": 8
+    },
+    {
+      "symbol": "xABT",
+      "mint": "XsHtf5RpxsQ7jeJ9ivNewouZKJHbPxhPoEy6yYvULr7",
+      "stockTicker": "ABT",
+      "enabled": true,
+      "poolAddress": "8YQvLk8cuMuaQHGnkQfB7UyG6xYGJyDueFRmfjs9m3Qw",
+      "decimals": 8
+    },
+    {
+      "symbol": "xKO",
+      "mint": "XsaBXg8dU5cPM6ehmVctMkVqoiRG2ZjMo1cyBJ3AykQ",
+      "stockTicker": "KO",
+      "enabled": true,
+      "poolAddress": "BnZshR5oa91FYeQndmdaXzkJLBvE3w1G8YmqfjjEjUjF",
+      "decimals": 8
+    },
+    {
+      "symbol": "xXOM",
+      "mint": "XsaHND8sHyfMfsWPj6kSdd5VwvCayZvjYgKmmcNL5qh",
+      "stockTicker": "XOM",
+      "enabled": true,
+      "poolAddress": "H3qMpQnUiod9qfEMZL84nvoYd2pXrscHA6NQAb6icwxD",
+      "decimals": 8
+    },
+    {
+      "symbol": "xAMBR",
+      "mint": "XsaQTCgebC2KPbf27KUhdv5JFvHhQ4GDAPURwrEhAzb",
+      "stockTicker": "AMBR",
+      "enabled": true,
+      "poolAddress": "2DHt38DfCB4tSzbKrfgUBsiwUQMBc1oGAwWQWfRJCPut",
+      "decimals": 8
+    },
+    {
+      "symbol": "xGME",
+      "mint": "Xsf9mBktVB9BSU5kf4nHxPq5hCBJ2j2ui3ecFGxPRGc",
+      "stockTicker": "GME",
+      "enabled": true,
+      "poolAddress": "5Y7aeo5y7V6k2ezYk6ZPY4VqU2gE2RcTWrHEDTJGx7vs",
+      "decimals": 8
+    },
+    {
+      "symbol": "xORCL",
+      "mint": "XsjFwUPiLofddX5cWFHW35GCbXcSu1BCUGfxoQAQjeL",
+      "stockTicker": "ORCL",
+      "enabled": true,
+      "poolAddress": "GWjPMHYsmdosbMCPx14N627qf5WhpaxAwNBRCfqP9CM9",
+      "decimals": 8
+    },
+    {
+      "symbol": "xLLY",
+      "mint": "Xsnuv4omNoHozR6EEW5mXkw8Nrny5rB3jVfLqi6gKMH",
+      "stockTicker": "LLY",
+      "enabled": true,
+      "poolAddress": "D6qd9W868h6Jw318vhLSYyymDycydYPEkfsCGDKSzf34",
+      "decimals": 8
+    },
+    {
+      "symbol": "xLIN",
+      "mint": "XsSr8anD1hkvNMu8XQiVcmiaTP7XGvYu7Q58LdmtE8Z",
+      "stockTicker": "LIN",
+      "enabled": true,
+      "poolAddress": "75eRvwactaaKakunTgHxyj7NV2PcJL47CTCzWq4yAFnH",
+      "decimals": 8
+    },
+    {
+      "symbol": "xPG",
+      "mint": "XsYdjDjNUygZ7yGKfQaB6TxLh2gC6RRjzLtLAGJrhzV",
+      "stockTicker": "PG",
+      "enabled": true,
+      "poolAddress": "2ENFJDyjcPC2jAtGkiZEoNNswxNE9kwTvGVbndZkV2RP",
+      "decimals": 8
+    },
+    {
+      "symbol": "xV",
+      "mint": "XsqgsbXwWogGJsNcVZ3TyVouy2MbTkfCFhCGGGcQZ2p",
+      "stockTicker": "V",
+      "enabled": true,
+      "poolAddress": "7ViDiiS2jjhLvorRgxtSmY434LBgrPVzXrud1zidyYwo",
+      "decimals": 8
+    },
+    {
+      "symbol": "xUNH",
+      "mint": "XszvaiXGPwvk2nwb3o9C1CX4K6zH8sez11E6uyup6fe",
+      "stockTicker": "UNH",
+      "enabled": true,
+      "poolAddress": "5xm6QUDxRyMg3Gx59CxXB6VZnRKs4bVu44DS6DzZr3Bp",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMCD",
+      "mint": "XsqE9cRRpzxcGKDXj1BJ7Xmg4GRhZoyY1KpmGSxAWT2",
+      "stockTicker": "MCD",
+      "enabled": true,
+      "poolAddress": "5MGvNj9RNKNmzwp1LtZuQkZonEYtKJ3JuiyNQEUU2DsF",
+      "decimals": 8
+    },
+    {
+      "symbol": "xTMO",
+      "mint": "Xs8drBWy3Sd5QY3aifG9kt9KFs2K3PGZmx7jWrsrk57",
+      "stockTicker": "TMO",
+      "enabled": true,
+      "poolAddress": "7eT7W5fek6gu2EizyQpjHHgr12Hg8NcutE7zR4Up6wF1",
+      "decimals": 8
+    },
+    {
+      "symbol": "xGLD",
+      "mint": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
+      "stockTicker": "GLD",
+      "enabled": true,
+      "poolAddress": "9742CEMLXgRdWPZRGzd9CwBgVjkKVVAn4yZUfzHCHJgs",
+      "decimals": 8
+    },
+    {
+      "symbol": "xABBV",
+      "mint": "XswbinNKyPmzTa5CskMbCPvMW6G5CMnZXZEeQSSQoie",
+      "stockTicker": "ABBV",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xACN",
+      "mint": "Xs5UJzmCRQ8DWZjskExdSQDnbE6iLkRu2jjrRAB1JSU",
+      "stockTicker": "ACN",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xAMZN",
+      "mint": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",
+      "stockTicker": "AMZN",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xAPP",
+      "mint": "XsPdAVBi8Zc1xvv53k4JcMrQaEDTgkGqKYeh7AYgPHV",
+      "stockTicker": "APP",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xAVGO",
+      "mint": "XsgSaSvNSqLTtFuyWPBhK9196Xb9Bbdyjj4fH3cPJGo",
+      "stockTicker": "AVGO",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xBAC",
+      "mint": "XswsQk4duEQmCbGzfqUUWYmi7pV7xpJ9eEmLHXCaEQP",
+      "stockTicker": "BAC",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xCMCSA",
+      "mint": "XsvKCaNsxg2GN8jjUmq71qukMJr7Q1c5R2Mk9P8kcS8",
+      "stockTicker": "CMCSA",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xCRM",
+      "mint": "XsczbcQ3zfcgAEt9qHQES8pxKAVG5rujPSHQEXi4kaN",
+      "stockTicker": "CRM",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xCRWD",
+      "mint": "Xs7xXqkcK7K8urEqGg52SECi79dRp2cEKKuYjUePYDw",
+      "stockTicker": "CRWD",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xCSCO",
+      "mint": "Xsr3pdLQyXvDJBFgpR5nexCEZwXvigb8wbPYp4YoNFf",
+      "stockTicker": "CSCO",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xCVX",
+      "mint": "XsNNMt7WTNA2sV3jrb1NNfNgapxRF5i4i6GcnTRRHts",
+      "stockTicker": "CVX",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xDHR",
+      "mint": "Xseo8tgCZfkHxWS9xbFYeKFyMSbWEvZGFV1Gh53GtCV",
+      "stockTicker": "DHR",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xGS",
+      "mint": "XsgaUyp4jd1fNBCxgtTKkW64xnnhQcvgaxzsbAq5ZD1",
+      "stockTicker": "GS",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xHD",
+      "mint": "XszjVtyhowGjSC5odCqBpW1CtXXwXjYokymrk7fGKD3",
+      "stockTicker": "HD",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xHON",
+      "mint": "XsRbLZthfABAPAfumWNEJhPyiKDW6TvDVeAeW7oKqA2",
+      "stockTicker": "HON",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xIBM",
+      "mint": "XspwhyYPdWVM8XBHZnpS9hgyag9MKjLRyE3tVfmCbSr",
+      "stockTicker": "IBM",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xINTC",
+      "mint": "XshPgPdXFRWB8tP1j82rebb2Q9rPgGX37RuqzohmArM",
+      "stockTicker": "INTC",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xJPM",
+      "mint": "XsMAqkcKsUewDrzVkait4e5u4y8REgtyS7jWgCpLV2C",
+      "stockTicker": "JPM",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMA",
+      "mint": "XsApJFV9MAktqnAc6jqzsHVujxkGm9xcSUffaBoYLKC",
+      "stockTicker": "MA",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMDT",
+      "mint": "XsDgw22qRLTv5Uwuzn6T63cW69exG41T6gwQhEK22u2",
+      "stockTicker": "MDT",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMRK",
+      "mint": "XsnQnU7AdbRZYe2akqqpibDdXjkieGFfSkbkjX1Sd1X",
+      "stockTicker": "MRK",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xMRVL",
+      "mint": "XsuxRGDzbLjnJ72v74b7p9VY6N66uYgTCyfwwRjVCJA",
+      "stockTicker": "MRVL",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xNOVO",
+      "mint": "XsfAzPzYrYjd4Dpa9BU3cusBsvWfVB9gBcyGC87S57n",
+      "stockTicker": "NOVO",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xPEP",
+      "mint": "Xsv99frTRUeornyvCfvhnDesQDWuvns1M852Pez91vF",
+      "stockTicker": "PEP",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xPFE",
+      "mint": "XsAtbqkAP1HJxy7hFDeq7ok6yM43DQ9mQ1Rh861X8rw",
+      "stockTicker": "PFE",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xPLTR",
+      "mint": "XsoBhf2ufR8fTyNSjqfU71DYGaE6Z3SUGAidpzriAA4",
+      "stockTicker": "PLTR",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xPM",
+      "mint": "Xsba6tUnSjDae2VcopDB6FGGDaxRrewFCDa5hKn5vT3",
+      "stockTicker": "PM",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    },
+    {
+      "symbol": "xVTI",
+      "mint": "XsssYEQjzxBCFgvYFFNuhJFBeHNdLWYeUSP8F45cDr9",
+      "stockTicker": "VTI",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 8
+    }
+  ],
+  "rollingWindowSize": 100,
+  "simulatedSlippageBps": 5,
+  "customTokens": [
+    {
+      "symbol": "GOLD",
+      "mint": "GoLDppdjB1vDTPSGxyMJFqdnj134yH6Prg9eqsGDiw6A",
+      "stockTicker": "GOLD",
+      "priceSource": "swissquote",
+      "priceSymbol": "XAU/USD",
+      "enabled": true,
+      "poolAddress": "",
+      "decimals": 9
+    }
+  ]
+}
