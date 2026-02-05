@@ -197,7 +197,12 @@ export async function initializeFlashClient(): Promise<boolean> {
   }
 
   try {
+    // DEBUG: Log that we're starting init
+    console.log('[FLASH] Starting Flash Trade initialization...');
+    logger.info('[FLASH] Starting Flash Trade initialization...');
+    
     const config = getConfigSync();
+    console.log('[FLASH] Config loaded, RPC:', config.rpcEndpoint?.slice(0, 50));
 
     // Load wallet from private key
     const privateKeyString = process.env.SOLANA_PRIVATE_KEY;
@@ -265,8 +270,13 @@ export async function initializeFlashClient(): Promise<boolean> {
 
     return true;
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : '';
+    console.error('[FLASH] ERROR:', errMsg);
+    console.error('[FLASH] Stack:', errStack?.slice(0, 500));
     logger.error({
-      error: error instanceof Error ? error.message : String(error),
+      error: errMsg,
+      stack: errStack?.slice(0, 500),
     }, 'Failed to initialize Flash Trade client');
     return false;
   }
