@@ -7,7 +7,7 @@
   "maxUsdPerTrade": 50,
   "liquidityFraction": 0.01,
   "maxSlippageBps": 300,
-  "maxDailyLossUsd": 20,
+  "maxDailyLossUsd": 50,
   "maxDailyTrades": 50,
   "maxConsecutiveFailures": 3,
   "priceStalenessMs": 90000,

@@ -1103,16 +1103,35 @@ export class Orchestrator {
       let pnlUsd: number;
 
       if (positionMissingOnChain) {
-        // Position was liquidated or closed externally
-        // Assume worst case: 100% loss of collateral (liquidation)
-        // This ensures circuit breaker and risk limits account for the loss
-        pnlPct = -100;
-        pnlUsd = -position.collateralUsd;
-        executionLogger.error({
+        // Position was closed externally (liquidation, manual close, or system issue)
+        // DON'T assume 100% loss — could have been closed at breakeven or profit
+        // Use current spread to estimate, or fallback to 30% loss (conservative but not catastrophic)
+        const ESTIMATED_MISSING_LOSS_PCT = 30; // Conservative estimate, not 100%
+        
+        // Try to estimate based on current premium vs entry
+        const premiumChange = currentPremiumPct - position.entryPremiumPct;
+        const estimatedPnlFromPremium = premiumChange * position.leverage;
+        
+        // Use premium-based estimate if it's a loss, otherwise use conservative estimate
+        // (If premium shows profit, the position was likely closed profitably externally)
+        if (estimatedPnlFromPremium < 0) {
+          // Cap at -100% (can't lose more than collateral)
+          pnlPct = Math.max(-100, estimatedPnlFromPremium);
+        } else {
+          // Premium suggests profit or breakeven — use conservative loss estimate
+          // (We don't know actual outcome, so assume some loss for safety)
+          pnlPct = -ESTIMATED_MISSING_LOSS_PCT;
+        }
+        pnlUsd = position.collateralUsd * (pnlPct / 100);
+        
+        executionLogger.warn({
           positionId: position.id,
           ticker: position.ticker,
-          collateralLost: position.collateralUsd,
-        }, 'Position missing on-chain - assuming liquidation (100% collateral loss)');
+          estimatedPnlPct: pnlPct.toFixed(2),
+          estimatedPnlUsd: pnlUsd.toFixed(2),
+          premiumChange: premiumChange.toFixed(2),
+          note: 'Position missing on-chain - PnL estimated (not verified)',
+        }, 'Position missing on-chain - using estimated PnL (not 100% loss)');
       } else {
         // Get current oracle price for accurate PnL calculation
         const currentOraclePrice = await getOraclePrice(position.flashSymbol);
@@ -1209,10 +1228,20 @@ export class Orchestrator {
       setShortEntryCooldown(position.ticker);
 
       // Record PnL for risk management (daily loss tracking)
-      this.riskManager.recordPnL(pnlUsd);
+      // BUT skip for position_missing — it's an external event, not a trading strategy failure
+      // We don't want external position closures to trigger kill switch
+      if (!positionMissingOnChain) {
+        this.riskManager.recordPnL(pnlUsd);
+      } else {
+        executionLogger.warn({
+          ticker: position.ticker,
+          pnlUsd: pnlUsd.toFixed(2),
+        }, 'Skipping risk manager recording for position_missing (external event)');
+      }
 
       // Circuit breaker: track consecutive losses (only for live trades with real PnL)
-      if (config.mode === 'live' && this.executor.isLive()) {
+      // Also skip for position_missing — don't want external events triggering circuit breaker
+      if (config.mode === 'live' && this.executor.isLive() && !positionMissingOnChain) {
         this.recordTradeForCircuitBreaker(pnlUsd);
       }
     } catch (error) {
