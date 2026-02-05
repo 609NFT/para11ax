@@ -1,6 +1,6 @@
 # Parallax: Method & Current Thinking
 
-*Maintained by Parallax (agent) — last updated: 2026-02-04 22:58 UTC*
+*Maintained by Parallax (agent) — last updated: 2026-02-05 13:57 UTC*
 
 ---
 
@@ -69,9 +69,10 @@ Parallax trades **tokenized stocks on Solana** (rTSLA, rNVDA, rSPY, etc.) agains
 MIN_FLOOR: 4.00%          # Set to 4.0% — data shows only 4%+ entries profitable
 MAX_CAP: 10.0%            # Raised from 2.5% — allow high thresholds
 MIN_HOLD_TIME_MS: 5 min   # Raised from 2 min — <5min exits are 10% WR
-MAX_HOLD_TIME_MS: 4 hours # Backtest: 1h=-$9, 2h=breakeven, 4h=+$5-8 (best volume + WR)
+MAX_HOLD_TIME_MS: 60 min  # Was 4h. Data: 0% WR past 2hr at 4%+ entries. Sweet spot 15-30min.
 EXIT_TARGET: 2.0-3.0%     # TVL-based; backtest: 2.5% exit >> 0.5% (+$8 vs +$4)
-EXIT_DECAY: 2h→3.5h→1.0%  # Relax exit threshold over time, floor at 1.0%
+EXIT_DECAY: 30m→50m→1.0%  # Shortened proportionally (was 2h→3.5h for 4h max hold)
+SPREAD_WIDENING_STOP: 1.5% # NEW: exit if spread widens 1.5% from entry (data: 0% WR when diverging)
 PERCENTILE: 95            # Be highly selective
 PRICE_STOP_LOSS_PCT: -5%  # Emergency exit
 RETENTION_DAYS: 30         # Extended from 7 for better backtesting
@@ -100,6 +101,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 | Feb 4 | PM2 cluster mode for socket sharing | [`2800b50`](https://github.com/609NFT/parallax/commit/2800b50) | ✅ Zero-downtime |
 | Feb 4 | **Exit target 0.35%→2.5%, max hold 1h→4h** (backtest-driven) | [`7d84865`](https://github.com/609NFT/parallax/commit/7d84865) | ✅ Backtest: +$8 vs -$9 |
 | Feb 4 | **Recalibrate volatility multiplier** (was making thresholds 5-12%) | [`ff2386d`](https://github.com/609NFT/parallax/commit/ff2386d) | ✅ Range now 3.4-5.2% |
+| Feb 5 | **Exit overhaul: 60min hold, spread-widening stop, shorter decay** | [`8fbcd9a`](https://github.com/609NFT/para11ax/commit/8fbcd9a) | 🟡 Monitoring |
 | Feb 4 | MIN_FLOOR 4.5%→4.0% | [`b96d748`](https://github.com/609NFT/parallax/commit/b96d748) | 🟡 Monitoring |
 | Feb 4 | Fix algorithmic threshold bug | [`0ed83bf`](https://github.com/609NFT/parallax/commit/0ed83bf) | ✅ Fixed |
 | Feb 3 | PERCENTILE 90→95, MAX_HOLD 2h→1h | [`5cb2ae7`](https://github.com/609NFT/parallax/commit/5cb2ae7) | Superseded |
