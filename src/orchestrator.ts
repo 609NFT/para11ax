@@ -73,6 +73,10 @@ export class Orchestrator {
   private executingExits: Set<string> = new Set();
   private executingShortEntries: Set<string> = new Set();
   private executingShortExits: Set<string> = new Set();
+  
+  // Track recently closed short positions to prevent double-close race condition
+  // (Supabase write queue can lag behind, causing getOpenShortPositions to return stale data)
+  private recentlyClosedShorts: Map<string, number> = new Map(); // positionId -> closeTime
 
   // Loop-level mutex to prevent concurrent trading loop execution
   private loopRunning: boolean = false;
@@ -1015,6 +1019,14 @@ export class Orchestrator {
       executionLogger.debug({ positionId: position.id }, 'Short exit already executing, skipping');
       return;
     }
+    
+    // Check if this position was recently closed (prevents double-close race condition)
+    const recentCloseTime = this.recentlyClosedShorts.get(position.id);
+    if (recentCloseTime && Date.now() - recentCloseTime < 60000) {
+      executionLogger.debug({ positionId: position.id }, 'Short position was recently closed, skipping');
+      return;
+    }
+    
     this.executingShortExits.add(position.id);
 
     const config = getConfigSync();
@@ -1160,6 +1172,16 @@ export class Orchestrator {
       };
 
       saveShortPosition(closedPosition);
+      
+      // Track this position as recently closed (prevents double-close race condition)
+      this.recentlyClosedShorts.set(position.id, Date.now());
+      // Clean up old entries (keep map size bounded)
+      if (this.recentlyClosedShorts.size > 100) {
+        const now = Date.now();
+        for (const [id, time] of this.recentlyClosedShorts) {
+          if (now - time > 120000) this.recentlyClosedShorts.delete(id);
+        }
+      }
 
       // Send Discord notification
       notifyShortExit({
