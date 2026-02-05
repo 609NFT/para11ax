@@ -127,6 +127,28 @@ export interface MeanReversionPositionRow {
   entry_stock_price?: number | null;
 }
 
+/**
+ * Convert Postgres bigint string columns to JS numbers.
+ * pg returns bigint columns as strings to avoid precision loss,
+ * but our timestamps and numeric fields need to be actual numbers.
+ */
+function coercePositionRow(row: Record<string, unknown>): MeanReversionPositionRow {
+  const numericFields = [
+    'entry_spread_pct', 'entry_timestamp', 'size_usd', 'buy_amount', 'sell_amount',
+    'exit_spread_pct', 'exit_timestamp', 'pnl_usd', 'pnl_pct',
+    'buy_decimals', 'total_fees_usd', 'entry_fees_usd', 'exit_fees_usd',
+    'priority_fees_usd', 'network_fees_usd', 'slippage_usd',
+    'platform_fees_usd', 'entry_tvl_usd', 'entry_stock_price'
+  ];
+  const result = { ...row };
+  for (const field of numericFields) {
+    if (result[field] !== null && result[field] !== undefined) {
+      result[field] = Number(result[field]);
+    }
+  }
+  return result as unknown as MeanReversionPositionRow;
+}
+
 export async function upsertMeanReversionPosition(position: MeanReversionPositionRow): Promise<void> {
   const pool = getTradesPool();
   if (!pool) return;
@@ -202,7 +224,7 @@ export async function fetchRecentClosedPositions(limit: number = 10, withinMs: n
       LIMIT $2
     `, [cutoffTime, limit]);
 
-    return result.rows as MeanReversionPositionRow[];
+    return result.rows.map(coercePositionRow);
   } catch (error) {
     logger.error({ error }, 'Failed to fetch recent closed positions from Supabase');
     return [];
@@ -231,7 +253,7 @@ export async function fetchOpenPositions(): Promise<MeanReversionPositionRow[]> 
       ORDER BY entry_timestamp DESC
     `);
 
-    return result.rows as MeanReversionPositionRow[];
+    return result.rows.map(coercePositionRow);
   } catch (error) {
     logger.error({ error }, 'Failed to fetch open positions from Supabase');
     return [];
@@ -260,7 +282,7 @@ export async function fetchClosedPositions(limit: number = 100): Promise<MeanRev
       LIMIT $1
     `, [limit]);
 
-    return result.rows as MeanReversionPositionRow[];
+    return result.rows.map(coercePositionRow);
   } catch (error) {
     logger.error({ error }, 'Failed to fetch closed positions from Supabase');
     return [];
