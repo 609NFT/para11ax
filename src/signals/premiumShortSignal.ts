@@ -23,45 +23,43 @@ import {
   getMarketHolidayStatus,
   FlashSymbol,
 } from '../execution/flashTradeClient';
+import {
+  getShortEntryThresholdComputed,
+  getShortExitRatioComputed,
+  getShortStopLossFactorComputed,
+  getShortLeverageComputed,
+  getComputedThreshold,
+  getAllComputedThresholds,
+  isShortThresholdsInitialized,
+} from './shortThresholdCalc';
 
 // ============================================================================
-// SHORT THRESHOLD CONFIGURATION
+// SHORT THRESHOLD — DATA-DRIVEN
 // ============================================================================
-// Dynamic thresholds based on Flash Trade fees + profit margin
+// Thresholds are computed on startup by shortThresholdCalc.ts from:
+// 1. On-chain Flash Trade fees (read from Remora pool custody accounts)
+// 2. Historical spread volatility (Supabase discount_history)
+// 3. Premium reversion rates (computed from spread time series)
 //
-// Components:
-// 1. Flash Trade fees: ~0.1% open + 0.1% close = 0.2% round-trip
-// 2. Slippage buffer: 0.1% for price movement during execution
-// 3. Profit margin: Minimum profit we want after costs
+// No hardcoded per-symbol multipliers. See shortThresholdCalc.ts for details.
 //
-// Formula: entryThreshold = fees + slippage + profitMargin
+// Fallback values are only used if the threshold calculator fails to initialize.
 // ============================================================================
 
-const FLASH_TRADE_FEE_PCT = 0.2;        // Round-trip fees (open + close)
-const SHORT_SLIPPAGE_BUFFER_PCT = 0.1;  // Buffer for execution slippage
-const SHORT_MIN_PROFIT_PCT = 0.2;       // Minimum profit margin we want
-
-// Base threshold = fees + slippage + profit = 0.5% minimum
-const BASE_SHORT_THRESHOLD_PCT = FLASH_TRADE_FEE_PCT + SHORT_SLIPPAGE_BUFFER_PCT + SHORT_MIN_PROFIT_PCT;
-
-// Per-symbol adjustments based on volatility/characteristics
-// Higher volatility = higher threshold (more buffer needed)
-const SYMBOL_THRESHOLD_MULTIPLIERS: Record<string, number> = {
-  SPY: 1.0,    // Stable ETF, use base threshold
-  NVDA: 1.2,   // Tech stock, moderate volatility
-  TSLA: 1.5,   // High volatility
-  MSTR: 2.0,   // Very high volatility (Bitcoin proxy)
-  CRCL: 1.3,   // Moderate volatility
-};
+const FALLBACK_ENTRY_PCT = 0.5;
+const FALLBACK_EXIT_RATIO = 0.4;
+const FALLBACK_STOP_LOSS_FACTOR = 3.0;
+const FALLBACK_LEVERAGE = 2.0;
+const MAX_LEVERAGE = 3.0;
 
 /**
- * Get dynamic entry threshold for shorting based on symbol characteristics
- * Returns a NEGATIVE number (premium = negative discount)
+ * Get entry threshold for shorting — data-driven with fallback.
+ * Returns a NEGATIVE number (premium = negative discount).
  */
 function getShortEntryThreshold(ticker: string): number {
-  const multiplier = SYMBOL_THRESHOLD_MULTIPLIERS[ticker] ?? 1.2; // Default to 1.2x for unknown
-  const threshold = BASE_SHORT_THRESHOLD_PCT * multiplier;
-  return -threshold; // Return negative (premium thresholds are negative)
+  const computed = getShortEntryThresholdComputed(ticker);
+  if (computed !== null) return computed;
+  return -FALLBACK_ENTRY_PCT;
 }
 
 // ============================================================================
@@ -113,74 +111,32 @@ function isNearMarketClose(): { blocked: boolean; reason: string } {
   return { blocked: false, reason: '' };
 }
 
-// Exit and stop-loss are relative to entry
-// Exit when premium drops to 40% of entry threshold
-// Stop-loss when premium expands to 5x entry threshold
-const EXIT_THRESHOLD_RATIO = 0.4;   // Exit at 40% of entry premium
-const STOP_LOSS_RATIO = 5.0;        // Stop-loss at 5x entry premium
-
 /**
- * Get dynamic exit threshold for a short position
- * Exit when premium drops to EXIT_THRESHOLD_RATIO of entry threshold
+ * Get exit threshold — data-driven with fallback.
+ * Returns a NEGATIVE number (exit when premium shrinks to this level).
  */
 function getShortExitThreshold(ticker: string): number {
   const entryThreshold = getShortEntryThreshold(ticker);
-  return entryThreshold * EXIT_THRESHOLD_RATIO; // e.g., -0.5% * 0.4 = -0.2%
+  const ratio = getShortExitRatioComputed(ticker);
+  return entryThreshold * ratio;
 }
 
 /**
- * Get dynamic stop-loss threshold for a short position
- * Stop-loss when premium expands to STOP_LOSS_RATIO of entry threshold
+ * Get stop-loss threshold — data-driven with fallback.
+ * Returns a NEGATIVE number (stop-loss when premium expands to this level).
  */
 function getShortStopLossThreshold(ticker: string): number {
   const entryThreshold = getShortEntryThreshold(ticker);
-  return entryThreshold * STOP_LOSS_RATIO; // e.g., -0.5% * 5 = -2.5%
+  const factor = getShortStopLossFactorComputed(ticker);
+  return entryThreshold * factor;
 }
 
-// Leverage settings
-// Flash Trade has a minimum leverage requirement for rStock markets
-// Error 6023 at 1.1x and 1.5x indicates minimum is ~2x
-const MIN_LEVERAGE = 2.0;     // Minimum leverage for Flash Trade rStocks
-const MAX_LEVERAGE = 3.0;     // Max allowed
-
 /**
- * Get dynamic leverage for shorting based on threshold multiplier
- *
- * Derives leverage from SYMBOL_THRESHOLD_MULTIPLIERS - single source of truth:
- * - Higher multiplier = higher volatility = need more buffer = LOWER leverage
- * - Lower multiplier = lower volatility = stable asset = HIGHER leverage
- *
- * Formula: leverage = MAX - (multiplier - 1) * scale
- * Where scale maps the multiplier range [1.0, 2.0] to leverage range [MAX, MIN]
- *
- * Examples with current multipliers:
- * - SPY (1.0x): 2.0 leverage (stable ETF, max leverage)
- * - NVDA (1.2x): 1.8 leverage
- * - CRCL (1.3x): 1.7 leverage
- * - TSLA (1.5x): 1.5 leverage (high vol, min leverage)
- * - MSTR (2.0x): 1.5 leverage (very high vol, capped at min)
+ * Get leverage — data-driven with fallback.
+ * Derived from spread volatility: lower vol → higher leverage.
  */
 function getShortLeverage(ticker: string): number {
-  const multiplier = SYMBOL_THRESHOLD_MULTIPLIERS[ticker] ?? 1.2;
-
-  // Scale: maps multiplier range to leverage range
-  // multiplier 1.0 -> MAX_LEVERAGE (2.0)
-  // multiplier 2.0 -> MIN_LEVERAGE (1.5)
-  const scale = (MAX_LEVERAGE - MIN_LEVERAGE) / 1.0; // 0.5 per 1.0 multiplier increase
-  const rawLeverage = MAX_LEVERAGE - (multiplier - 1.0) * scale;
-
-  // Clamp to valid range and warn if clamped
-  const clampedLeverage = Math.max(MIN_LEVERAGE, Math.min(MAX_LEVERAGE, rawLeverage));
-  if (rawLeverage !== clampedLeverage) {
-    signalLogger.warn({
-      ticker,
-      multiplier,
-      rawLeverage: rawLeverage.toFixed(2),
-      clampedLeverage: clampedLeverage.toFixed(2),
-    }, 'Leverage clamped to bounds - multiplier outside expected range [1.0, 2.0]');
-  }
-
-  return clampedLeverage;
+  return getShortLeverageComputed(ticker);
 }
 
 // Premium watchlist item - tracks tokens approaching short threshold
@@ -414,6 +370,16 @@ export async function evaluatePremiumSignal(spread: PairSpread): Promise<Premium
     return defaultResponse;
   }
 
+  // Check 2b: Is this symbol eligible for shorting based on computed thresholds?
+  // (e.g., NVDAr has structural premium with low reversion — skip it)
+  if (isShortThresholdsInitialized()) {
+    const computed = getComputedThreshold(spread.stockTicker);
+    if (computed && !computed.eligible) {
+      // Silently skip — this symbol's data says don't short it
+      return defaultResponse;
+    }
+  }
+
   // Check 3: Is the equity market open?
   if (!isEquityMarketOpen()) {
     reasons.push('❌ Equity market closed');
@@ -637,14 +603,17 @@ export function saveShortPosition(position: ShortPosition): void {
 }
 
 /**
- * Get premium thresholds for a specific ticker (for dashboard display)
- * If no ticker provided, returns base thresholds
+ * Get premium thresholds for a specific ticker (for dashboard display).
+ * Uses data-driven computed thresholds when available, fallbacks otherwise.
  */
 export function getPremiumThresholds(ticker?: string) {
-  const entryPct = ticker ? getShortEntryThreshold(ticker) : -BASE_SHORT_THRESHOLD_PCT;
-  const exitPct = ticker ? getShortExitThreshold(ticker) : entryPct * EXIT_THRESHOLD_RATIO;
-  const stopLossPct = ticker ? getShortStopLossThreshold(ticker) : entryPct * STOP_LOSS_RATIO;
-  const leverage = ticker ? getShortLeverage(ticker) : MIN_LEVERAGE;
+  const entryPct = ticker ? getShortEntryThreshold(ticker) : -FALLBACK_ENTRY_PCT;
+  const exitPct = ticker ? getShortExitThreshold(ticker) : entryPct * FALLBACK_EXIT_RATIO;
+  const stopLossPct = ticker ? getShortStopLossThreshold(ticker) : entryPct * FALLBACK_STOP_LOSS_FACTOR;
+  const leverage = ticker ? getShortLeverage(ticker) : FALLBACK_LEVERAGE;
+
+  // Include computed threshold data if available
+  const computed = ticker ? getComputedThreshold(ticker) : null;
 
   return {
     entryPct,
@@ -652,33 +621,52 @@ export function getPremiumThresholds(ticker?: string) {
     stopLossPct,
     defaultLeverage: leverage,
     maxLeverage: MAX_LEVERAGE,
+    computed, // Full computed threshold data for dashboard
   };
 }
 
 /**
- * Get all symbol threshold multipliers (for dashboard display)
+ * Get all computed short thresholds (for dashboard display).
+ * Returns data-driven thresholds per symbol with eligibility info.
  */
-export function getSymbolThresholdMultipliers(): Record<string, number> {
-  return { ...SYMBOL_THRESHOLD_MULTIPLIERS };
-}
+export function getSymbolShortThresholds(): Record<string, {
+  entryPct: number;
+  leverage: number;
+  eligible: boolean;
+  reason: string;
+  fees: { roundTripBps: number };
+  spreadVol: number;
+  reversionRate: number;
+}> {
+  const result: Record<string, {
+    entryPct: number;
+    leverage: number;
+    eligible: boolean;
+    reason: string;
+    fees: { roundTripBps: number };
+    spreadVol: number;
+    reversionRate: number;
+  }> = {};
 
-/**
- * Get all symbol leverage settings (for dashboard display)
- * Derived from threshold multipliers - not a separate config
- */
-export function getSymbolLeverageSettings(): Record<string, number> {
-  const result: Record<string, number> = {};
-  for (const [ticker, multiplier] of Object.entries(SYMBOL_THRESHOLD_MULTIPLIERS)) {
-    const scale = (MAX_LEVERAGE - MIN_LEVERAGE) / 1.0;
-    const leverage = MAX_LEVERAGE - (multiplier - 1.0) * scale;
-    result[ticker] = Math.max(MIN_LEVERAGE, Math.min(MAX_LEVERAGE, leverage));
+  for (const t of getAllComputedThresholds()) {
+    const ticker = t.ticker.replace(/[rx]$/i, '').toUpperCase();
+    result[ticker] = {
+      entryPct: t.entryThresholdPct,
+      leverage: t.leverage,
+      eligible: t.eligible,
+      reason: t.reason,
+      fees: { roundTripBps: t.fees.roundTripBps },
+      spreadVol: t.stats.spreadVol,
+      reversionRate: t.stats.reversionRate30m,
+    };
   }
+
   return result;
 }
 
 /**
- * Get the base threshold percentage (before multiplier)
+ * Whether the threshold calculator has been initialized with data.
  */
-export function getBaseShortThreshold(): number {
-  return BASE_SHORT_THRESHOLD_PCT;
+export function isThresholdCalcInitialized(): boolean {
+  return isShortThresholdsInitialized();
 }

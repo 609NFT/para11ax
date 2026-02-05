@@ -32,6 +32,7 @@ import {
   getOraclePrice,
 } from './execution/flashTradeClient';
 import { getDatabase } from './db';
+import { initializeShortThresholds } from './signals/shortThresholdCalc';
 import { pruneOldDiscountHistory, upsertHeatmapSummary, getHourlySummaryFromSupabase } from './db/supabaseClient';
 import { Dashboard } from './dashboard';
 import logger, { executionLogger } from './logger';
@@ -387,6 +388,9 @@ export class Orchestrator {
       const flashInitialized = await initializeFlashClient();
       if (flashInitialized) {
         logger.info('Flash Trade initialized - premium shorting enabled');
+
+        // Compute data-driven short thresholds from on-chain fees + historical spreads
+        await initializeShortThresholds();
 
         // Reconcile orphaned on-chain positions (positions that exist on-chain but not in DB)
         if (config.mode === 'live') {
