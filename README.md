@@ -1,23 +1,23 @@
 # Parallax
 
-**Solana tokenized stock arbitrage — buy the discount, ride the reversion.**
+**Solana RWA arbitrage — buy the discount, ride the reversion.**
 
-Parallax is a fully automated statistical arbitrage bot that trades tokenized stocks (rTSLA, rNVDA, rSPY, and 20+ others) on Solana. It detects when on-chain token prices deviate from their real-world stock NAV, enters positions at discount, and exits on mean reversion — capturing the spread as profit.
+Parallax is a fully automated statistical arbitrage bot that trades RWAs (Real World Assets) — tokenized stocks, ETFs, and commodities (rTSLA, rNVDA, rSPY, rGLD, and 20+ others) on Solana. It detects when on-chain token prices deviate from their real-world NAV, enters positions at discount, and exits on mean reversion — capturing the spread as profit.
 
-Built by an AI agent collaborating with a human. Running in production with real capital.
+Built by an AI agent collaborating with a human. Running in production with real capital since late 2024.
 
-> 🏆 Solana hackathon submission — this is a live, deployed system, not a prototype.
+> 🏆 **Colosseum Agent Hackathon submission** — this is a live, deployed system with 600+ real trades, not a prototype.
 
 ---
 
 ## How It Works
 
-Tokenized stocks on Solana (rStocks via Clone/Reflect) sometimes trade at a discount or premium to their underlying stock price. Parallax monitors these spreads in real-time and:
+RWAs (Real World Assets) on Solana — tokenized stocks, ETFs, and commodities via Reflect — sometimes trade at a discount or premium to their underlying NAV. Parallax monitors these spreads in real-time and:
 
-1. **Buys** when a token trades at a significant discount to NAV (e.g., rTSLA at -4% vs TSLA)
+1. **Buys** when an RWA trades at a significant discount to NAV (e.g., rTSLA at -4% vs TSLA)
 2. **Holds** while the spread narrows (mean reversion)
 3. **Sells** when the token price converges back toward fair value
-4. **Shorts** via Flash Trade perps when tokens trade at a premium (optional)
+4. **Shorts** via Flash Trade perps when RWAs trade at a premium (optional)
 
 The edge: these mispricings are temporary and predictable. Parallax captures them systematically.
 
@@ -57,11 +57,53 @@ The edge: these mispricings are temporary and predictable. Parallax captures the
 
 ---
 
+## Dashboard
+
+Parallax includes a real-time web dashboard at **[parallax.report](https://parallax.report)** showing live portfolio state, spread analysis, and trading activity.
+
+### Main Dashboard
+Portfolio overview with watchlist, open positions, and real-time P&L tracking.
+
+![Main Dashboard](public/screenshots/dashboard-main.png)
+
+### 24h Discount Heatmap
+Visual heatmap of NAV discounts across 20+ RWAs — instantly see where the opportunities are.
+
+![Discount Heatmap](public/screenshots/dashboard-heatmap.png)
+
+### Spread Charts
+Historical spread analysis showing entry/exit zones and mean reversion patterns.
+
+![Spread Charts](public/screenshots/dashboard-spreads.png)
+
+### Trading Methodology
+How Parallax identifies and captures mispricings — the statistical edge explained.
+
+![Trading Methodology](public/screenshots/dashboard-method.png)
+
+---
+
+## Live System
+
+> **This is not a prototype.** Parallax runs 24/7 in production with real capital on Solana mainnet.
+
+| Metric | Value |
+|--------|-------|
+| **Total Trades** | 600+ |
+| **Assets Covered** | 20+ RWAs (stocks, ETFs, commodities) |
+| **Live Dashboard** | [parallax.report](https://parallax.report) |
+| **Uptime** | Managed via PM2 with zero-downtime reloads |
+| **Infrastructure** | AWS EC2 + Cloudflare Tunnel |
+
+The bot runs continuously, monitoring spreads every 10 seconds, executing trades through Jupiter and Raydium, and managing risk autonomously. Every trade is logged, every position tracked, every decision auditable.
+
+---
+
 ## Features
 
 ### Trading Engine
-- **Mean reversion strategy** — buys discounted rStocks, exits on spread convergence
-- **Premium shorting** — short via Flash Trade perps when tokens trade above NAV
+- **Mean reversion strategy** — buys discounted RWAs, exits on spread convergence
+- **Premium shorting** — short via Flash Trade perps when RWAs trade above NAV
 - **Volatility-adjusted entry thresholds** — per-token ATR from Twelve Data API
 - **TVL-scaled position sizing** — larger positions in liquid pools, smaller in thin ones
 - **Dynamic exit targets** — time-decaying thresholds with trailing stops to let winners run
@@ -305,11 +347,13 @@ Parallax is built with the assumption that **something will go wrong**. Every co
 
 ---
 
-## Built With AI
+## Built With AI — Colosseum Agent Hackathon
 
-Parallax was built through collaboration between a human (609) and an AI agent. The AI wrote the majority of the code, tuned the trading parameters through backtesting, and manages the live deployment. See [CLAUDE.md](CLAUDE.md) for the AI's working notes and architecture understanding.
+Parallax was built through collaboration between a human (609) and an AI agent (Claude, via [OpenClaw](https://openclaw.com)). The AI wrote the majority of the code, tuned the trading parameters through backtesting, manages the live deployment, and monitors the system 24/7. See [CLAUDE.md](CLAUDE.md) for the AI's working notes and architecture understanding.
 
-This isn't a toy demo — it's a production system managing real positions on Solana mainnet, with thousands of lines of battle-tested TypeScript handling edge cases from months of live operation.
+This is our submission for the **Colosseum Agent Hackathon**. It demonstrates what's possible when an AI agent isn't just writing code, but actively operating a live financial system — making deployment decisions, debugging production issues, tuning parameters based on real market data, and managing risk in real-time.
+
+This isn't a toy demo — it's a production system managing real positions on Solana mainnet, with thousands of lines of battle-tested TypeScript handling edge cases from months of live operation and 600+ real trades executed.
 
 ---
 
