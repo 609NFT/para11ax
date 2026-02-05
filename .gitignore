@@ -38,7 +38,26 @@ coverage/
 # Sensitive test files
 twitter-cookie-test.js
 check_wallet.js
+twitter-login.js
+tweet-verify.js
+post-*.js
+check-posted.js
 
 # Marketing/draft assets
 twitter-image.html
 twitter-post-draft.md
+
+# Internal docs (not for public)
+OPEN_SOURCE_AUDIT.md
+FIXES_*.md
+AUTO_TUNE_PROMPT.md
+tuning_log.md
+PRE_DEPLOY_CHECKLIST.md
+
+# Agent configs
+.claude/
+
+# Large assets
+public/blob.webp
+public/twitter-login-state.png
+public/twitter-step1.png

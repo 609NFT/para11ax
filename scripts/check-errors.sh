@@ -1,8 +1,8 @@
 #!/bin/bash
 # Check Parallax logs for real errors (not warnings or known noise)
 
-LOG_FILE="logs/pm2-out.log"
-ERR_FILE="logs/pm2-error.log"
+LOG_FILE="/home/ec2-user/parallax/logs/pm2-out.log"
+ERR_FILE="/home/ec2-user/parallax/logs/pm2-error.log"
 LINES=100
 
 # Real errors to catch (case insensitive)
