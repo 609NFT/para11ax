@@ -295,7 +295,8 @@ export class Orchestrator {
         }
 
         // Execute the swap using executeSell (SOL -> USDC)
-        const result = await this.executor.executeSell(SOL_MINT, excessSol, quote);
+        // Note: executeSell expects raw lamports for sells
+        const result = await this.executor.executeSell(SOL_MINT, excessSolLamports, quote);
 
         if (result.success) {
           const usdcReceived = (result.outputAmount || 0) / 1e6;
