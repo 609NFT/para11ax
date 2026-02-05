@@ -12,7 +12,7 @@
 
 import { AnchorProvider, BN, Wallet } from '@coral-xyz/anchor';
 import { Connection, Keypair, PublicKey, TransactionInstruction, Signer } from '@solana/web3.js';
-import { PerpetualsClient, PoolConfig, Side, OraclePrice } from 'flash-sdk';
+import { PerpetualsClient, PoolConfig, Side, OraclePrice, CustodyAccount, Privilege, BN_ZERO, uiDecimalsToNative } from 'flash-sdk';
 import { PriceServiceConnection } from '@pythnetwork/price-service-client';
 import logger from '../logger';
 import { getConfigSync } from '../config';
@@ -237,6 +237,8 @@ export async function initializeFlashClient(): Promise<boolean> {
     poolConfig = PoolConfig.fromIdsByName(POOL_NAME, CLUSTER);
 
     // Create the client
+    // useExtOracleAccount = false: program validates oracle account against
+    // custody's intOracleAccount (updated by Flash Trade keepers)
     flashClient = new PerpetualsClient(
       provider,
       poolConfig.programId,
@@ -245,7 +247,7 @@ export async function initializeFlashClient(): Promise<boolean> {
       poolConfig.rewardDistributionProgram.programId,
       {
         prioritizationFee: 50000, // 50k microlamports
-      }
+      },
     );
 
     // Load address lookup tables for efficient transactions
@@ -303,7 +305,7 @@ export function getTickerFromFlashSymbol(flashSymbol: string): string | null {
 }
 
 /**
- * Build instructions and send transaction
+ * Build instructions and send transaction, then confirm on-chain
  */
 async function sendFlashTransaction(
   instructions: TransactionInstruction[],
@@ -317,31 +319,52 @@ async function sendFlashTransaction(
     additionalSigners,
   });
 
+  // Wait for confirmation and verify on-chain success
+  const conn = flashClient.provider.connection;
+  try {
+    // Wait for transaction to be confirmed
+    await conn.confirmTransaction(txid, 'confirmed');
+
+    // Double-check the transaction didn't fail on-chain
+    const txInfo = await conn.getTransaction(txid, {
+      commitment: 'confirmed',
+      maxSupportedTransactionVersion: 0,
+    });
+    if (txInfo?.meta?.err) {
+      throw new Error(`Transaction failed on-chain: ${JSON.stringify(txInfo.meta.err)}`);
+    }
+  } catch (error) {
+    // If this is our own "failed on-chain" error, re-throw it
+    if (error instanceof Error && error.message.startsWith('Transaction failed on-chain')) {
+      throw error;
+    }
+    // Confirmation timeout or other network error - log but don't fail
+    // The transaction may still land
+    logger.warn({
+      txid,
+      error: error instanceof Error ? error.message : String(error),
+    }, 'Transaction confirmation check failed (tx may still succeed)');
+  }
+
   return txid;
 }
 
-/**
- * Fetch the oracle exponent for a symbol from Pyth
- * This ensures we use the correct precision for each asset
- */
-async function getOracleExponent(symbol: FlashSymbol): Promise<number> {
-  // Check cache first
-  const cached = oracleExponentCache.get(symbol);
-  if (cached !== undefined) {
-    return cached;
-  }
+// getOracleExponent removed — getOraclePrices() handles exponent caching now
 
+/**
+ * Fetch both price and EMA price from Pyth Hermes for a given symbol.
+ * Returns OraclePrice objects suitable for Flash Trade SDK methods.
+ */
+async function getOraclePrices(symbol: FlashSymbol): Promise<{ price: OraclePrice; emaPrice: OraclePrice }> {
   if (!poolConfig) {
     throw new Error('Pool config not initialized');
   }
 
-  // Find the token config to get the pythPriceId
   const tokenConfig = poolConfig.tokens.find(t => t.symbol === symbol);
   if (!tokenConfig) {
     throw new Error(`Token ${symbol} not found in pool config`);
   }
 
-  // Get pythPriceId - need to strip '0x' prefix if present
   const pythPriceId = (tokenConfig as any).pythPriceId;
   if (!pythPriceId) {
     throw new Error(`No pythPriceId found for ${symbol}`);
@@ -349,36 +372,40 @@ async function getOracleExponent(symbol: FlashSymbol): Promise<number> {
 
   const priceIdClean = pythPriceId.startsWith('0x') ? pythPriceId.slice(2) : pythPriceId;
 
-  try {
-    // Fetch the current price from Pyth to get the exponent
-    const priceFeeds = await pythConnection.getLatestPriceFeeds([priceIdClean]);
-    if (!priceFeeds || priceFeeds.length === 0) {
-      throw new Error(`No price feed returned for ${symbol}`);
-    }
-
-    const priceFeed = priceFeeds[0];
-    const price = priceFeed.getPriceUnchecked();
-    const exponent = price.expo;
-
-    logger.info({
-      symbol,
-      pythPriceId: priceIdClean,
-      exponent,
-      price: price.price,
-    }, `Fetched oracle exponent for ${symbol}`);
-
-    // Cache the exponent
-    oracleExponentCache.set(symbol, exponent);
-
-    return exponent;
-  } catch (error) {
-    logger.error({
-      symbol,
-      pythPriceId: priceIdClean,
-      error: error instanceof Error ? error.message : String(error),
-    }, `Failed to fetch oracle exponent for ${symbol}`);
-    throw error;
+  const priceFeeds = await pythConnection.getLatestPriceFeeds([priceIdClean]);
+  if (!priceFeeds || priceFeeds.length === 0) {
+    throw new Error(`No price feed returned for ${symbol}`);
   }
+
+  const priceFeed = priceFeeds[0];
+  const priceData = priceFeed.getPriceUnchecked();
+  const emaPriceData = priceFeed.getEmaPriceUnchecked();
+
+  // Cache the exponent while we're at it
+  oracleExponentCache.set(symbol, priceData.expo);
+
+  const price = new OraclePrice({
+    price: new BN(priceData.price),
+    exponent: new BN(priceData.expo),
+    confidence: new BN(priceData.conf),
+    timestamp: new BN(priceData.publishTime),
+  });
+
+  const emaPrice = new OraclePrice({
+    price: new BN(emaPriceData.price),
+    exponent: new BN(emaPriceData.expo),
+    confidence: new BN(emaPriceData.conf),
+    timestamp: new BN(emaPriceData.publishTime),
+  });
+
+  logger.debug({
+    symbol,
+    price: priceData.price,
+    emaPrice: emaPriceData.price,
+    exponent: priceData.expo,
+  }, `Fetched oracle prices for ${symbol}`);
+
+  return { price, emaPrice };
 }
 
 /**
@@ -431,31 +458,6 @@ export async function getOraclePrice(symbol: FlashSymbol): Promise<number | null
 }
 
 /**
- * Create an OraclePrice from a USD price with dynamic exponent
- * Flash Trade uses BN with exponent for prices
- *
- * The exponent is fetched from Pyth oracle to match the on-chain expectations:
- * - Crypto: typically -8 (8 decimal places)
- * - Stocks/Equities: typically -5 (5 decimal places)
- *
- * @param priceUsd - The price in USD
- * @param exponent - The oracle exponent (e.g., -5 for stocks, -8 for crypto)
- */
-function createOraclePriceFromUsd(priceUsd: number, exponent: number): OraclePrice {
-  // Convert to fixed point using the oracle's exponent
-  // exponent is negative, so we multiply by 10^(-exponent) = 10^5 for exponent=-5
-  const scaleFactor = Math.pow(10, -exponent);
-  const priceScaled = Math.floor(priceUsd * scaleFactor);
-
-  return OraclePrice.from({
-    price: new BN(priceScaled),
-    exponent: new BN(exponent),
-    confidence: new BN(0),
-    timestamp: new BN(Math.floor(Date.now() / 1000)),
-  });
-}
-
-/**
  * Open a perpetual position (long or short)
  *
  * @param params.symbol - The rStock symbol (e.g., 'TSLAr')
@@ -489,46 +491,93 @@ export async function openPerpPosition(params: OpenPositionParams): Promise<{
       leverage,
       slippageBps,
       currentPriceUsd,
-    }, `Opening ${side} perp position - fetching oracle exponent`);
+    }, `Opening ${side} perp position`);
 
     // Validate leverage for rStocks (max 10x)
     if (leverage > 10) {
       return { success: false, error: 'Maximum leverage for rStocks is 10x' };
     }
 
-    // Find token config
-    const tokenConfig = poolConfig.tokens.find(t => t.symbol === symbol);
-    if (!tokenConfig) {
+    // Find token configs for market (target) and collateral (USDC)
+    const targetToken = poolConfig.tokens.find(t => t.symbol === symbol);
+    if (!targetToken) {
       return { success: false, error: `Token ${symbol} not found in pool config` };
     }
+    const collateralToken = poolConfig.tokens.find(t => t.symbol === 'USDC');
+    if (!collateralToken) {
+      return { success: false, error: 'USDC token not found in pool config' };
+    }
 
-    // Fetch the oracle exponent dynamically from Pyth
-    const oracleExponent = await getOracleExponent(symbol);
+    // Find custody configs
+    const targetCustodyConfig = poolConfig.custodies.find(c => c.symbol === symbol);
+    if (!targetCustodyConfig) {
+      return { success: false, error: `Custody for ${symbol} not found in pool config` };
+    }
+    const collateralCustodyConfig = poolConfig.custodies.find(c => c.symbol === 'USDC');
+    if (!collateralCustodyConfig) {
+      return { success: false, error: 'USDC custody not found in pool config' };
+    }
 
-    // Create oracle price from USD price with correct exponent
-    const currentPrice = createOraclePriceFromUsd(currentPriceUsd, oracleExponent);
+    // Fetch oracle prices (price + EMA) from Pyth for both target and collateral
+    const [targetPrices, collateralPrices] = await Promise.all([
+      getOraclePrices(symbol),
+      getOraclePrices('USDC'),
+    ]);
 
     logger.info({
       symbol,
-      oracleExponent,
-      priceUsd: currentPriceUsd,
-      priceScaled: currentPrice.price.toString(),
-    }, `Using dynamic oracle exponent for ${symbol}`);
+      targetPrice: targetPrices.price.price.toString(),
+      targetEmaPrice: targetPrices.emaPrice.price.toString(),
+      targetExponent: targetPrices.price.exponent.toString(),
+      collateralPrice: collateralPrices.price.price.toString(),
+      currentPriceUsd,
+    }, `Fetched oracle prices for ${symbol} and USDC`);
 
-    // Convert collateral to proper format (USDC has 6 decimals)
-    const collateralAmount = new BN(Math.floor(collateralUsd * 1e6));
+    // Fetch custody account data from chain
+    const custodyAccounts = await flashClient.program.account.custody.fetchMultiple([
+      collateralCustodyConfig.custodyAccount,
+      targetCustodyConfig.custodyAccount,
+    ]);
+    if (!custodyAccounts[0] || !custodyAccounts[1]) {
+      return { success: false, error: 'Failed to fetch custody accounts from chain' };
+    }
 
-    // Calculate size based on leverage
-    const sizeUsd = collateralUsd * leverage;
-    const sizeAmount = new BN(Math.floor(sizeUsd * 1e6));
+    const collateralCustodyAccount = CustodyAccount.from(collateralCustodyConfig.custodyAccount, custodyAccounts[0]);
+    const targetCustodyAccount = CustodyAccount.from(targetCustodyConfig.custodyAccount, custodyAccounts[1]);
 
     const perpSide = side === 'long' ? Side.Long : Side.Short;
+
+    // Convert collateral using SDK utility (proper decimal handling)
+    const collateralWithFee = uiDecimalsToNative(collateralUsd.toString(), collateralToken.decimals);
+
+    // Calculate position size using the SDK's built-in function
+    const sizeAmount = flashClient.getSizeAmountFromLeverageAndCollateral(
+      collateralWithFee,
+      leverage.toString(),
+      targetToken,          // market/target token
+      collateralToken,      // collateral token (USDC)
+      perpSide,
+      targetPrices.price,
+      targetPrices.emaPrice,
+      targetCustodyAccount,
+      collateralPrices.price,
+      collateralPrices.emaPrice,
+      collateralCustodyAccount,
+      BN_ZERO,              // discountBps
+    );
+
+    logger.info({
+      symbol,
+      collateralWithFee: collateralWithFee.toString(),
+      sizeAmount: sizeAmount.toString(),
+      leverage,
+    }, `Calculated position size via SDK`);
 
     // Get price with slippage applied
     const priceWithSlippage = flashClient.getPriceAfterSlippage(
       true, // isEntry
       new BN(slippageBps),
-      currentPrice,
+      targetPrices.price,
       perpSide
     );
 
@@ -537,14 +586,11 @@ export async function openPerpPosition(params: OpenPositionParams): Promise<{
       symbol,           // target symbol (e.g., 'TSLAr')
       'USDC',           // collateral symbol
       priceWithSlippage,
-      collateralAmount,
+      collateralWithFee,
       sizeAmount,
       perpSide,
       poolConfig,
-      { none: {} } as any, // No special privilege (Privilege.None)
-      undefined,        // tokenStakeAccount
-      undefined,        // userReferralAccount
-      false,            // skipBalanceChecks
+      Privilege.None,
     );
 
     // Send the transaction
@@ -596,11 +642,8 @@ export async function closePerpPosition(params: ClosePositionParams): Promise<{
   try {
     logger.info({ symbol, side, currentPriceUsd }, `Closing ${side} perp position`);
 
-    // Fetch the oracle exponent dynamically from Pyth
-    const oracleExponent = await getOracleExponent(symbol);
-
-    // Create oracle price from USD price with correct exponent
-    const currentPrice = createOraclePriceFromUsd(currentPriceUsd, oracleExponent);
+    // Fetch oracle prices from Pyth (price + EMA)
+    const targetPrices = await getOraclePrices(symbol);
 
     const perpSide = side === 'long' ? Side.Long : Side.Short;
 
@@ -608,21 +651,17 @@ export async function closePerpPosition(params: ClosePositionParams): Promise<{
     const priceWithSlippage = flashClient.getPriceAfterSlippage(
       false, // isEntry = false for exit
       new BN(slippageBps),
-      currentPrice,
+      targetPrices.price,
       perpSide
     );
 
     const { instructions, additionalSigners } = await flashClient.closePosition(
       symbol,           // market symbol
-      'USDC',           // collateral symbol
+      'USDC',           // collateral/receiving symbol
       priceWithSlippage,
       perpSide,
       poolConfig,
-      { none: {} } as any,
-      undefined,
-      undefined,
-      true,             // createUserATA
-      false,            // closeUsersWSOLATA
+      Privilege.None,
     );
 
     const txSignature = await sendFlashTransaction(instructions, additionalSigners);
