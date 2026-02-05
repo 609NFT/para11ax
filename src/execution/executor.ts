@@ -1060,6 +1060,8 @@ export class Executor {
         txSignature: result.txSignature,
         inputAmount: result.inputAmount,
         outputAmount: result.outputAmount,
+        outputAmountUsd: result.outputAmountUsd,  // Pass through USD value
+        outputMint: result.outputMint,              // Pass through output mint
         expectedOutput: result.outputAmount,
         slippageActual: result.fees?.executionSlippagePct ?? 0,
         timestamp: Date.now(),
@@ -1322,6 +1324,8 @@ export class Executor {
         txSignature: result.txSignature,
         inputAmount: result.inputAmount,
         outputAmount: result.outputAmount,
+        outputAmountUsd: result.outputAmountUsd,  // Pass through USD value (critical for SOL pool PnL)
+        outputMint: result.outputMint,              // Pass through output mint for SOL detection
         expectedOutput: result.outputAmount,
         slippageActual: result.fees?.executionSlippagePct ?? 0,
         timestamp: Date.now(),
