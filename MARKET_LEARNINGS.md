@@ -69,10 +69,10 @@ Parallax trades **tokenized stocks on Solana** (rTSLA, rNVDA, rSPY, etc.) agains
 MIN_FLOOR: 4.00%          # Set to 4.0% — data shows only 4%+ entries profitable
 MAX_CAP: 10.0%            # Raised from 2.5% — allow high thresholds
 MIN_HOLD_TIME_MS: 5 min   # Raised from 2 min — <5min exits are 10% WR
-MAX_HOLD_TIME_MS: 60 min  # Was 4h. Data: 0% WR past 2hr at 4%+ entries. Sweet spot 15-30min.
+MAX_HOLD_TIME_MS: 60 min  # UPDATED Feb 5: was 4h. Data: 0% WR past 2hr, sweet spot 15-30min
 EXIT_TARGET: 2.0-3.0%     # TVL-based; backtest: 2.5% exit >> 0.5% (+$8 vs +$4)
-EXIT_DECAY: 30m→50m→1.0%  # Shortened proportionally (was 2h→3.5h for 4h max hold)
-SPREAD_WIDENING_STOP: 1.5% # NEW: exit if spread widens 1.5% from entry (data: 0% WR when diverging)
+EXIT_DECAY: 30m→50m→1.0%  # UPDATED Feb 5: shortened from 2h→3.5h (proportional to max hold)
+SPREAD_WIDENING_STOP: 1.5% # NEW Feb 5: exit if spread widens 1.5% from entry (cuts losers fast)
 PERCENTILE: 95            # Be highly selective
 PRICE_STOP_LOSS_PCT: -5%  # Emergency exit
 RETENTION_DAYS: 30         # Extended from 7 for better backtesting
@@ -93,6 +93,10 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 
 | Date | Change | Commit | Result |
 |------|--------|--------|--------|
+| Feb 5 | **Exit overhaul: 60min hold, spread-widening stop, shorter decay** | [`8fbcd9a`](https://github.com/609NFT/para11ax/commit/8fbcd9a) | 🟡 **Monitoring** (8 trades today vs 40 avg) |
+| Feb 5 | **Data-driven short thresholds** (on-chain Flash fees + spread analysis) | [`f36b3f6`](https://github.com/609NFT/para11ax/commit/f36b3f6) | 🟡 **Ready** (ENABLE_SHORTING=false) |
+| Feb 5 | **Fix anti-churning guard blocking max hold** | [`2dd7583`](https://github.com/609NFT/para11ax/commit/2dd7583) | ✅ **Fixed** (GOOGL stuck 133min→exit) |
+| Feb 5 | **Token→ticker mapping fix** (TICKER_OVERRIDES + validation) | [`1476fe2`](https://github.com/609NFT/para11ax/commit/1476fe2) | ✅ **Fixed** (INTCon→INTC etc) |
 | Feb 4 | Volatility refresh: defer init until after liquidity | [`9168c2a`](https://github.com/609NFT/parallax/commit/9168c2a) | ✅ 15 stocks vs 36 |
 | Feb 4 | Volatility refresh: only TVL-enabled stocks | [`b3fb40e`](https://github.com/609NFT/parallax/commit/b3fb40e) | ✅ Cleaner |
 | Feb 4 | Incremental volatility refresh (no rate limits) | [`00cdff3`](https://github.com/609NFT/parallax/commit/00cdff3) | ✅ Fixed |
@@ -101,8 +105,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 | Feb 4 | PM2 cluster mode for socket sharing | [`2800b50`](https://github.com/609NFT/parallax/commit/2800b50) | ✅ Zero-downtime |
 | Feb 4 | **Exit target 0.35%→2.5%, max hold 1h→4h** (backtest-driven) | [`7d84865`](https://github.com/609NFT/parallax/commit/7d84865) | ✅ Backtest: +$8 vs -$9 |
 | Feb 4 | **Recalibrate volatility multiplier** (was making thresholds 5-12%) | [`ff2386d`](https://github.com/609NFT/parallax/commit/ff2386d) | ✅ Range now 3.4-5.2% |
-| Feb 5 | **Exit overhaul: 60min hold, spread-widening stop, shorter decay** | [`8fbcd9a`](https://github.com/609NFT/para11ax/commit/8fbcd9a) | 🟡 Monitoring |
-| Feb 4 | MIN_FLOOR 4.5%→4.0% | [`b96d748`](https://github.com/609NFT/parallax/commit/b96d748) | 🟡 Monitoring |
+| Feb 4 | MIN_FLOOR 4.5%→4.0% | [`b96d748`](https://github.com/609NFT/parallax/commit/b96d748) | ✅ **Profitable** (4%+ only wins) |
 | Feb 4 | Fix algorithmic threshold bug | [`0ed83bf`](https://github.com/609NFT/parallax/commit/0ed83bf) | ✅ Fixed |
 | Feb 3 | PERCENTILE 90→95, MAX_HOLD 2h→1h | [`5cb2ae7`](https://github.com/609NFT/parallax/commit/5cb2ae7) | Superseded |
 | Feb 3 | Percentile calc → PostgreSQL | [`446c349`](https://github.com/609NFT/parallax/commit/446c349) | ✅ Memory fixed |
@@ -176,6 +179,48 @@ The data is unambiguous:
 2. **Quick exits are usually wrong** — patience matters
 3. **Data beats intuition** — let the numbers guide decisions
 4. **One change at a time** — proper scientific method
+
+---
+
+---
+
+## Daily Review: February 5, 2026 (9:00 AM PST)
+
+### Performance Snapshot
+- **640 total trades** (+2 from yesterday)
+- **8 trades today** (down from 40/day average — 80% reduction)
+- **20.9% win rate** (unchanged)
+- **-$14.18 total PnL** (slight improvement)
+- **0 open positions**
+
+### New Exit Parameters Impact
+The Feb 5 exit overhaul is showing early positive signals:
+- **Much more selective** — waiting for higher quality 4%+ spreads
+- **No stuck positions** — max hold 60min prevents long losers
+- **Spread widening stop** — cuts losers when they diverge instead of hoping
+
+### Key Investigation: Low Trade Frequency
+Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering:
+- **Liquidity filters**: 21 tokens disabled, 22 enabled
+- **GOOGLx example**: Above 4% for 4+ hours yesterday, never entered
+- **Hypothesis**: Liquidity thresholds may be too conservative
+
+### Token Performance (Unchanged)
+- **COINx**: Only profitable token (46% WR, 13 trades, +$0.11)
+- **AMBRx/LINx/CRCLx**: High opportunity frequency but low entry conversion
+- **TSLA/NVDA/META/AMZN**: Never hit 4% (correctly filtered out)
+
+### System Health
+- **Bot stable**: 31min uptime, 34 restarts (includes ffmpeg video encoding issues)
+- **No kill switch**: Clean daily state
+- **EC2 health monitoring**: Auto-restart cron active (15min intervals)
+
+### Recommendations
+1. **Continue monitoring** — need 48+ hours of data under new exit params
+2. **Investigate liquidity gates** — why aren't 4%+ spreads converting to trades?
+3. **Consider per-token liquidity tuning** — AMBRx may be filtered incorrectly
+
+**Status**: 🟡 **MONITORING NEW PARAMETERS** — Initial signs positive, low volume expected
 
 ---
 

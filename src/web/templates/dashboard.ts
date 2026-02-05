@@ -89,16 +89,121 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
   <title>${tabConfig.title}</title>
   <style>
     :root {
-      --bg: #0a0a0f;
-      --card-bg: #12121a;
-      --border: #1e1e2e;
-      --text: #e0e0e0;
-      --text-dim: #888;
-      --green: #22c55e;
-      --red: #ef4444;
-      --yellow: #eab308;
-      --cyan: #ffffff;
-      --purple: #a855f7;
+      /* Backgrounds */
+      --bg-primary: #0a0a0f;
+      --bg-card: #12121a;
+      --bg-elevated: #1a1a24;
+      --bg-hover: rgba(255, 255, 255, 0.03);
+
+      /* Borders */
+      --border-primary: #1e1e2e;
+      --border-hover: #2e2e3e;
+
+      /* Text */
+      --text-primary: #e0e0e0;
+      --text-secondary: #888888;
+      --text-tertiary: #666666;
+      --text-inverse: #0a0a0f;
+
+      /* Semantic colors */
+      --color-green: #22c55e;
+      --color-red: #ef4444;
+      --color-yellow: #eab308;
+      --color-orange: #f97316;
+      --color-purple: #a855f7;
+      --color-blue: #3b82f6;
+      --color-link: #60a5fa;
+
+      /* Spacing scale (4px base) */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+
+      /* Border radius */
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-xl: 12px;
+      --radius-full: 9999px;
+
+      /* Typography */
+      --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+      --font-brand: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --text-xs: 10px;
+      --text-sm: 12px;
+      --text-base: 14px;
+      --text-lg: 16px;
+      --text-xl: 20px;
+      --text-2xl: 24px;
+      --text-3xl: 28px;
+
+      /* Transitions */
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.2s ease;
+      --transition-slow: 0.3s ease;
+
+      /* Backward-compatible aliases */
+      --bg: var(--bg-primary);
+      --card-bg: var(--bg-card);
+      --border: var(--border-primary);
+      --text: var(--text-primary);
+      --text-dim: var(--text-secondary);
+      --green: var(--color-green);
+      --red: var(--color-red);
+      --yellow: var(--color-yellow);
+      --cyan: var(--color-link);
+      --purple: var(--color-purple);
+    }
+
+    /* Utility classes */
+    .text-positive { color: var(--color-green); }
+    .text-negative { color: var(--color-red); }
+    .text-warning { color: var(--color-yellow); }
+    .text-muted { color: var(--text-secondary); }
+    .text-brand { color: var(--color-purple); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size: var(--text-sm); }
+    .badge-purple { background: var(--color-purple); color: white; }
+    .badge-warning { background: var(--color-yellow); color: var(--text-inverse); }
+    .badge-red { background: var(--color-red); color: white; }
+
+    /* Analytics cards */
+    .analytics-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+    }
+    .analytics-card .label {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-1);
+    }
+    .analytics-card .value {
+      font-size: var(--text-xl);
+      font-weight: 600;
+    }
+
+    /* Trade table hover */
+    #trades-tbody tr:hover {
+      background: var(--bg-hover);
+    }
+
+    /* Global focus states */
+    :focus-visible {
+      outline: 2px solid var(--color-purple);
+      outline-offset: 2px;
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      .skeleton, .pulse-dot, .live-dot-ring, .live-dot-center { animation: none !important; }
+      .flash-up, .flash-down { animation: none !important; }
+      * { transition-duration: 0.01ms !important; }
     }
     /* Skeleton loader styles */
     @keyframes skeleton-shimmer {
@@ -166,11 +271,11 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     }
     .skeleton-heatmap-label {
       height: 16px;
-      border-radius: 3px;
+      border-radius: var(--radius-sm);
     }
     .skeleton-heatmap-cell {
       height: 16px;
-      border-radius: 3px;
+      border-radius: var(--radius-sm);
       border: 1px solid transparent;
       box-sizing: border-box;
     }
@@ -278,21 +383,21 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
       background: var(--bg);
       color: var(--text);
-      padding: 20px;
+      padding: var(--space-5);
       min-height: 100vh;
     }
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: var(--space-5);
       flex-wrap: nowrap;
       background-image: url('/public/blob.webp');
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
       padding: 16px 20px;
-      border-radius: 10px;
+      border-radius: var(--radius-xl);
     }
     .header-left {
       display: flex;
@@ -462,31 +567,37 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
     }
     .stat-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 15px;
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
     }
     .stat-card .label {
-      font-size: 12px;
+      font-size: var(--text-sm);
       color: var(--text-dim);
       margin-bottom: 5px;
     }
     .stat-card .value {
-      font-size: 24px;
+      font-size: var(--text-2xl);
       font-weight: bold;
     }
     .stat-card .sub {
-      font-size: 12px;
+      font-size: var(--text-sm);
       color: var(--text-dim);
       margin-top: 3px;
     }
     .stat-card.wide {
       grid-column: span 2;
+      border-color: rgba(168, 85, 247, 0.3);
+      background: linear-gradient(135deg, var(--bg-card) 0%, rgba(168, 85, 247, 0.04) 100%);
+    }
+    #notable-logs {
+      border-left: 3px solid var(--color-yellow);
+      padding-left: var(--space-3);
     }
     .positive { color: var(--green); }
     .negative { color: var(--red); }
@@ -514,8 +625,8 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     .section {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      margin-bottom: 20px;
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--space-5);
     }
     .watchlists-container {
       display: flex;
@@ -556,17 +667,18 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       overflow: visible;
     }
     .section-header {
-      padding: 12px 15px;
+      padding: var(--space-3) var(--space-4);
       border-bottom: 1px solid var(--border);
       font-weight: bold;
       color: var(--purple);
+      transition: color var(--transition-fast);
     }
     table {
       width: 100%;
       border-collapse: collapse;
     }
     th, td {
-      padding: 10px 15px;
+      padding: var(--space-2) var(--space-4);
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
@@ -578,7 +690,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     }
     tr:last-child td { border-bottom: none; }
     .ticker-link {
-      color: #fff;
+      color: var(--text-primary);
       text-decoration: none;
       font-weight: bold;
     }
@@ -651,13 +763,13 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     }
     .log-entry {
       padding: 4px 8px;
-      border-radius: 3px;
+      border-radius: var(--radius-sm);
       margin-bottom: 2px;
       white-space: nowrap;
       display: block;
       width: 100%;
       box-sizing: border-box;
-      font-size: 11px !important;
+      font-size: 11px;
       line-height: 1.4;
     }
     .log-info { background: rgba(255, 255, 255, 0.03); }
@@ -696,7 +808,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      margin-bottom: 20px;
+      margin-bottom: var(--space-5);
       border-bottom: 1px solid var(--border);
     }
     .tab-group {
@@ -744,103 +856,103 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       display: block;
     }
     .blog-container {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
       padding: 30px;
       width: 100%;
       line-height: 1.7;
     }
     .blog-container h1 {
-      color: var(--purple);
-      font-size: 28px;
-      margin-bottom: 10px;
+      color: var(--color-purple);
+      font-size: var(--text-3xl);
+      margin-bottom: var(--space-3);
     }
     .blog-container h2 {
-      color: var(--purple);
-      font-size: 22px;
-      margin-top: 40px;
-      margin-bottom: 15px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
+      color: var(--color-purple);
+      font-size: var(--text-2xl);
+      margin-top: var(--space-10);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--border-primary);
     }
     .blog-container h3 {
-      color: var(--cyan);
-      font-size: 18px;
-      margin-top: 25px;
-      margin-bottom: 10px;
+      color: var(--color-link);
+      font-size: var(--text-xl);
+      margin-top: var(--space-6);
+      margin-bottom: var(--space-3);
     }
     .blog-container h4 {
-      color: var(--text);
-      font-size: 16px;
-      margin-top: 20px;
-      margin-bottom: 8px;
+      color: var(--text-primary);
+      font-size: var(--text-lg);
+      margin-top: var(--space-5);
+      margin-bottom: var(--space-2);
     }
     .blog-container p {
-      margin-bottom: 8px;
-      color: var(--text);
+      margin-bottom: var(--space-4);
+      color: var(--text-primary);
     }
     .blog-container blockquote {
-      border-left: 3px solid var(--purple);
-      padding-left: 15px;
-      margin: 20px 0;
-      color: var(--text-dim);
+      border-left: 3px solid var(--color-purple);
+      padding-left: var(--space-4);
+      margin: var(--space-5) 0;
+      color: var(--text-secondary);
       font-style: italic;
     }
     .blog-container ul, .blog-container ol {
-      margin: 15px 0;
-      padding-left: 25px;
+      margin: var(--space-4) 0;
+      padding-left: var(--space-6);
     }
     .blog-container li {
-      margin-bottom: 8px;
+      margin-bottom: var(--space-2);
     }
     .blog-container code {
       background: rgba(168, 85, 247, 0.15);
-      color: var(--purple);
-      padding: 2px 6px;
-      border-radius: 3px;
+      color: var(--color-purple);
+      padding: 2px var(--space-2);
+      border-radius: var(--radius-sm);
       font-size: 13px;
     }
     .blog-container pre {
-      background: #1a1a24;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 15px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
       overflow-x: auto;
-      margin: 15px 0;
+      margin: var(--space-4) 0;
     }
     .blog-container pre code {
       background: none;
       padding: 0;
-      color: var(--text);
+      color: var(--text-primary);
     }
     .blog-container table {
       width: 100%;
       border-collapse: collapse;
-      margin: 20px 0;
-      font-size: 14px;
+      margin: var(--space-5) 0;
+      font-size: var(--text-base);
     }
     .blog-container th {
       background: rgba(168, 85, 247, 0.1);
-      color: var(--purple);
-      padding: 10px;
+      color: var(--color-purple);
+      padding: var(--space-3);
       text-align: left;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-primary);
     }
     .blog-container td {
-      padding: 10px;
-      border: 1px solid var(--border);
+      padding: var(--space-3);
+      border: 1px solid var(--border-primary);
     }
     .blog-container strong {
-      color: var(--text);
+      color: var(--text-primary);
     }
     .blog-container hr {
       border: none;
-      border-top: 1px solid var(--border);
-      margin: 30px 0;
+      border-top: 1px solid var(--border-primary);
+      margin: var(--space-8) 0;
     }
     .blog-container a {
-      color: var(--cyan);
+      color: var(--color-link);
       text-decoration: none;
     }
     .blog-container a:hover {
@@ -924,7 +1036,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       width: 100%;
     }
     .heatmap-row-label {
-      font-size: 10px;
+      font-size: var(--text-sm);
       color: var(--text);
       display: flex;
       align-items: center;
@@ -943,7 +1055,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     .heatmap-cell {
       width: 100%;
       height: 16px;
-      border-radius: 3px;
+      border-radius: var(--radius-sm);
       border: 1px solid var(--border);
       transition: transform 0.1s;
       cursor: crosshair;
@@ -979,10 +1091,10 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     }
     /* Changelog Timeline Styles */
     .changelog-container {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 30px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-8);
       width: 100%;
       position: relative;
     }
@@ -992,31 +1104,31 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       bottom: 0;
       left: 0;
       right: 0;
-      height: 120px;
-      background: linear-gradient(to bottom, transparent 0%, var(--card-bg) 100%);
+      height: 80px;
+      background: linear-gradient(to bottom, transparent 0%, var(--bg-card) 100%);
       pointer-events: none;
-      border-radius: 0 0 8px 8px;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
     }
     .changelog-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--border-primary);
     }
     .changelog-title {
-      color: var(--purple);
-      font-size: 24px;
+      color: var(--color-purple);
+      font-size: var(--text-2xl);
       font-weight: 600;
       margin: 0;
     }
     .changelog-repo {
-      color: var(--text-dim);
-      font-size: 12px;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
     }
     .changelog-repo a {
-      color: var(--cyan);
+      color: var(--color-link);
       text-decoration: none;
     }
     .changelog-repo a:hover {
@@ -1024,7 +1136,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     }
     .changelog-timeline {
       position: relative;
-      padding-left: 24px;
+      padding-left: var(--space-6);
     }
     .changelog-timeline::before {
       content: '';
@@ -1033,13 +1145,13 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       top: 0;
       bottom: 0;
       width: 2px;
-      background: linear-gradient(180deg, var(--purple) 0%, var(--border) 100%);
+      background: linear-gradient(180deg, var(--color-purple) 0%, var(--border-primary) 100%);
     }
     .changelog-item {
       position: relative;
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-5);
+      padding-bottom: var(--space-5);
+      border-bottom: 1px solid var(--border-primary);
     }
     .changelog-item:last-child {
       border-bottom: none;
@@ -1052,96 +1164,169 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       top: 4px;
       width: 8px;
       height: 8px;
-      border-radius: 50%;
-      background: var(--purple);
-      border: 2px solid var(--card-bg);
-      box-shadow: 0 0 0 2px var(--purple);
+      border-radius: var(--radius-full);
+      background: var(--color-purple);
+      border: 2px solid var(--bg-card);
+      box-shadow: 0 0 0 2px var(--color-purple);
     }
     .changelog-item:not(:first-child) .changelog-dot {
-      background: var(--card-bg);
-      box-shadow: 0 0 0 2px var(--border);
+      background: var(--bg-card);
+      box-shadow: 0 0 0 2px var(--border-primary);
     }
     .changelog-date {
       font-size: 11px;
-      color: var(--text-dim);
-      margin-bottom: 6px;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-1);
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
     }
     .changelog-date a {
-      color: var(--text-dim);
+      color: var(--text-secondary);
       text-decoration: none;
       font-family: monospace;
-      font-size: 10px;
+      font-size: var(--text-xs);
       background: rgba(168, 85, 247, 0.1);
-      padding: 1px 6px;
-      border-radius: 4px;
+      padding: 1px var(--space-2);
+      border-radius: var(--radius-sm);
     }
     .changelog-date a:hover {
-      color: var(--purple);
+      color: var(--color-purple);
       background: rgba(168, 85, 247, 0.2);
     }
     .changelog-message {
-      color: var(--text);
-      font-size: 14px;
+      color: var(--text-primary);
+      font-size: var(--text-base);
       line-height: 1.5;
-      margin-bottom: 8px;
+      margin-bottom: var(--space-2);
     }
     .changelog-message strong {
-      color: var(--cyan);
+      color: var(--color-link);
     }
     .changelog-author {
       font-size: 11px;
-      color: var(--text-dim);
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: var(--space-1);
     }
     .changelog-author img {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
+      width: var(--space-4);
+      height: var(--space-4);
+      border-radius: var(--radius-full);
     }
     .changelog-author a {
-      color: var(--text-dim);
+      color: var(--text-secondary);
       text-decoration: none;
     }
     .changelog-author a:hover {
-      color: var(--cyan);
+      color: var(--color-link);
     }
     .changelog-loading {
       text-align: center;
-      color: var(--text-dim);
-      padding: 12px;
+      color: var(--text-secondary);
+      padding: var(--space-3);
     }
     .changelog-error {
       text-align: center;
-      color: var(--negative);
-      padding: 12px;
+      color: var(--color-red);
+      padding: var(--space-3);
     }
+    /* Admin Styles */
+    .admin-section {
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+    }
+    .admin-section h3 {
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
+      font-size: var(--text-lg);
+    }
+    .admin-section p {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      margin-bottom: var(--space-3);
+    }
+    .admin-input {
+      padding: var(--space-2) var(--space-3);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: var(--text-base);
+    }
+    .admin-btn {
+      padding: var(--space-2) var(--space-5);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity var(--transition-fast);
+    }
+    .admin-btn:hover { opacity: 0.85; }
+    .admin-btn-primary {
+      background: var(--color-purple);
+      color: white;
+    }
+    .admin-btn-warning {
+      background: var(--color-yellow);
+      color: var(--text-inverse);
+    }
+    .admin-btn-danger {
+      background: var(--color-red);
+      color: white;
+    }
+    /* Interactive element transitions */
+    button, .btn, [onclick] {
+      transition: opacity var(--transition-fast), background-color var(--transition-fast);
+    }
+    button:hover, .btn:hover {
+      opacity: 0.85;
+    }
+    tr {
+      transition: background-color var(--transition-fast);
+    }
+    .stat-card {
+      transition: border-color var(--transition-fast);
+    }
+    .stat-card:hover {
+      border-color: var(--border-hover);
+    }
+
+    /* Tab fade-in animation */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .tab-content.active {
+      animation: fadeIn 0.15s ease;
+    }
+
     @media (max-width: 900px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
       .table-wrapper { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
-      table { min-width: 700px; font-size: 13px; }
-      th, td { padding: 8px 6px; white-space: nowrap; }
+      table { min-width: 700px; font-size: var(--text-sm); }
+      th, td { padding: var(--space-2) 6px; white-space: nowrap; }
     }
     @media (max-width: 600px) {
       body { padding: 8px; }
       .tooltip-icon { display: none; }
       .tooltip-text { display: none; }
       .gap-text { display: none; }
-      .progress-bar { width: 100% !important; }
-      .progress-text { width: 100% !important; }
+      .progress-bar { width: 100% !important; } /* override JS inline */
+      .progress-text { width: 100% !important; } /* override JS inline */
       .header { flex-direction: row; align-items: stretch; gap: 8px; padding: 12px; margin-bottom: 8px; }
       .header-left { flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 2px; }
       .header-title { line-height: 1; }
-      .header-title span:first-child { font-size: 18px !important; margin-right: 4px !important; }
-      .header-title span:last-child { font-size: 16px !important; }
-      .header-subtitle { font-size: 10px !important; }
-      .header-by-link { font-size: 10px !important; padding: 2px 6px !important; border: 1px solid var(--border); }
-      .header-by-link img { width: 14px !important; height: 14px !important; }
-      .header-by-link svg { width: 14px !important; height: 14px !important; }
+      .header-title span:first-child { font-size: 18px !important; margin-right: 4px !important; } /* override JS inline */
+      .header-title span:last-child { font-size: 16px !important; } /* override JS inline */
+      .header-subtitle { font-size: 10px; }
+      .header-by-link { font-size: 10px; padding: 2px 6px; border: 1px solid var(--border); }
+      .header-by-link img { width: 14px !important; height: 14px !important; } /* override JS inline */
+      .header-by-link svg { width: 14px; height: 14px; }
       .header-by-link.desktop-only { display: none; }
       .header-by-link.mobile-only { display: inline-flex; }
       .header-right { flex-direction: column-reverse; align-items: flex-end; justify-content: space-between; gap: 2px; }
@@ -1154,9 +1339,8 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
         width: 6px;
         height: 6px;
       }
-      #header-wallet-total { font-size: 14px !important; text-align: right; }
-      .header-wallet { text-align: right !important; }
-      #header-wallet-breakdown { font-size: 10px !important; }
+      #header-wallet-total { font-size: 14px !important; text-align: right; } /* override JS inline */
+      #header-wallet-breakdown { font-size: 10px !important; } /* override JS inline */
       .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
       .stat-card { padding: 12px; }
       .stat-card .value { font-size: 16px; }
@@ -1164,15 +1348,15 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       .stat-card .sub { font-size: 10px; }
       .section { padding: 12px; }
       .section-header { font-size: 14px; margin-bottom: 10px; }
-      #weekend-warning.visible { display: block !important; margin-left: 0 !important; margin-top: 6px; font-size: 10px !important; }
+      #weekend-warning.visible { display: block !important; margin-left: 0 !important; margin-top: 6px; font-size: 10px !important; } /* override JS inline */
       table { min-width: 700px; font-size: 12px; border-collapse: separate; border-spacing: 0; }
       th, td { padding: 8px 12px; }
       th { letter-spacing: 0.5px; }
       .log-container { max-height: 180px; font-size: 10px; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .log-entry { padding: 3px 6px; font-size: 10px !important; }
-      .log-entry * { font-size: 10px !important; }
-      .log-time { font-size: 10px !important; margin-right: 6px; }
-      .log-component { font-size: 10px !important; margin-right: 6px; }
+      .log-entry { padding: 3px 6px; font-size: 10px; }
+      .log-entry * { font-size: 10px; }
+      .log-time { font-size: 10px; margin-right: 6px; }
+      .log-component { font-size: 10px; margin-right: 6px; }
       .tabs { flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
       .tab-group { order: 1; }
       .tabs-line { display: none; }
@@ -1180,19 +1364,19 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       .time-range-btn { padding: 6px 10px; font-size: 11px; }
       .tab { font-size: 12px; }
       .tab a { padding: 8px 14px; }
-      .blog-container { padding: 12px; }
+      .blog-container { padding: var(--space-3); }
       .blog-container h2 { font-size: 18px; }
       .blog-container p, .blog-container li { font-size: 13px; }
-      .changelog-container { padding: 12px; }
-      .changelog-header { margin-bottom: 16px; padding-bottom: 12px; }
-      .changelog-timeline { padding-left: 20px; }
+      .changelog-container { padding: var(--space-3); }
+      .changelog-header { margin-bottom: var(--space-4); padding-bottom: var(--space-3); }
+      .changelog-timeline { padding-left: var(--space-5); }
       .changelog-dot { left: -18px; }
       .heatmap-container { padding: 12px; }
       .heatmap-header { flex-direction: column; align-items: flex-start; gap: 12px; }
       .heatmap-title { font-size: 18px; }
       .heatmap-info { flex-direction: column; align-items: flex-start; gap: 8px; }
       .heatmap-legend { flex-wrap: wrap; gap: 8px; }
-      .heatmap-row-label { font-size: 9px; min-width: 40px; padding-right: 4px; }
+      .heatmap-row-label { font-size: var(--text-xs); min-width: 40px; padding-right: 4px; }
       .heatmap-cell { height: 14px; min-width: 8px; }
       .skeleton-heatmap-cell { height: 14px; }
       .skeleton-heatmap-label { height: 14px; }
@@ -1253,8 +1437,8 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       <button class="time-range-btn desktop-only" data-range="6H">6H</button>
       <button class="time-range-btn active" data-range="12H">12H</button>
       <button class="time-range-btn" data-range="D">D</button>
-      <button class="time-range-btn desktop-only" data-range="W">W</button>
-      <button class="time-range-btn desktop-only" data-range="M">M</button>
+      <button class="time-range-btn" data-range="W">W</button>
+      <button class="time-range-btn" data-range="M">M</button>
       <button class="time-range-btn desktop-only" data-range="Y">Y</button>
       <button class="time-range-btn" data-range="ALL">All</button>
     </div>
@@ -1311,7 +1495,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
 
   <div class="watchlists-container">
     <div class="section" id="premium-watchlist-section" style="display: none;">
-      <div class="section-header" style="color: #a855f7;">Premium Watchlist (<span id="premium-watchlist-count">0</span>) <span id="equity-market-closed-badge" style="display: none; background: var(--purple); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px;">Market Closed</span></div>
+      <div class="section-header" style="color: var(--purple);">Premium Watchlist (<span id="premium-watchlist-count">0</span>) <span id="equity-market-closed-badge" style="display: none; background: var(--purple); color: var(--text-primary); padding: 2px 8px; border-radius: var(--radius-sm); font-size: var(--text-sm); margin-left: var(--space-2);">Market Closed</span></div>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -1333,7 +1517,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     </div>
 
     <div class="section" id="watchlist-section" style="display: none;">
-      <div class="section-header" style="color: #a855f7;">Discount Watchlist (<span id="watchlist-count">0</span>)</div>
+      <div class="section-header" style="color: var(--purple);">Discount Watchlist (<span id="watchlist-count">0</span>)</div>
       <div class="table-wrapper">
         <table>
           <thead>
@@ -1356,7 +1540,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
   </div>
 
   <div class="section">
-    <div class="section-header">Open Positions (<span id="open-positions-count">0</span>) <span id="weekend-warning" style="display: none; background: var(--purple); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px;"></span></div>
+    <div class="section-header">Open Positions (<span id="open-positions-count">0</span>) <span id="weekend-warning" style="display: none; background: var(--purple); color: var(--text-primary); padding: 2px var(--space-2); border-radius: var(--radius-sm); font-size: var(--text-sm); margin-left: var(--space-2);"></span></div>
     <div class="table-wrapper">
       <table>
         <thead>
@@ -1452,9 +1636,9 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       <div class="heatmap-info">
         <span id="heatmap-time-range">--</span>
         <span class="heatmap-legend">
-          <span class="heatmap-legend-item"><span class="heatmap-legend-color" style="background: #22c55e;"></span> 4% Premium</span>
-          <span class="heatmap-legend-item"><span class="heatmap-legend-color" style="background: #1a1a2e;"></span> 0%</span>
-          <span class="heatmap-legend-item"><span class="heatmap-legend-color" style="background: #ef4444;"></span> 4% Discount</span>
+          <span class="heatmap-legend-item"><span class="heatmap-legend-color" style="background: var(--color-green);"></span> 4% Premium</span>
+          <span class="heatmap-legend-item"><span class="heatmap-legend-color" style="background: var(--bg-elevated);"></span> 0%</span>
+          <span class="heatmap-legend-item"><span class="heatmap-legend-color" style="background: var(--color-red);"></span> 4% Discount</span>
         </span>
       </div>
       <div id="discount-heatmap" class="discount-heatmap">
@@ -1553,7 +1737,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
         </table>
       </div>
       <div id="trades-load-more" style="text-align: center; margin-top: 16px; display: none;">
-        <button onclick="loadMoreTrades()" style="background: var(--accent); color: white; border: none; padding: 8px 24px; border-radius: 6px; cursor: pointer; font-size: 13px;">Load More</button>
+        <button onclick="loadMoreTrades()" style="background: var(--color-purple); color: white; border: none; padding: 8px 24px; border-radius: 6px; cursor: pointer; font-size: 13px;">Load More</button>
       </div>
     </div>
   </div><!-- end tab-trades -->
@@ -1583,26 +1767,25 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
   </div><!-- end tab-changelog -->
 
   ${isAdminTab ? `<div id="tab-admin" class="tab-content active">
-    <div class="admin-container" style="max-width: 800px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: var(--text); margin-bottom: 24px;">Admin Controls</h2>
+    <div class="admin-container" style="max-width: 800px; margin: 0 auto; padding: var(--space-5);">
+      <h2 style="color: var(--text-primary); margin-bottom: var(--space-6);">Admin Controls</h2>
 
-      <div class="admin-auth" style="margin-bottom: 24px; padding: 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;">
-        <label style="color: var(--text-dim); font-size: 12px; text-transform: uppercase; margin-bottom: 8px; display: block;">Admin Token</label>
-        <div style="display: flex; gap: 12px; align-items: center;">
+      <div class="admin-auth admin-section">
+        <label style="color: var(--text-secondary); font-size: var(--text-sm); text-transform: uppercase; margin-bottom: var(--space-2); display: block;">Admin Token</label>
+        <div style="display: flex; gap: var(--space-3); align-items: center;">
           <input type="password" id="admin-token" placeholder="Enter admin token"
             onkeypress="if(event.key==='Enter')verifyAdminToken()"
-            style="flex: 1; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 14px;">
-          <button onclick="verifyAdminToken()"
-            style="padding: 10px 20px; background: var(--cyan); color: var(--bg); border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+            class="admin-input" style="flex: 1;">
+          <button onclick="verifyAdminToken()" class="admin-btn admin-btn-primary">
             Verify
           </button>
         </div>
-        <div id="admin-auth-status" style="margin-top: 8px; font-size: 12px; color: var(--text-dim);"></div>
+        <div id="admin-auth-status" style="margin-top: var(--space-2); font-size: var(--text-sm); color: var(--text-secondary);"></div>
       </div>
 
       <div id="admin-panel" style="display: none;">
-        <div class="admin-endpoints" style="margin-bottom: 24px; padding: 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;">
-          <h3 style="color: var(--text); margin-bottom: 16px; font-size: 16px;">API Endpoints</h3>
+        <div class="admin-endpoints admin-section">
+          <h3>API Endpoints</h3>
           <div id="endpoints-table" style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
               <thead>
@@ -1621,8 +1804,8 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
           </div>
         </div>
 
-        <div class="admin-status" style="margin-bottom: 24px; padding: 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;">
-          <h3 style="color: var(--text); margin-bottom: 16px; font-size: 16px;">Status</h3>
+        <div class="admin-status admin-section">
+          <h3>Status</h3>
           <div id="admin-status-content" style="display: grid; gap: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span style="color: var(--text-dim);">Kill Switch</span>
@@ -1631,28 +1814,26 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
           </div>
         </div>
 
-        <div class="admin-actions" style="display: grid; gap: 16px;">
-          <div style="padding: 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;">
-            <h3 style="color: var(--text); margin-bottom: 12px; font-size: 16px;">Kill Switch</h3>
-            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">Resets the kill switch to allow trading to resume.</p>
-            <button onclick="resetKillSwitch()"
-              style="padding: 10px 20px; background: var(--yellow); color: var(--bg); border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+        <div class="admin-actions" style="display: grid; gap: var(--space-4);">
+          <div class="admin-section" style="margin-bottom: 0;">
+            <h3>Kill Switch</h3>
+            <p>Resets the kill switch to allow trading to resume.</p>
+            <button onclick="resetKillSwitch()" class="admin-btn admin-btn-warning">
               Reset Kill Switch
             </button>
           </div>
 
-          <div style="padding: 16px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;">
-            <h3 style="color: var(--text); margin-bottom: 12px; font-size: 16px;">Restart Bot</h3>
-            <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 12px;">Restarts the PM2 process. Page will reload after restart.</p>
-            <button onclick="restartBot()"
-              style="padding: 10px 20px; background: var(--red); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+          <div class="admin-section" style="margin-bottom: 0;">
+            <h3>Restart Bot</h3>
+            <p>Restarts the PM2 process. Page will reload after restart.</p>
+            <button onclick="restartBot()" class="admin-btn admin-btn-danger">
               Restart Bot
             </button>
           </div>
 
         </div>
 
-        <div id="admin-result" style="margin-top: 16px; padding: 12px; border-radius: 6px; display: none;"></div>
+        <div id="admin-result" style="margin-top: var(--space-4); padding: var(--space-3); border-radius: var(--radius-md); display: none;"></div>
       </div>
     </div>
   </div><!-- end tab-admin -->` : ''}
@@ -2124,11 +2305,11 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
             } else if (rawProgress >= 100) {
               progressColor = 'var(--green)';
             } else if (rawProgress >= 85) {
-              progressColor = '#a3e635'; // yellow-green
+              progressColor = '#a3e635'; /* TODO: add --color-yellow-green token */
             } else if (rawProgress >= 60) {
               progressColor = 'var(--yellow)';
             } else {
-              progressColor = '#6b7280'; // gray
+              progressColor = 'var(--text-tertiary)';
             }
 
             // Show different text based on state
@@ -2239,11 +2420,11 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
             } else if (rawProgress >= 100) {
               progressColor = 'var(--green)';
             } else if (rawProgress >= 85) {
-              progressColor = '#a3e635'; // yellow-green
+              progressColor = '#a3e635'; /* TODO: add --color-yellow-green token */
             } else if (rawProgress >= 60) {
               progressColor = 'var(--yellow)';
             } else {
-              progressColor = '#6b7280'; // gray
+              progressColor = 'var(--text-tertiary)';
             }
             // Show discount as positive (token trading below stock price = good for longs)
             let progressText;
@@ -2369,11 +2550,11 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
             } else if (rawProgress >= 100) {
               progressColor = 'var(--green)';
             } else if (rawProgress >= 85) {
-              progressColor = '#a3e635'; // yellow-green
+              progressColor = '#a3e635'; /* TODO: add --color-yellow-green token */
             } else if (rawProgress >= 60) {
               progressColor = 'var(--yellow)';
             } else {
-              progressColor = '#6b7280'; // gray
+              progressColor = 'var(--text-tertiary)';
             }
             let progressText;
             if (hasOpenPosition) {
@@ -2952,10 +3133,10 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     }
 
     function makeCard(label, value, color) {
-      const colorStyle = color === 'green' ? 'color: #4ecb71;' : color === 'red' ? 'color: #ff6b6b;' : 'color: var(--text);';
-      return '<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">' +
-        '<div style="color: var(--text-dim); font-size: 12px; margin-bottom: 4px;">' + label + '</div>' +
-        '<div style="font-size: 20px; font-weight: 600; ' + colorStyle + '">' + value + '</div>' +
+      const colorClass = color === 'green' ? 'text-positive' : color === 'red' ? 'text-negative' : '';
+      return '<div class="analytics-card">' +
+        '<div class="label">' + label + '</div>' +
+        '<div class="value ' + colorClass + '">' + value + '</div>' +
       '</div>';
     }
 
@@ -2964,43 +3145,43 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       const container = document.getElementById('token-performance');
       const tokens = Object.entries(a.byToken).sort((x, y) => y[1].totalPnl - x[1].totalPnl);
       if (tokens.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-dim);">No token data yet</p>';
+        container.innerHTML = '<p style="color: var(--text-secondary);">No token data yet</p>';
         return;
       }
-      let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">';
+      let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-2);">';
       for (const [token, data] of tokens) {
-        const pnlColor = data.totalPnl > 0 ? '#4ecb71' : data.totalPnl < 0 ? '#ff6b6b' : 'var(--text-dim)';
-        html += '<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px;">' +
-          '<div style="font-weight: 600; color: var(--text); margin-bottom: 6px;">' + escapeHtml(token) + '</div>' +
-          '<div style="font-size: 12px; color: var(--text-dim);">' +
+        const pnlColor = data.totalPnl > 0 ? 'var(--color-green)' : data.totalPnl < 0 ? 'var(--color-red)' : 'var(--text-secondary)';
+        html += '<div style="background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: var(--radius-md); padding: var(--space-3); transition: border-color var(--transition-fast);">' +
+          '<div style="font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">' + escapeHtml(token) + '</div>' +
+          '<div style="font-size: var(--text-sm); color: var(--text-secondary);">' +
             data.trades + ' trades · ' + (data.winRate * 100).toFixed(0) + '% WR' +
           '</div>' +
           '<div style="font-size: 14px; color: ' + pnlColor + '; margin-top: 4px;">$' + data.totalPnl.toFixed(4) + '</div>' +
         '</div>';
       }
       html += '</div>';
-      container.innerHTML = '<h3 style="color: var(--text); margin-bottom: 12px; font-size: 16px;">Per-Token Performance</h3>' + html;
+      container.innerHTML = '<h3 style="color: var(--text-primary); margin-bottom: var(--space-3); font-size: 16px;">Per-Token Performance</h3>' + html;
     }
 
     function renderTradesTable(trades, append) {
       const tbody = document.getElementById('trades-tbody');
       if (!append) tbody.innerHTML = '';
       for (const t of trades) {
-        const pnlColor = t.pnlUsd > 0 ? '#4ecb71' : t.pnlUsd < 0 ? '#ff6b6b' : 'var(--text-dim)';
+        const pnlColor = t.pnlUsd > 0 ? 'var(--color-green)' : t.pnlUsd < 0 ? 'var(--color-red)' : 'var(--text-secondary)';
         const holdMin = (t.holdTimeMs / 60000).toFixed(1);
         const exitTime = new Date(Number(t.exitTimestamp)).toLocaleString();
         const reason = (t.exitReason || '').replace(/_/g, ' ');
         const row = document.createElement('tr');
-        row.style.borderBottom = '1px solid var(--border)';
+        row.style.borderBottom = '1px solid var(--border-primary)';
         row.innerHTML =
-          '<td style="padding: 8px; color: var(--text);">' + escapeHtml(t.ticker || t.symbol) + '</td>' +
-          '<td style="padding: 8px; text-align: right; color: var(--text);">' + (t.entryDiscount || 0).toFixed(2) + '%</td>' +
-          '<td style="padding: 8px; text-align: right; color: var(--text);">' + (t.exitDiscount || 0).toFixed(2) + '%</td>' +
-          '<td style="padding: 8px; text-align: right; color: ' + pnlColor + ';">$' + (t.pnlUsd || 0).toFixed(4) + '</td>' +
-          '<td style="padding: 8px; text-align: right; color: var(--text);">' + holdMin + 'm</td>' +
-          '<td style="padding: 8px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + reason + '">' + reason + '</td>' +
-          '<td style="padding: 8px; text-align: right; color: var(--text);" class="desktop-only">$' + (t.sizeUsd || 0).toFixed(2) + '</td>' +
-          '<td style="padding: 8px; text-align: right; color: var(--text-dim);" class="desktop-only">' + exitTime + '</td>';
+          '<td style="padding: var(--space-2); color: var(--text-primary);">' + escapeHtml(t.ticker || t.symbol) + '</td>' +
+          '<td style="padding: var(--space-2); text-align: right; color: var(--text-primary);">' + (t.entryDiscount || 0).toFixed(2) + '%</td>' +
+          '<td style="padding: var(--space-2); text-align: right; color: var(--text-primary);">' + (t.exitDiscount || 0).toFixed(2) + '%</td>' +
+          '<td style="padding: var(--space-2); text-align: right; color: ' + pnlColor + ';">$' + (t.pnlUsd || 0).toFixed(4) + '</td>' +
+          '<td style="padding: var(--space-2); text-align: right; color: var(--text-primary);">' + holdMin + 'm</td>' +
+          '<td style="padding: var(--space-2); color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + reason + '">' + reason + '</td>' +
+          '<td style="padding: var(--space-2); text-align: right; color: var(--text-primary);" class="desktop-only">$' + (t.sizeUsd || 0).toFixed(2) + '</td>' +
+          '<td style="padding: var(--space-2); text-align: right; color: var(--text-secondary);" class="desktop-only">' + exitTime + '</td>';
         tbody.appendChild(row);
       }
     }
