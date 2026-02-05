@@ -1,6 +1,10 @@
-# Parallax
+<p align="center">
+  <img src="logo.png" width="160" alt="Parallax" />
+</p>
 
-**Solana RWA arbitrage — buy the discount, ride the reversion.**
+<h1 align="center">Parallax</h1>
+
+<p align="center"><b>Solana RWA arbitrage — buy the discount, ride the reversion.</b></p>
 
 Parallax is a fully automated statistical arbitrage bot that trades RWAs (Real World Assets) — tokenized stocks, ETFs, and commodities (rTSLA, rNVDA, rSPY, rGLD, and 20+ others) on Solana. It detects when on-chain token prices deviate from their real-world NAV, enters positions at discount, and exits on mean reversion — capturing the spread as profit.
 
