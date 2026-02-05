@@ -37,6 +37,12 @@ export const TAB_CONFIG: Record<string, TabConfig> = {
     ogImage: 'https://parallax.report/public/SEO.jpg',
     activeTab: 'changelog',
   },
+  trades: {
+    title: 'Parallax Trade History',
+    description: 'Complete trade history with analytics and per-token performance.',
+    ogImage: 'https://parallax.report/public/SEO.jpg',
+    activeTab: 'trades',
+  },
   admin: {
     title: 'Parallax Admin',
     description: 'Admin controls for kill switch, restart, and token management.',
@@ -1238,6 +1244,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     <div class="tab-group">
       <div class="tab${tabConfig.activeTab === 'dashboard' ? ' active' : ''}" data-tab="dashboard"><a href="/"><span class="desktop-only">Dashboard</span><span class="mobile-only">Dash</span></a></div>
       <div class="tab${tabConfig.activeTab === 'heatmap' ? ' active' : ''}" data-tab="heatmap"><a href="/heatmap"><span class="desktop-only">Spreads</span><span class="mobile-only">Map</span></a></div>
+      <div class="tab${tabConfig.activeTab === 'trades' ? ' active' : ''}" data-tab="trades"><a href="/trades">Trades</a></div>
       <div class="tab${tabConfig.activeTab === 'blog' ? ' active' : ''}" data-tab="blog"><a href="/method">Method</a></div>
       <div class="tab${tabConfig.activeTab === 'changelog' ? ' active' : ''}" data-tab="changelog"><a href="/changelog"><span class="desktop-only">Changelog</span><span class="mobile-only">Log</span></a></div>
     </div>
@@ -1488,6 +1495,58 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       <div class="skeleton skeleton-blog-paragraph" style="width: 95%;"></div>
     </div>
   </div><!-- end tab-blog -->
+
+  <div id="tab-trades" class="tab-content${tabConfig.activeTab === 'trades' ? ' active' : ''}">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="color: var(--text); margin: 0;">Trade History</h2>
+        <div id="trades-analytics-summary" style="color: var(--text-dim); font-size: 13px;"></div>
+      </div>
+
+      <!-- Analytics Cards -->
+      <div id="trades-analytics" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;">
+        <div class="skeleton" style="height: 80px; border-radius: 8px;"></div>
+        <div class="skeleton" style="height: 80px; border-radius: 8px;"></div>
+        <div class="skeleton" style="height: 80px; border-radius: 8px;"></div>
+        <div class="skeleton" style="height: 80px; border-radius: 8px;"></div>
+        <div class="skeleton" style="height: 80px; border-radius: 8px;"></div>
+      </div>
+
+      <!-- Token Performance -->
+      <div id="token-performance" style="margin-bottom: 24px;">
+        <h3 style="color: var(--text); margin-bottom: 12px; font-size: 16px;">Per-Token Performance</h3>
+        <div class="skeleton" style="height: 200px; border-radius: 8px;"></div>
+      </div>
+
+      <!-- Trade Table -->
+      <div style="overflow-x: auto;">
+        <table id="trades-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); color: var(--text-dim);">
+              <th style="padding: 8px; text-align: left;">Token</th>
+              <th style="padding: 8px; text-align: right;">Entry %</th>
+              <th style="padding: 8px; text-align: right;">Exit %</th>
+              <th style="padding: 8px; text-align: right;">PnL</th>
+              <th style="padding: 8px; text-align: right;">Hold Time</th>
+              <th style="padding: 8px; text-align: left;">Exit Reason</th>
+              <th style="padding: 8px; text-align: right;" class="desktop-only">Size</th>
+              <th style="padding: 8px; text-align: right;" class="desktop-only">Time</th>
+            </tr>
+          </thead>
+          <tbody id="trades-tbody">
+            ${Array(10).fill(0).map(() => `
+              <tr style="border-bottom: 1px solid var(--border);">
+                ${Array(8).fill(0).map((_, i) => `<td style="padding: 8px;"${i > 5 ? ' class="desktop-only"' : ''}><div class="skeleton skeleton-text" style="width: ${60 + Math.random() * 40}%;"></div></td>`).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div id="trades-load-more" style="text-align: center; margin-top: 16px; display: none;">
+        <button onclick="loadMoreTrades()" style="background: var(--accent); color: white; border: none; padding: 8px 24px; border-radius: 6px; cursor: pointer; font-size: 13px;">Load More</button>
+      </div>
+    </div>
+  </div><!-- end tab-trades -->
 
   <div id="tab-changelog" class="tab-content${tabConfig.activeTab === 'changelog' ? ' active' : ''}">
     <div class="changelog-container">
@@ -2470,6 +2529,10 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     if (activeChangelogTab && !window.changelogLoaded) {
       loadChangelogContent();
     }
+    const activeTradesTab = document.querySelector('#tab-trades.active');
+    if (activeTradesTab && !window.tradesLoaded) {
+      loadTradesContent();
+    }
     // Time range selection
     document.querySelectorAll('.time-range-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -2830,6 +2893,119 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
         container.innerHTML = '<div class="changelog-error">Failed to load commits from GitHub</div>';
       }
     }
+
+    // ================================================================
+    // TRADES TAB
+    // ================================================================
+    let tradesOffset = 0;
+    const TRADES_PAGE_SIZE = 50;
+
+    async function loadTradesContent() {
+      try {
+        // Load analytics and trades in parallel
+        const [analyticsRes, tradesRes] = await Promise.all([
+          fetch('/api/analytics'),
+          fetch('/api/trades?limit=' + TRADES_PAGE_SIZE)
+        ]);
+        const analytics = await analyticsRes.json();
+        const trades = await tradesRes.json();
+
+        renderAnalyticsCards(analytics);
+        renderTokenPerformance(analytics);
+        renderTradesTable(trades, false);
+        tradesOffset = trades.length;
+        if (trades.length >= TRADES_PAGE_SIZE) {
+          document.getElementById('trades-load-more').style.display = 'block';
+        }
+        window.tradesLoaded = true;
+      } catch (err) {
+        console.error('Failed to load trades:', err);
+      }
+    }
+
+    function renderAnalyticsCards(a) {
+      if (!a || !a.summary) return;
+      const s = a.summary;
+      const exitReasons = a.exitReasons || {};
+      const cards = document.getElementById('trades-analytics');
+      cards.innerHTML = [
+        makeCard('Total Trades', s.totalTrades, ''),
+        makeCard('Win Rate', (s.winRate * 100).toFixed(1) + '%', s.winRate > 0.3 ? 'green' : s.winRate > 0.2 ? '' : 'red'),
+        makeCard('Net PnL', '$' + s.avgPnl.toFixed(4) + '/trade', s.avgPnl > 0 ? 'green' : 'red'),
+        makeCard('Avg Hold', s.avgHoldTimeMin.toFixed(1) + ' min', ''),
+        makeCard('Profit Factor', s.profitFactor ? s.profitFactor.toFixed(2) : 'N/A', s.profitFactor > 1 ? 'green' : 'red'),
+      ].join('');
+      document.getElementById('trades-analytics-summary').textContent =
+        'Exit reasons: ' + Object.entries(exitReasons).map(([k,v]) => k + ': ' + v).join(', ');
+    }
+
+    function makeCard(label, value, color) {
+      const colorStyle = color === 'green' ? 'color: #4ecb71;' : color === 'red' ? 'color: #ff6b6b;' : 'color: var(--text);';
+      return '<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">' +
+        '<div style="color: var(--text-dim); font-size: 12px; margin-bottom: 4px;">' + label + '</div>' +
+        '<div style="font-size: 20px; font-weight: 600; ' + colorStyle + '">' + value + '</div>' +
+      '</div>';
+    }
+
+    function renderTokenPerformance(a) {
+      if (!a || !a.byToken) return;
+      const container = document.getElementById('token-performance');
+      const tokens = Object.entries(a.byToken).sort((x, y) => y[1].totalPnl - x[1].totalPnl);
+      if (tokens.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-dim);">No token data yet</p>';
+        return;
+      }
+      let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">';
+      for (const [token, data] of tokens) {
+        const pnlColor = data.totalPnl > 0 ? '#4ecb71' : data.totalPnl < 0 ? '#ff6b6b' : 'var(--text-dim)';
+        html += '<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px;">' +
+          '<div style="font-weight: 600; color: var(--text); margin-bottom: 6px;">' + escapeHtml(token) + '</div>' +
+          '<div style="font-size: 12px; color: var(--text-dim);">' +
+            data.trades + ' trades · ' + (data.winRate * 100).toFixed(0) + '% WR' +
+          '</div>' +
+          '<div style="font-size: 14px; color: ' + pnlColor + '; margin-top: 4px;">$' + data.totalPnl.toFixed(4) + '</div>' +
+        '</div>';
+      }
+      html += '</div>';
+      container.innerHTML = '<h3 style="color: var(--text); margin-bottom: 12px; font-size: 16px;">Per-Token Performance</h3>' + html;
+    }
+
+    function renderTradesTable(trades, append) {
+      const tbody = document.getElementById('trades-tbody');
+      if (!append) tbody.innerHTML = '';
+      for (const t of trades) {
+        const pnlColor = t.pnlUsd > 0 ? '#4ecb71' : t.pnlUsd < 0 ? '#ff6b6b' : 'var(--text-dim)';
+        const holdMin = (t.holdTimeMs / 60000).toFixed(1);
+        const exitTime = new Date(Number(t.exitTimestamp)).toLocaleString();
+        const reason = (t.exitReason || '').replace(/_/g, ' ');
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid var(--border)';
+        row.innerHTML =
+          '<td style="padding: 8px; color: var(--text);">' + escapeHtml(t.ticker || t.symbol) + '</td>' +
+          '<td style="padding: 8px; text-align: right; color: var(--text);">' + (t.entryDiscount || 0).toFixed(2) + '%</td>' +
+          '<td style="padding: 8px; text-align: right; color: var(--text);">' + (t.exitDiscount || 0).toFixed(2) + '%</td>' +
+          '<td style="padding: 8px; text-align: right; color: ' + pnlColor + ';">$' + (t.pnlUsd || 0).toFixed(4) + '</td>' +
+          '<td style="padding: 8px; text-align: right; color: var(--text);">' + holdMin + 'm</td>' +
+          '<td style="padding: 8px; color: var(--text-dim);">' + reason + '</td>' +
+          '<td style="padding: 8px; text-align: right; color: var(--text);" class="desktop-only">$' + (t.sizeUsd || 0).toFixed(2) + '</td>' +
+          '<td style="padding: 8px; text-align: right; color: var(--text-dim);" class="desktop-only">' + exitTime + '</td>';
+        tbody.appendChild(row);
+      }
+    }
+
+    window.loadMoreTrades = async function() {
+      try {
+        const res = await fetch('/api/trades?limit=' + TRADES_PAGE_SIZE + '&offset=' + tradesOffset);
+        const trades = await res.json();
+        renderTradesTable(trades, true);
+        tradesOffset += trades.length;
+        if (trades.length < TRADES_PAGE_SIZE) {
+          document.getElementById('trades-load-more').style.display = 'none';
+        }
+      } catch (err) {
+        console.error('Failed to load more trades:', err);
+      }
+    };
 
     // Escape HTML for safe display
     function escapeHtml(text) {

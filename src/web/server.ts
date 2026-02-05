@@ -8,7 +8,7 @@ import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
 import { getDatabase } from '../db';
-import { fetchHeatmapSummary, fetchDiscountHeatmapFromSupabase, fetchRecentClosedPositions, fetchStatsFromSupabase, fetchPnlHistoryFromSupabase } from '../db/supabaseClient';
+import { fetchHeatmapSummary, fetchDiscountHeatmapFromSupabase, fetchRecentClosedPositions, fetchClosedPositions, fetchStatsFromSupabase, fetchPnlHistoryFromSupabase } from '../db/supabaseClient';
 import { getRiskManager } from '../risk';
 import { getConfigSync } from '../config';
 import { getAllThresholds, getExitThreshold, getTokenFeeRate, getEntryThreshold } from '../liquidity/liquidityChecker';
@@ -1002,6 +1002,250 @@ app.get('/api/heatmap', async (req: Request, res: Response) => {
   }
 });
 
+// Cache for trades endpoint (30s TTL)
+const tradesCache: Map<string, { data: unknown; timestamp: number }> = new Map();
+const TRADES_CACHE_MS = 30 * 1000; // 30 seconds
+
+// Cache for analytics endpoint (60s TTL)
+const analyticsCache: Map<string, { data: unknown; timestamp: number }> = new Map();
+const ANALYTICS_CACHE_MS = 60 * 1000; // 60 seconds
+
+// GET /api/trades - Trade history endpoint
+app.get('/api/trades', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const token = req.query.token as string;
+    const since = req.query.since ? Number(req.query.since) : undefined;
+    
+    const cacheKey = `${limit}-${token || 'all'}-${since || 'all'}`;
+    
+    // Check cache first
+    const cached = tradesCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < TRADES_CACHE_MS) {
+      return res.json(cached.data);
+    }
+
+    // Fetch positions with larger limit to filter afterwards
+    const positions = await fetchClosedPositions(limit * 2);
+    
+    // Filter by token if specified
+    let filteredPositions = positions;
+    if (token) {
+      filteredPositions = positions.filter(pos => 
+        pos.buy_symbol?.toLowerCase().includes(token.toLowerCase()) ||
+        pos.stock_ticker?.toLowerCase().includes(token.toLowerCase())
+      );
+    }
+    
+    // Filter by timestamp if specified
+    if (since) {
+      filteredPositions = filteredPositions.filter(pos => 
+        pos.exit_timestamp && pos.exit_timestamp >= since
+      );
+    }
+    
+    // Sort by exit_timestamp descending and apply offset/limit
+    filteredPositions.sort((a, b) => (b.exit_timestamp || 0) - (a.exit_timestamp || 0));
+    const offset = Number(req.query.offset) || 0;
+    filteredPositions = filteredPositions.slice(offset, offset + limit);
+    
+    // Format response with camelCase fields for frontend
+    const trades = filteredPositions.map(pos => ({
+      id: pos.id,
+      ticker: pos.stock_ticker,
+      symbol: pos.buy_symbol,
+      entryDiscount: pos.entry_spread_pct,
+      exitDiscount: pos.exit_spread_pct,
+      entryTimestamp: pos.entry_timestamp,
+      exitTimestamp: pos.exit_timestamp,
+      sizeUsd: pos.size_usd,
+      pnlUsd: pos.pnl_usd,
+      pnlPct: pos.pnl_pct,
+      holdTimeMs: pos.exit_timestamp && pos.entry_timestamp ? pos.exit_timestamp - pos.entry_timestamp : 0,
+      exitReason: pos.exit_reason,
+      entryTxSignature: pos.entry_tx_signature,
+    }));
+
+    // Cache the result
+    tradesCache.set(cacheKey, { data: trades, timestamp: Date.now() });
+
+    res.json(trades);
+  } catch (error) {
+    logger.error({ error }, 'Error fetching trades');
+    res.status(500).json({ error: 'Failed to fetch trades' });
+  }
+});
+
+// GET /api/analytics - Analytics endpoint
+app.get('/api/analytics', async (_req: Request, res: Response) => {
+  try {
+    const cacheKey = 'analytics-7d';
+    
+    // Check cache first
+    const cached = analyticsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < ANALYTICS_CACHE_MS) {
+      return res.json(cached.data);
+    }
+
+    // Fetch recent positions from last 7 days
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const positions = await fetchRecentClosedPositions(1000, sevenDaysMs);
+    
+    // Initialize analytics object
+    const analytics = {
+      byToken: {} as Record<string, { trades: number; wins: number; losses: number; winRate: number; totalPnl: number; avgPnl: number; avgHoldTime: number }>,
+      byHour: [] as { hour: number; trades: number; winRate: number; pnl: number }[],
+      byDay: [] as { date: string; trades: number; winRate: number; pnl: number }[],
+      exitReasons: { target: 0, max_hold: 0, stop_loss: 0, decay: 0 },
+      spreadDistribution: { buckets: [] as { range: string; count: number }[] },
+      summary: { totalTrades: 0, winRate: 0, avgPnl: 0, avgHoldTimeMin: 0, profitFactor: 0 }
+    };
+
+    if (positions.length === 0) {
+      analyticsCache.set(cacheKey, { data: analytics, timestamp: Date.now() });
+      return res.json(analytics);
+    }
+
+    // Process by token
+    const tokenStats: Record<string, { trades: number; wins: number; totalPnl: number; totalHoldTime: number }> = {};
+    positions.forEach(pos => {
+      const token = pos.buy_symbol || pos.stock_ticker || 'unknown';
+      if (!tokenStats[token]) {
+        tokenStats[token] = { trades: 0, wins: 0, totalPnl: 0, totalHoldTime: 0 };
+      }
+      const holdTimeMs = pos.exit_timestamp && pos.entry_timestamp ? pos.exit_timestamp - pos.entry_timestamp : 0;
+      tokenStats[token].trades++;
+      if ((pos.pnl_usd || 0) > 0) tokenStats[token].wins++;
+      tokenStats[token].totalPnl += pos.pnl_usd || 0;
+      tokenStats[token].totalHoldTime += holdTimeMs;
+    });
+
+    for (const [token, stats] of Object.entries(tokenStats)) {
+      analytics.byToken[token] = {
+        trades: stats.trades,
+        wins: stats.wins,
+        losses: stats.trades - stats.wins,
+        winRate: stats.trades > 0 ? stats.wins / stats.trades : 0,
+        totalPnl: stats.totalPnl,
+        avgPnl: stats.trades > 0 ? stats.totalPnl / stats.trades : 0,
+        avgHoldTime: stats.trades > 0 ? stats.totalHoldTime / stats.trades : 0
+      };
+    }
+
+    // Process by hour (24 hour buckets)
+    const hourStats: Record<number, { trades: number; wins: number; totalPnl: number }> = {};
+    for (let i = 0; i < 24; i++) hourStats[i] = { trades: 0, wins: 0, totalPnl: 0 };
+    
+    positions.forEach(pos => {
+      if (pos.exit_timestamp) {
+        const hour = new Date(pos.exit_timestamp).getHours();
+        hourStats[hour].trades++;
+        if ((pos.pnl_usd || 0) > 0) hourStats[hour].wins++;
+        hourStats[hour].totalPnl += pos.pnl_usd || 0;
+      }
+    });
+
+    for (let i = 0; i < 24; i++) {
+      const stats = hourStats[i];
+      analytics.byHour.push({
+        hour: i,
+        trades: stats.trades,
+        winRate: stats.trades > 0 ? stats.wins / stats.trades : 0,
+        pnl: stats.totalPnl
+      });
+    }
+
+    // Process by day (last 7 days)
+    const dayStats: Record<string, { trades: number; wins: number; totalPnl: number }> = {};
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      dayStats[dateStr] = { trades: 0, wins: 0, totalPnl: 0 };
+    }
+
+    positions.forEach(pos => {
+      if (pos.exit_timestamp) {
+        const dateStr = new Date(pos.exit_timestamp).toISOString().split('T')[0];
+        if (dayStats[dateStr]) {
+          dayStats[dateStr].trades++;
+          if ((pos.pnl_usd || 0) > 0) dayStats[dateStr].wins++;
+          dayStats[dateStr].totalPnl += pos.pnl_usd || 0;
+        }
+      }
+    });
+
+    for (const [date, stats] of Object.entries(dayStats)) {
+      analytics.byDay.push({
+        date,
+        trades: stats.trades,
+        winRate: stats.trades > 0 ? stats.wins / stats.trades : 0,
+        pnl: stats.totalPnl
+      });
+    }
+    analytics.byDay.sort((a, b) => a.date.localeCompare(b.date));
+
+    // Exit reasons
+    positions.forEach(pos => {
+      const reason = pos.exit_reason;
+      if (reason === 'target') analytics.exitReasons.target++;
+      else if (reason === 'max_hold') analytics.exitReasons.max_hold++;
+      else if (reason === 'stop_loss') analytics.exitReasons.stop_loss++;
+      else if (reason === 'decay') analytics.exitReasons.decay++;
+    });
+
+    // Spread distribution
+    const spreadBuckets = [
+      { range: "0-1%", min: 0, max: 1 },
+      { range: "1-2%", min: 1, max: 2 },
+      { range: "2-3%", min: 2, max: 3 },
+      { range: "3-5%", min: 3, max: 5 },
+      { range: "5%+", min: 5, max: 100 }
+    ];
+    
+    const bucketCounts = spreadBuckets.map(bucket => ({ range: bucket.range, count: 0 }));
+    positions.forEach(pos => {
+      const entryDiscount = Math.abs(pos.entry_spread_pct || 0);
+      for (let i = 0; i < spreadBuckets.length; i++) {
+        const bucket = spreadBuckets[i];
+        if (entryDiscount >= bucket.min && entryDiscount < bucket.max) {
+          bucketCounts[i].count++;
+          break;
+        }
+      }
+    });
+    analytics.spreadDistribution.buckets = bucketCounts;
+
+    // Summary
+    const totalTrades = positions.length;
+    const totalWins = positions.filter(pos => (pos.pnl_usd || 0) > 0).length;
+    const totalPnl = positions.reduce((sum, pos) => sum + (pos.pnl_usd || 0), 0);
+    const totalHoldTime = positions.reduce((sum, pos) => {
+      const ht = pos.exit_timestamp && pos.entry_timestamp ? pos.exit_timestamp - pos.entry_timestamp : 0;
+      return sum + ht;
+    }, 0);
+    const winningPnl = positions.filter(pos => (pos.pnl_usd || 0) > 0).reduce((sum, pos) => sum + (pos.pnl_usd || 0), 0);
+    const losingPnl = Math.abs(positions.filter(pos => (pos.pnl_usd || 0) <= 0).reduce((sum, pos) => sum + (pos.pnl_usd || 0), 0));
+
+    analytics.summary = {
+      totalTrades,
+      winRate: totalTrades > 0 ? totalWins / totalTrades : 0,
+      avgPnl: totalTrades > 0 ? totalPnl / totalTrades : 0,
+      avgHoldTimeMin: totalTrades > 0 ? totalHoldTime / totalTrades / (1000 * 60) : 0,
+      profitFactor: losingPnl > 0 ? winningPnl / losingPnl : (winningPnl > 0 ? 999 : 0)
+    };
+
+    // Cache the result
+    analyticsCache.set(cacheKey, { data: analytics, timestamp: Date.now() });
+
+    res.json(analytics);
+  } catch (error) {
+    logger.error({ error }, 'Error computing analytics');
+    res.status(500).json({ error: 'Failed to compute analytics' });
+  }
+});
+
 // Serve static HTML dashboard with tab-specific routes
 app.get('/', (_req: Request, res: Response) => {
   res.send(getDashboardHTML('dashboard'));
@@ -1013,6 +1257,10 @@ app.get('/heatmap', (_req: Request, res: Response) => {
 
 app.get('/method', (_req: Request, res: Response) => {
   res.send(getDashboardHTML('method'));
+});
+
+app.get('/trades', (_req: Request, res: Response) => {
+  res.send(getDashboardHTML('trades'));
 });
 
 app.get('/changelog', (_req: Request, res: Response) => {
