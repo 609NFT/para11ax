@@ -2520,6 +2520,10 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     // Update timers every second
     setInterval(updateWatchlistTimers, 1000);
 
+    // Trades tab variables (must be before loadTradesContent call)
+    let tradesOffset = 0;
+    const TRADES_PAGE_SIZE = 50;
+
     // Load content for active tab on page load
     const activeBlogTab = document.querySelector('#tab-blog.active');
     if (activeBlogTab && !window.blogLoaded) {
@@ -2897,8 +2901,6 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     // ================================================================
     // TRADES TAB
     // ================================================================
-    let tradesOffset = 0;
-    const TRADES_PAGE_SIZE = 50;
 
     async function loadTradesContent() {
       try {
