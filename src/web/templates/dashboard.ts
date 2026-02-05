@@ -1520,15 +1520,25 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
 
       <!-- Trade Table -->
       <div style="overflow-x: auto;">
-        <table id="trades-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <table id="trades-table" style="width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed;">
+          <colgroup>
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            <col style="width: 10%;">
+            <col style="width: 12%;">
+            <col style="width: 10%;">
+            <col style="width: 22%;">
+            <col style="width: 10%;" class="desktop-only">
+            <col style="width: 16%;" class="desktop-only">
+          </colgroup>
           <thead>
             <tr style="border-bottom: 1px solid var(--border); color: var(--text-dim);">
               <th style="padding: 8px; text-align: left;">Token</th>
               <th style="padding: 8px; text-align: right;">Entry %</th>
               <th style="padding: 8px; text-align: right;">Exit %</th>
               <th style="padding: 8px; text-align: right;">PnL</th>
-              <th style="padding: 8px; text-align: right;">Hold Time</th>
-              <th style="padding: 8px; text-align: left;">Exit Reason</th>
+              <th style="padding: 8px; text-align: right;">Hold</th>
+              <th style="padding: 8px; text-align: left; overflow: hidden; text-overflow: ellipsis;">Reason</th>
               <th style="padding: 8px; text-align: right;" class="desktop-only">Size</th>
               <th style="padding: 8px; text-align: right;" class="desktop-only">Time</th>
             </tr>
@@ -2988,7 +2998,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
           '<td style="padding: 8px; text-align: right; color: var(--text);">' + (t.exitDiscount || 0).toFixed(2) + '%</td>' +
           '<td style="padding: 8px; text-align: right; color: ' + pnlColor + ';">$' + (t.pnlUsd || 0).toFixed(4) + '</td>' +
           '<td style="padding: 8px; text-align: right; color: var(--text);">' + holdMin + 'm</td>' +
-          '<td style="padding: 8px; color: var(--text-dim);">' + reason + '</td>' +
+          '<td style="padding: 8px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="' + reason + '">' + reason + '</td>' +
           '<td style="padding: 8px; text-align: right; color: var(--text);" class="desktop-only">$' + (t.sizeUsd || 0).toFixed(2) + '</td>' +
           '<td style="padding: 8px; text-align: right; color: var(--text-dim);" class="desktop-only">' + exitTime + '</td>';
         tbody.appendChild(row);
