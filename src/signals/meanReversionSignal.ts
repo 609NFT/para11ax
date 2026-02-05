@@ -45,6 +45,7 @@ import {
   EXIT_THRESHOLD_DECAY_END_MS,
   MIN_EXIT_THRESHOLD_PCT,
   LENIENT_EXIT_MAX_STALE_MS,
+  SPREAD_WIDENING_STOP_PCT,
 } from '../constants';
 import { getDynamicStopLossPct, getVolatilityPositionMultiplier, getVolatilityEntryMultiplier } from '../feeds/volatilityFeed';
 
@@ -1859,7 +1860,31 @@ export class MeanReversionSignalGenerator {
       }, 'Discount stop-loss condition met but in grace period');
     }
 
-    // 5. Max hold time - flat 24 hours
+    // 5a. Spread-widening stop — exit if spread has widened significantly from entry
+    // Data (7d): trades where spread widened >1.5% from entry had 0% win rate.
+    const spreadWidening = currentDiscount - position.entrySpreadPct;
+    if (spreadWidening >= SPREAD_WIDENING_STOP_PCT && holdTimeMs >= MIN_HOLD_TIME_MS) {
+      signalLogger.info({
+        ticker: position.stockTicker,
+        token: position.buySymbol,
+        entrySpread: position.entrySpreadPct.toFixed(2),
+        currentSpread: currentDiscount.toFixed(2),
+        spreadWidening: spreadWidening.toFixed(2),
+        holdTimeMin: (holdTimeMs / 60000).toFixed(1),
+        threshold: SPREAD_WIDENING_STOP_PCT,
+      }, 'Spread-widening stop triggered - spread diverging from entry, cutting losses');
+      this.trailingStops.delete(position.id);
+      return {
+        shouldExit: true,
+        reason: 'spread_widening_stop',
+        currentSpreadPct,
+        spread,
+        preferredRoute: exitPreferredRoute,
+        expectedExitUsd: bestQuoteUsd,
+      };
+    }
+
+    // 5b. Max hold time - 60 minutes
     if (holdTimeMs > MAX_HOLD_TIME_MS) {
       signalLogger.info({
         ticker: position.stockTicker,
@@ -1867,8 +1892,8 @@ export class MeanReversionSignalGenerator {
         entryTokenPrice: entryTokenPrice.toFixed(2),
         currentTokenPrice: currentTokenPrice.toFixed(2),
         tokenAppreciationPct: tokenAppreciationPct.toFixed(2),
-        holdTimeHours: (holdTimeMs / (60 * 60 * 1000)).toFixed(1),
-        maxHoldHours: 24,
+        holdTimeMin: (holdTimeMs / 60000).toFixed(1),
+        maxHoldMin: (MAX_HOLD_TIME_MS / 60000).toFixed(0),
       }, 'Max hold time reached - exiting at current price');
       this.trailingStops.delete(position.id); // Clean up trailing state
       return {

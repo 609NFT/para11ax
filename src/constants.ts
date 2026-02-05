@@ -134,10 +134,11 @@ export const MIN_TVL_FOR_TRADING = 50_000;
 // HOLD TIME CONSTANTS
 // ============================================================================
 
-/** Max hold time - 4 hours
- *  Backtest (14d, 27K pts): 1h = -$9 (catastrophic), 2h = breakeven, 4h = +$5-6.
- *  4h gives best balance of trade volume (78 trades) and win rate (42%). */
-export const MAX_HOLD_TIME_MS = 4 * 60 * 60 * 1000;
+/** Max hold time - 60 minutes
+ *  Data (7d, 494 trades): 4%+ entries held >2hr = 0% win rate, -$1.79 total.
+ *  Sweet spot is 15-30min (64% WR). After 60min, losses accelerate.
+ *  Changed 2026-02-05 from 4h based on real trade data. */
+export const MAX_HOLD_TIME_MS = 60 * 60 * 1000;
 
 /** Minimum time to hold before allowing exit (prevents quick flips) */
 export const MIN_HOLD_TIME_MS = 5 * 60 * 1000; // 5 minutes — data shows <5min exits have 10% WR vs 33% for 5-15min
@@ -146,19 +147,31 @@ export const MIN_HOLD_TIME_MS = 5 * 60 * 1000; // 5 minutes — data shows <5min
 // TIME-DECAYING EXIT THRESHOLD
 // ============================================================================
 // After DECAY_START, exit threshold linearly decays from full value to MIN_EXIT
-// This frees up capital faster while still ensuring profit
+// With 60min max hold, decay starts at 30min and ends at 50min.
+// Changed 2026-02-05: shortened proportionally with max hold (was 2h/3.5h for 4h hold).
 
-/** Time before exit threshold starts decaying (2 hours)
- *  With 4h max hold, begin decay at 50% mark to free capital if spread isn't closing. */
-export const EXIT_THRESHOLD_DECAY_START_MS = 2 * 60 * 60 * 1000;
+/** Time before exit threshold starts decaying (30 minutes) */
+export const EXIT_THRESHOLD_DECAY_START_MS = 30 * 60 * 1000;
 
-/** Time when exit threshold reaches minimum (3.5 hours) */
-export const EXIT_THRESHOLD_DECAY_END_MS = 3.5 * 60 * 60 * 1000;
+/** Time when exit threshold reaches minimum (50 minutes) */
+export const EXIT_THRESHOLD_DECAY_END_MS = 50 * 60 * 1000;
 
 /** Minimum exit threshold after time decay (1.0%)
  *  Even at max decay, don't exit unless we capture at least 1% spread.
  *  Backtest: exits below 1.5% have lower P&L. This ensures profit after fees. */
 export const MIN_EXIT_THRESHOLD_PCT = 1.0;
+
+// ============================================================================
+// SPREAD-WIDENING STOP
+// ============================================================================
+// If the spread widens significantly from entry, exit immediately.
+// Data (7d): trades where spread widened >1.5% from entry had 0% win rate.
+// This prevents holding losers until max_hold when the spread is clearly diverging.
+// Added 2026-02-05 based on analysis of max_hold exits (all showed spread widening).
+
+/** Maximum spread widening from entry before forced exit (1.5%)
+ *  e.g., enter at 4% discount, if spread widens to 5.5%, exit immediately. */
+export const SPREAD_WIDENING_STOP_PCT = 1.5;
 
 // ============================================================================
 // SAFETY THRESHOLDS
