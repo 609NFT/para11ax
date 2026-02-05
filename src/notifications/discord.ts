@@ -106,3 +106,59 @@ export async function notifyCircuitBreaker(losses: number, amount: number): Prom
 export async function notifyError(context: string, error: string): Promise<void> {
   await sendDiscordMessage(`⚠️ **Error** | ${context}: ${error}`);
 }
+
+/**
+ * Short position notification
+ */
+interface ShortNotification {
+  ticker: string;
+  flashSymbol: string;
+  premiumPct: number;
+  collateralUsd: number;
+  leverage: number;
+  pnlUsd?: number;
+  exitReason?: string;
+  txSignature?: string;
+}
+
+/**
+ * Notify on short entry
+ */
+export async function notifyShortEntry(trade: ShortNotification): Promise<void> {
+  const solscanLink = trade.txSignature 
+    ? `[tx](https://solscan.io/tx/${trade.txSignature})`
+    : '';
+  
+  const message = [
+    `📉 **SHORT ENTRY** | ${trade.ticker}`,
+    `Premium: ${trade.premiumPct.toFixed(2)}%`,
+    `Collateral: $${trade.collateralUsd.toFixed(2)}`,
+    `Leverage: ${trade.leverage}x`,
+    solscanLink,
+  ].filter(Boolean).join(' • ');
+
+  await sendDiscordMessage(message);
+}
+
+/**
+ * Notify on short exit
+ */
+export async function notifyShortExit(trade: ShortNotification): Promise<void> {
+  const pnlEmoji = (trade.pnlUsd ?? 0) >= 0 ? '🟢' : '🔴';
+  const pnlStr = trade.pnlUsd !== undefined 
+    ? `${trade.pnlUsd >= 0 ? '+' : ''}$${trade.pnlUsd.toFixed(3)}`
+    : 'n/a';
+  
+  const solscanLink = trade.txSignature 
+    ? `[tx](https://solscan.io/tx/${trade.txSignature})`
+    : '';
+
+  const message = [
+    `${pnlEmoji} **SHORT EXIT** | ${trade.ticker}`,
+    `P&L: ${pnlStr}`,
+    `Reason: ${trade.exitReason || 'target'}`,
+    solscanLink,
+  ].filter(Boolean).join(' • ');
+
+  await sendDiscordMessage(message);
+}

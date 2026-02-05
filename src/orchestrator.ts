@@ -53,7 +53,7 @@ import {
 } from './constants';
 import { startWebServer, stopWebServer } from './web/server';
 import { prewarmInternalVolatility, refreshNextVolatility } from './feeds/volatilityFeed';
-import { notifyEntry, notifyExit, notifyStartup, notifyCircuitBreaker } from './notifications/discord';
+import { notifyEntry, notifyExit, notifyStartup, notifyCircuitBreaker, notifyShortEntry, notifyShortExit } from './notifications/discord';
 
 export class Orchestrator {
   private running: boolean = false;
@@ -979,6 +979,16 @@ export class Orchestrator {
 
       saveShortPosition(position);
 
+      // Send Discord notification
+      notifyShortEntry({
+        ticker: signal.ticker,
+        flashSymbol: signal.flashSymbol,
+        premiumPct: -signal.premiumPct, // Make positive for display
+        collateralUsd: signal.suggestedCollateralUsd,
+        leverage: signal.leverage,
+        txSignature,
+      }).catch(() => {});
+
       executionLogger.info({
         positionId: position.id,
         ticker: signal.ticker,
@@ -1150,6 +1160,18 @@ export class Orchestrator {
       };
 
       saveShortPosition(closedPosition);
+
+      // Send Discord notification
+      notifyShortExit({
+        ticker: position.ticker,
+        flashSymbol: position.flashSymbol,
+        premiumPct: currentPremiumPct,
+        collateralUsd: position.collateralUsd,
+        leverage: position.leverage,
+        pnlUsd,
+        exitReason: finalExitReason,
+        txSignature,
+      }).catch(() => {});
 
       executionLogger.info({
         positionId: position.id,
