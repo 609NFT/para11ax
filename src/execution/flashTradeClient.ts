@@ -189,28 +189,48 @@ export function isShortingEnabled(): boolean {
 /**
  * Initialize the Flash Trade client
  */
+// Track initialization state to prevent position_missing false positives during startup
+let flashInitState: 'pending' | 'success' | 'failed' = 'pending';
+
+export function getFlashInitState(): 'pending' | 'success' | 'failed' {
+  return flashInitState;
+}
+
+// Helper: wrap a promise with timeout
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]);
+}
+
 export async function initializeFlashClient(): Promise<boolean> {
+  // Mark as pending at start
+  flashInitState = 'pending';
+  
   // Check if shorting is enabled
   if (!isShortingEnabled()) {
     logger.info('Flash Trade shorting is disabled (ENABLE_SHORTING != true)');
+    flashInitState = 'failed'; // Not really failed, but not available
     return false;
   }
 
   try {
-    // DEBUG: Log that we're starting init
     console.log('[FLASH] Starting Flash Trade initialization...');
     logger.info('[FLASH] Starting Flash Trade initialization...');
     
     const config = getConfigSync();
-    console.log('[FLASH] Config loaded, RPC:', config.rpcEndpoint?.slice(0, 50));
+    console.log('[FLASH] Step 1/6: Config loaded, RPC:', config.rpcEndpoint?.slice(0, 50));
 
     // Load wallet from private key
     const privateKeyString = process.env.SOLANA_PRIVATE_KEY;
     if (!privateKeyString) {
       logger.warn('SOLANA_PRIVATE_KEY not set - Flash Trade client disabled');
+      flashInitState = 'failed';
       return false;
     }
 
+    console.log('[FLASH] Step 2/6: Parsing wallet key...');
     // Parse private key (supports both array and base58 formats)
     let keypair: Keypair;
     try {
@@ -224,9 +244,12 @@ export async function initializeFlashClient(): Promise<boolean> {
       }
     } catch (e) {
       logger.error({ error: e }, 'Failed to parse SOLANA_PRIVATE_KEY');
+      flashInitState = 'failed';
       return false;
     }
+    console.log('[FLASH] Step 2/6: Wallet loaded:', keypair.publicKey.toBase58().slice(0, 10) + '...');
 
+    console.log('[FLASH] Step 3/6: Creating connection and provider...');
     // Create connection and provider
     const connection = new Connection(config.rpcEndpoint, {
       commitment: 'confirmed',
@@ -238,9 +261,12 @@ export async function initializeFlashClient(): Promise<boolean> {
       preflightCommitment: 'confirmed',
     });
 
+    console.log('[FLASH] Step 4/6: Loading pool config...');
     // Load Remora pool config
     poolConfig = PoolConfig.fromIdsByName(POOL_NAME, CLUSTER);
+    console.log('[FLASH] Step 4/6: Pool config loaded, programId:', poolConfig.programId.toBase58().slice(0, 10) + '...');
 
+    console.log('[FLASH] Step 5/6: Creating PerpetualsClient...');
     // Create the client
     // useExtOracleAccount = false: program validates oracle account against
     // custody's intOracleAccount (updated by Flash Trade keepers)
@@ -254,9 +280,16 @@ export async function initializeFlashClient(): Promise<boolean> {
         prioritizationFee: 50000, // 50k microlamports
       },
     );
+    console.log('[FLASH] Step 5/6: PerpetualsClient created');
 
-    // Load address lookup tables for efficient transactions
-    await flashClient.loadAddressLookupTable(poolConfig);
+    console.log('[FLASH] Step 6/6: Loading address lookup tables (30s timeout)...');
+    // Load address lookup tables for efficient transactions (with timeout)
+    await withTimeout(
+      flashClient.loadAddressLookupTable(poolConfig),
+      30000,
+      'loadAddressLookupTable'
+    );
+    console.log('[FLASH] Step 6/6: Address lookup tables loaded');
 
     // Discover available short markets from pool config
     discoverShortMarkets();
@@ -267,17 +300,20 @@ export async function initializeFlashClient(): Promise<boolean> {
       wallet: wallet.publicKey.toBase58(),
       availableRStockMarkets: Array.from(availableShortSymbols),
     }, 'Flash Trade client initialized');
-
+    
+    console.log('[FLASH] ✅ Initialization complete!');
+    flashInitState = 'success';
     return true;
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     const errStack = error instanceof Error ? error.stack : '';
-    console.error('[FLASH] ERROR:', errMsg);
+    console.error('[FLASH] ❌ ERROR:', errMsg);
     console.error('[FLASH] Stack:', errStack?.slice(0, 500));
     logger.error({
       error: errMsg,
       stack: errStack?.slice(0, 500),
     }, 'Failed to initialize Flash Trade client');
+    flashInitState = 'failed';
     return false;
   }
 }

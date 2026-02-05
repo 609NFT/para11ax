@@ -30,6 +30,7 @@ import {
   getTickerFromFlashSymbol,
   isFlashTradeAvailable,
   getOraclePrice,
+  getFlashInitState,
 } from './execution/flashTradeClient';
 import { getDatabase } from './db';
 import { initializeShortThresholds } from './signals/shortThresholdCalc';
@@ -1046,6 +1047,18 @@ export class Orchestrator {
 
       // Only execute on Flash Trade in live mode
       if (config.mode === 'live') {
+        // CRITICAL: Don't check on-chain positions while Flash Trade is still initializing
+        // This prevents false "position_missing" during startup
+        const flashState = getFlashInitState();
+        if (flashState === 'pending') {
+          executionLogger.warn({
+            positionId: position.id,
+            ticker: position.ticker,
+            flashState,
+          }, 'Flash Trade still initializing - skipping short exit check to prevent false position_missing');
+          return; // Skip this exit check entirely, will retry next loop
+        }
+        
         // First, verify the position still exists on-chain
         // This handles cases where the position was liquidated, manually closed, or never opened
         const onChainPositions = await getOpenPerpPositions();
@@ -1054,6 +1067,15 @@ export class Orchestrator {
         );
 
         if (!onChainPosition) {
+          // Double-check Flash Trade is actually available before marking as missing
+          if (!isFlashTradeAvailable()) {
+            executionLogger.warn({
+              positionId: position.id,
+              ticker: position.ticker,
+            }, 'Flash Trade not available - skipping position check to prevent false position_missing');
+            return; // Skip, will retry when Flash Trade is available
+          }
+          
           executionLogger.warn({
             positionId: position.id,
             ticker: position.ticker,
