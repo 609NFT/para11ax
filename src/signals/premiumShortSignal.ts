@@ -485,6 +485,19 @@ export async function evaluatePremiumSignal(spread: PairSpread): Promise<Premium
   };
 }
 
+// ============================================================================
+// RELATIVE EXIT THRESHOLDS
+// ============================================================================
+// Exit thresholds are computed relative to ENTRY premium, not absolute values.
+// This allows entering at any premium level without immediate stop-loss.
+//
+// Example: Entry at -4.25% premium
+//   - Profit target (60% retracement): -4.25% * 0.4 = -1.7%
+//   - Stop-loss (30% worsening): -4.25% * 1.3 = -5.525%
+// ============================================================================
+const SHORT_PROFIT_RETRACEMENT = 0.4;   // Exit when premium retraces to 40% of entry (60% profit captured)
+const SHORT_STOP_LOSS_MULTIPLIER = 1.3; // Stop if premium worsens by 30% from entry
+
 /**
  * Check if an open short position should be closed
  */
@@ -496,28 +509,40 @@ export function checkShortExit(position: ShortPosition, currentSpread: PairSprea
   const currentDiscount = currentSpread.tokenA.discountVsStock ?? 0;
   const currentPremiumPct = currentDiscount;
 
-  // Get dynamic thresholds for this symbol
-  const exitThreshold = getShortExitThreshold(position.ticker);
-  const stopLossThreshold = getShortStopLossThreshold(position.ticker);
+  // Calculate RELATIVE thresholds based on actual entry premium
+  // Entry premium is negative (e.g., -4.25% means 4.25% premium)
+  const entryPremium = position.entryPremiumPct;
+  
+  // Profit target: premium should retrace toward 0
+  // e.g., entry -4.25% * 0.4 = -1.7% (take profit when premium shrinks to 1.7%)
+  const profitTarget = entryPremium * SHORT_PROFIT_RETRACEMENT;
+  
+  // Stop-loss: premium worsens (becomes more negative)
+  // e.g., entry -4.25% * 1.3 = -5.525% (stop if premium expands to 5.5%)
+  const stopLoss = entryPremium * SHORT_STOP_LOSS_MULTIPLIER;
 
-  // 1. Profit target: premium collapsed
-  if (currentPremiumPct >= exitThreshold) {
+  // 1. Profit target: premium collapsed toward 0
+  // currentPremiumPct >= profitTarget means premium improved (less negative)
+  if (currentPremiumPct >= profitTarget) {
     signalLogger.info({
       ticker: position.ticker,
-      entryPremium: position.entryPremiumPct.toFixed(2),
+      entryPremium: entryPremium.toFixed(2),
       currentPremium: currentPremiumPct.toFixed(2),
-      exitThreshold: exitThreshold.toFixed(2),
+      profitTarget: profitTarget.toFixed(2),
+      retracementPct: SHORT_PROFIT_RETRACEMENT * 100,
     }, 'Short profit target reached - premium collapsed');
     return { shouldExit: true, reason: 'profit_target', currentPremiumPct };
   }
 
-  // 2. Stop-loss: premium expanded further
-  if (currentPremiumPct <= stopLossThreshold) {
+  // 2. Stop-loss: premium expanded (became more negative)
+  // currentPremiumPct <= stopLoss means premium worsened
+  if (currentPremiumPct <= stopLoss) {
     signalLogger.warn({
       ticker: position.ticker,
-      entryPremium: position.entryPremiumPct.toFixed(2),
+      entryPremium: entryPremium.toFixed(2),
       currentPremium: currentPremiumPct.toFixed(2),
-      stopLossThreshold: stopLossThreshold.toFixed(2),
+      stopLoss: stopLoss.toFixed(2),
+      worseningPct: (SHORT_STOP_LOSS_MULTIPLIER - 1) * 100,
     }, 'Short stop-loss triggered - premium expanded');
     return { shouldExit: true, reason: 'stop_loss', currentPremiumPct };
   }
