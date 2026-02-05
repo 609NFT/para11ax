@@ -958,36 +958,8 @@ export async function fetchTokensFromDb(): Promise<TokenConfig[]> {
   `);
 
   return result.rows.map((row) => {
-    // Use symbol directly from DB (e.g., AAPLx, SPYr, xSPY, rSPY, SPYON)
-    // Stock ticker: remove vendor prefix/suffix to get base ticker
-    // Stock tickers are uppercase, so lowercase letters are vendor prefixes/suffixes
-    let stockTicker = row.symbol;
-
-    // Handle known uppercase suffixes (e.g., Ondo's "ON" suffix: SPYON -> SPY)
-    const knownSuffixes = ['ON'];
-    for (const suffix of knownSuffixes) {
-      if (stockTicker.endsWith(suffix) && stockTicker.length > suffix.length) {
-        const base = stockTicker.slice(0, -suffix.length);
-        // Only strip if the base is all uppercase (valid ticker)
-        if (base === base.toUpperCase() && /^[A-Z]+$/.test(base)) {
-          stockTicker = base;
-          break;
-        }
-      }
-    }
-
-    // Handle lowercase suffix: AAPLx, SPYr, GOOGLz -> AAPL, SPY, GOOGL
-    const lastChar = stockTicker.slice(-1);
-    if (lastChar >= 'a' && lastChar <= 'z') {
-      stockTicker = stockTicker.slice(0, -1);
-    }
-    // Handle lowercase prefix: xSPY, rNVDA -> SPY, NVDA
-    else {
-      const firstChar = stockTicker.charAt(0);
-      if (firstChar >= 'a' && firstChar <= 'z') {
-        stockTicker = stockTicker.slice(1);
-      }
-    }
+    // Use the shared tokenSymbolToStockTicker function for consistent mapping
+    const stockTicker = tokenSymbolToStockTicker(row.symbol);
 
     return {
       symbol: row.symbol,
@@ -1198,28 +1170,64 @@ function getEmptyStats(): TradeStats {
 
 /**
  * Convert token symbol to stock ticker (e.g., TSLAx -> TSLA, rNVDA -> NVDA)
+ * 
+ * Strategy: explicit overrides first, then vendor suffix/prefix stripping.
+ * Validated against real stock tickers to avoid garbage like "INTCo".
  */
+
+// Explicit overrides for tokens that don't follow simple prefix/suffix rules
+const TICKER_OVERRIDES: Record<string, string> = {
+  'INTCon': 'INTC',    // Ondo format: INTC + "on" suffix
+  'Vx': 'V',           // Visa — single-letter ticker edge case
+  'BRK.Bx': 'BRK.B',  // Berkshire Hathaway — dot in ticker
+};
+
+// Known valid stock/ETF tickers for validation
+const KNOWN_TICKERS = new Set([
+  'AAPL', 'ABT', 'AMZN', 'AZN', 'BRK.B', 'COIN', 'CPER', 'CRCL',
+  'DFDV', 'GLD', 'GOOGL', 'HOOD', 'INTC', 'JNJ', 'KO', 'LIN',
+  'LLY', 'MCD', 'META', 'MSFT', 'MSTR', 'NFLX', 'NVDA', 'ORCL',
+  'PALL', 'PG', 'PPLT', 'QQQ', 'SLV', 'SPY', 'TQQQ', 'TSLA',
+  'UNH', 'V', 'XOM', 'AMBR',
+]);
+
 function tokenSymbolToStockTicker(symbol: string): string {
+  // 1. Check explicit overrides first
+  if (TICKER_OVERRIDES[symbol]) {
+    return TICKER_OVERRIDES[symbol];
+  }
+
   let stockTicker = symbol;
 
-  // Handle known uppercase suffixes (e.g., Ondo's "ON" suffix: SPYON -> SPY)
-  const knownSuffixes = ['ON'];
+  // 2. Handle known vendor suffixes (case-insensitive): "on", "ON" (Ondo format)
+  const knownSuffixes = ['on', 'ON'];
   for (const suffix of knownSuffixes) {
     if (stockTicker.endsWith(suffix) && stockTicker.length > suffix.length) {
       const base = stockTicker.slice(0, -suffix.length);
-      if (base === base.toUpperCase() && /^[A-Z]+$/.test(base)) {
-        return base;
+      if (/^[A-Z][A-Z.]+$/.test(base)) {
+        stockTicker = base;
+        if (KNOWN_TICKERS.has(stockTicker)) return stockTicker;
+        // If not known, continue to other stripping methods
       }
     }
   }
 
-  // Handle lowercase suffix: AAPLx, SPYr, GOOGLz -> AAPL, SPY, GOOGL
+  // 3. Handle lowercase suffix: AAPLx, SPYr, GOOGLz -> AAPL, SPY, GOOGL
   const lastChar = stockTicker.slice(-1);
   if (lastChar >= 'a' && lastChar <= 'z') {
-    return stockTicker.slice(0, -1);
+    const candidate = stockTicker.slice(0, -1);
+    if (KNOWN_TICKERS.has(candidate)) return candidate;
+    // If single lowercase suffix didn't work, try stripping more
+    // e.g., "INTCon" after failing "on" suffix -> "INTCo" -> strip "o" -> "INTC"
+    const lastChar2 = candidate.slice(-1);
+    if (lastChar2 >= 'a' && lastChar2 <= 'z') {
+      const candidate2 = candidate.slice(0, -1);
+      if (KNOWN_TICKERS.has(candidate2)) return candidate2;
+    }
+    return candidate; // Return best guess even if not in known list
   }
 
-  // Handle lowercase prefix: xSPY, rNVDA -> SPY, NVDA
+  // 4. Handle lowercase prefix: xSPY, rNVDA -> SPY, NVDA
   const firstChar = stockTicker.charAt(0);
   if (firstChar >= 'a' && firstChar <= 'z') {
     return stockTicker.slice(1);

@@ -1019,7 +1019,8 @@ export function getEntryThreshold(symbol: string): number {
   const tvlBasedThreshold = cached ? cached.entryThresholdPct : (config.meanReversionEntrySpreadPct ?? 1.5);
 
   // Get stock ticker from token symbol (e.g., 'xSPY' -> 'SPY', 'TSLAx' -> 'TSLA')
-  const stockTicker = symbol.replace(/^x/, '').replace(/[xr]$/, ''); // Strip x or r suffix
+  // Note: this is a rough mapping for liquidity lookup only; authoritative mapping is in supabaseClient.ts
+  const stockTicker = symbol.replace(/^[a-z]/, '').replace(/[a-z]+$/, ''); // Strip lowercase prefix/suffix
   
   // Check for historically profitable spread (algorithmic, data-driven)
   const historicalData = profitableSpreadCache.get(stockTicker);
