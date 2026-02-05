@@ -332,7 +332,7 @@ async function getDashboardData(timeRange: string = 'ALL') {
     const exitPremiumPct = Math.abs(premiumThresholds.exitPct);
     const premiumDropNeeded = entryPremiumPct - exitPremiumPct;
     const premiumDropAchieved = entryPremiumPct - currentPremiumPct;
-    const sizeUsd = p.collateralUsd * p.leverage;
+    const sizeUsd = p.collateralUsd; // Show actual capital invested, not leveraged notional
     let pnlPct = 0;
     if (currentOraclePrice && p.entryStockPrice > 0) {
       const priceChange = (p.entryStockPrice - currentOraclePrice) / p.entryStockPrice;
@@ -433,7 +433,7 @@ async function getDashboardData(timeRange: string = 'ALL') {
         mint: '', // No mint for shorts
         entryDiscount: Math.abs(p.entryPremiumPct), // Show as positive premium
         exitDiscount: Math.abs(p.exitPremiumPct || 0),
-        sizeUsd: p.collateralUsd * p.leverage,
+        sizeUsd: p.collateralUsd, // Actual capital invested, not leveraged notional
         pnlUsd: p.pnlUsd || 0,
         pnlPct: p.pnlPct || 0,
         exitReason: p.exitReason || 'unknown',
