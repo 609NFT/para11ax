@@ -11,6 +11,21 @@ import { signalLogger } from '../logger';
 import { getRaydiumClient, getJupiterClient } from './index';
 import { USDC_MINT } from '../constants';
 
+// Price impact scoring constants
+const PRICE_IMPACT_THRESHOLDS = {
+  EXCELLENT: 0.1,    // < 0.1% price impact
+  GOOD: 0.5,         // < 0.5% price impact
+  MODERATE: 1.0,     // < 1.0% price impact
+  HIGH: 2.0,         // > 2.0% price impact
+} as const;
+
+const PRICE_IMPACT_SCORES = {
+  EXCELLENT: 10,
+  GOOD: 5,
+  MODERATE_PENALTY: -10,
+  HIGH_PENALTY: -20,
+} as const;
+
 export interface OptimizedQuote {
   source: 'raydium' | 'jupiter';
   outputAmount: number;
@@ -96,10 +111,10 @@ function calculateExecutionScore(
 
   // Penalize high price impact
   if (priceImpact !== null) {
-    if (priceImpact < 0.1) score += 10;
-    else if (priceImpact < 0.5) score += 5;
-    else if (priceImpact > 2.0) score -= 20;
-    else if (priceImpact > 1.0) score -= 10;
+    if (priceImpact < PRICE_IMPACT_THRESHOLDS.EXCELLENT) score += PRICE_IMPACT_SCORES.EXCELLENT;
+    else if (priceImpact < PRICE_IMPACT_THRESHOLDS.GOOD) score += PRICE_IMPACT_SCORES.GOOD;
+    else if (priceImpact > PRICE_IMPACT_THRESHOLDS.HIGH) score += PRICE_IMPACT_SCORES.HIGH_PENALTY;
+    else if (priceImpact > PRICE_IMPACT_THRESHOLDS.MODERATE) score += PRICE_IMPACT_SCORES.MODERATE_PENALTY;
   }
 
   // High TVL pools are more reliable
