@@ -18,7 +18,7 @@ import {
 import { signalLogger } from '../logger';
 import { getConfigSync } from '../config';
 import { getOnchainFeed, getStockFeed } from '../feeds';
-import { getEntryThreshold, getExitThreshold, getPositionSize, isTokenEnabledByLiquidity, isTokenEnabledForSpread, getTokenTVL, getSwapRouting } from '../liquidity/liquidityChecker';
+import { getEntryThreshold, getExitThreshold, getAdaptivePositionSize, isTokenEnabledByLiquidity, isTokenEnabledForSpread, getTokenTVL, getSwapRouting } from '../liquidity/liquidityChecker';
 import { isEquityMarketOpen } from '../execution/flashTradeClient';
 import { fetchBatchDexScreenerPrices } from '../feeds/dexScreenerFeed';
 import { getRaydiumClient, getJupiterClient } from '../execution';
@@ -793,9 +793,10 @@ export class MeanReversionSignalGenerator {
       reasons.push(`✓ Liquidity: $${(checkerTvl / 1000).toFixed(0)}K`);
     }
 
-    // Calculate position size based on TVL tier, adjusted for volatility
+    // Calculate position size based on TVL tier, spread, and volatility
     // Higher volatility stocks get smaller positions (risk parity)
-    const tvlBasedSize = getPositionSize(token.symbol);
+    // Higher spreads get larger positions (better risk-adjusted return)
+    const tvlBasedSize = getAdaptivePositionSize(token.symbol, Math.abs(discount));
     const volatilityMultiplier = getVolatilityPositionMultiplier(pair.stockTicker);
     const volatilityAdjustedSize = tvlBasedSize * volatilityMultiplier;
     const liquidityBasedSize = checkerTvl * config.liquidityFraction;

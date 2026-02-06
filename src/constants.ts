@@ -110,6 +110,19 @@ export const POSITION_SIZE_FORMULA = {
   MAX_MULTIPLIER: 1.0, // Maximum position size (100% of maxUsdPerTrade)
 } as const;
 
+/**
+ * Adaptive position sizing - scales position size with spread size and liquidity
+ * Higher spreads = higher expected profit = larger position size (risk-adjusted)
+ * Formula: base_position * spread_multiplier * liquidity_factor
+ */
+export const ADAPTIVE_POSITION_SIZING = {
+  ENABLED: true,                     // Feature flag - ENABLED for testing
+  SPREAD_COEFFICIENT: 12,            // Multiplier for spread (12 = 6% spread → 0.72x position)
+  LIQUIDITY_EXPONENT: 0.2,           // How much TVL variation affects sizing (0.2 = conservative)
+  MIN_SPREAD_MULTIPLIER: 0.6,        // Minimum spread multiplier (60% of base)
+  MAX_SPREAD_MULTIPLIER: 1.3,        // Maximum spread multiplier (130% of base)
+} as const;
+
 // TVL tier constants - used by liquidityChecker for DISABLED threshold
 export const TVL_ENTRY_THRESHOLDS = {
   TIER_1: { minTvl: 1_000_000, entryPct: 0.5 },

@@ -30,6 +30,7 @@ import {
   EXIT_THRESHOLD_FORMULA,
   POSITION_SIZE_FORMULA,
   PERCENTILE_THRESHOLD_FORMULA,
+  ADAPTIVE_POSITION_SIZING,
 } from '../constants';
 import { getDatabase } from '../db';
 import { fetchBatchDexScreenerPrices, DexScreenerPrice } from '../feeds/dexScreenerFeed';
@@ -1103,6 +1104,68 @@ export function getPositionSize(symbol: string): number {
 
   const multiplier = calculatePositionMultiplier(cached.tvl);
   return maxUsd * multiplier;
+}
+
+/**
+ * Adaptive position sizing - scales with spread and liquidity
+ * Formula: base_position * spread_multiplier * liquidity_factor
+ * 
+ * @param symbol Token symbol
+ * @param spreadPct Current spread percentage (e.g., 6.0 for 6%)
+ * @returns Position size in USD
+ */
+export function getAdaptivePositionSize(symbol: string, spreadPct: number): number {
+  // If adaptive sizing disabled, use standard formula
+  if (!ADAPTIVE_POSITION_SIZING.ENABLED) {
+    return getPositionSize(symbol);
+  }
+
+  const config = getConfigSync();
+  const maxUsd = config.maxUsdPerTrade;
+  const cached = thresholdCache.get(symbol);
+
+  if (!cached) {
+    // Unknown liquidity - use minimum multiplier for safety
+    return maxUsd * POSITION_SIZE_FORMULA.MIN_MULTIPLIER;
+  }
+
+  // Base position from TVL (standard formula)
+  const baseMultiplier = calculatePositionMultiplier(cached.tvl);
+  const basePosition = maxUsd * baseMultiplier;
+
+  // Spread multiplier: higher spread = larger position
+  // 6% spread = 6 * 15 / 100 = 0.9x
+  // 4.5% spread = 4.5 * 15 / 100 = 0.675x
+  const spreadMultiplier = Math.max(
+    ADAPTIVE_POSITION_SIZING.MIN_SPREAD_MULTIPLIER,
+    Math.min(
+      ADAPTIVE_POSITION_SIZING.MAX_SPREAD_MULTIPLIER,
+      (spreadPct * ADAPTIVE_POSITION_SIZING.SPREAD_COEFFICIENT) / 100
+    )
+  );
+
+  // Liquidity factor: higher TVL relative to average = larger position
+  // Use cached.tvl relative to historical average (approximate $400K)
+  const avgTvl = 400_000;
+  const liquidityFactor = Math.pow(cached.tvl / avgTvl, ADAPTIVE_POSITION_SIZING.LIQUIDITY_EXPONENT);
+
+  // Final position size with caps
+  const adaptivePosition = basePosition * spreadMultiplier * liquidityFactor;
+  const finalPosition = Math.min(adaptivePosition, maxUsd * POSITION_SIZE_FORMULA.MAX_MULTIPLIER);
+
+  // Log adaptive sizing calculation for monitoring
+  logger.debug({
+    symbol,
+    spreadPct: spreadPct.toFixed(2),
+    tvl: cached.tvl,
+    basePosition: basePosition.toFixed(0),
+    spreadMultiplier: spreadMultiplier.toFixed(3),
+    liquidityFactor: liquidityFactor.toFixed(3),
+    finalPosition: finalPosition.toFixed(0),
+    adaptiveEnabled: ADAPTIVE_POSITION_SIZING.ENABLED,
+  }, 'Adaptive position sizing calculation');
+
+  return finalPosition;
 }
 
 /**
