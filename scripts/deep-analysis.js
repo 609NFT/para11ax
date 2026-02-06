@@ -1,114 +1,93 @@
-const { Pool } = require('pg');
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+const { createClient } = require('@supabase/supabase-js');
+const { config } = require('dotenv');
+const path = require('path');
 
-require('dotenv').config();
+// Load environment variables
+config({ path: path.join(__dirname, '..', '.env') });
 
-const connectionString = process.env.TRADES_DB_URL;
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-if (!connectionString) {
-  console.error('Error: TRADES_DB_URL environment variable not set');
-  process.exit(1);
-}
+const sixHoursAgo = new Date(Date.now() - 6*60*60*1000).toISOString();
 
-const pool = new Pool({ connectionString });
-
-(async () => {
+async function analyze() {
   try {
-    // Check last 6 hours of trades
-    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+    // Get recent trades
+    const { data: trades, error } = await supabase
+      .from('trades')
+      .select('*')
+      .gte('timestamp', sixHoursAgo)
+      .order('timestamp', { ascending: false });
     
-    const recentTrades = await pool.query(`
-      SELECT * FROM mean_reversion_positions 
-      WHERE created_at >= $1 
-      ORDER BY created_at DESC
-    `, [sixHoursAgo]);
+    if (error) {
+      console.error('Supabase error:', error);
+      return;
+    }
+    
+    console.log('=== RECENT TRADES (Last 6 Hours) ===');
+    console.log(`Found ${trades?.length || 0} trades`);
+    
+    if (trades && trades.length > 0) {
+      let totalPnl = 0;
+      let entryThresholds = [];
+      let exitReasons = {};
+      let holdTimes = [];
       
-    console.log('=== LAST 6 HOURS TRADES ===');
-    console.log('Total trades:', recentTrades.rows.length);
-    
-    if (recentTrades.rows.length > 0) {
-      recentTrades.rows.forEach(trade => {
-        const entrySpread = Math.abs(trade.entry_spread_pct || 0).toFixed(2);
-        const pnl = trade.pnl_usd ? parseFloat(trade.pnl_usd).toFixed(2) : 'pending';
-        const holdTime = trade.exit_timestamp ? 
-          Math.round((parseInt(trade.exit_timestamp) - parseInt(trade.entry_timestamp)) / 60000) : 'open';
+      trades.forEach(trade => {
+        totalPnl += parseFloat(trade.pnl_usd || 0);
+        entryThresholds.push(parseFloat(trade.entry_spread_pct || 0));
+        const exitReason = trade.exit_reason || 'unknown';
+        exitReasons[exitReason] = (exitReasons[exitReason] || 0) + 1;
         
-        console.log(`${trade.symbol} | Entry: ${entrySpread}% | PnL: $${pnl} | Hold: ${holdTime}min | Exit: ${trade.exit_reason || 'open'}`);
+        if (trade.exit_timestamp) {
+          const holdMinutes = Math.round((new Date(trade.exit_timestamp) - new Date(trade.entry_timestamp))/60000);
+          holdTimes.push(holdMinutes);
+          console.log(`${trade.symbol}: Entry ${trade.entry_spread_pct}%, Exit ${trade.exit_spread_pct}%, PnL $${trade.pnl_usd}, Reason: ${trade.exit_reason}, Hold: ${holdMinutes}min`);
+        }
       });
       
-      // Check entry thresholds
-      const entries = recentTrades.rows.filter(t => t.entry_spread_pct);
-      if (entries.length > 0) {
-        const avgEntry = entries.reduce((sum, t) => sum + Math.abs(t.entry_spread_pct), 0) / entries.length;
-        console.log(`\nAvg entry spread: ${avgEntry.toFixed(2)}%`);
-        console.log('Min entry:', Math.min(...entries.map(t => Math.abs(t.entry_spread_pct))).toFixed(2) + '%');
-        console.log('Max entry:', Math.max(...entries.map(t => Math.abs(t.entry_spread_pct))).toFixed(2) + '%');
+      console.log(`\nTotal PnL: $${totalPnl.toFixed(2)}`);
+      console.log(`Entry thresholds: ${entryThresholds.map(x => x.toFixed(1)).join('%, ')}%`);
+      console.log('Exit reasons:', exitReasons);
+      
+      if (holdTimes.length > 0) {
+        const avgHold = holdTimes.reduce((a,b) => a+b, 0) / holdTimes.length;
+        console.log(`Hold times: avg ${avgHold.toFixed(1)}min, range ${Math.min(...holdTimes)}-${Math.max(...holdTimes)}min`);
       }
       
-      // Exit reason breakdown
-      const exitReasons = {};
-      recentTrades.rows.filter(t => t.exit_reason).forEach(t => {
-        exitReasons[t.exit_reason] = (exitReasons[t.exit_reason] || 0) + 1;
-      });
-      console.log('\nExit reasons:', exitReasons);
-      
-      // Check for forced exits blocked by anti-churning
-      const forcedExits = recentTrades.rows.filter(t => 
-        t.exit_reason && ['max_hold', 'stop_loss', 'spread_widening_stop'].includes(t.exit_reason)
-      );
-      console.log('\nForced exits (should bypass anti-churning):', forcedExits.length);
-      
-    } else {
-      console.log('No trades in last 6 hours - checking recent activity...');
-      
-      // Check last 5 trades regardless of time
-      const lastTrades = await pool.query(`
-        SELECT * FROM mean_reversion_positions 
-        ORDER BY created_at DESC 
-        LIMIT 5
-      `);
-      
-      if (lastTrades.rows.length > 0) {
-        console.log('\n=== LAST 5 TRADES (ANY TIME) ===');
-        lastTrades.rows.forEach(trade => {
-          const entrySpread = Math.abs(trade.entry_spread_pct || 0).toFixed(2);
-          const pnl = trade.pnl_usd ? parseFloat(trade.pnl_usd).toFixed(2) : 'pending';
-          const age = Math.round((Date.now() - parseInt(trade.created_at)) / (60 * 60 * 1000));
-          console.log(`${trade.symbol} | ${age}h ago | Entry: ${entrySpread}% | PnL: $${pnl} | Exit: ${trade.exit_reason || 'open'}`);
-        });
-        
-        // Check if any are still open
-        const openTrades = lastTrades.rows.filter(t => !t.exit_reason);
-        if (openTrades.length > 0) {
-          console.log(`\nOpen trades: ${openTrades.length}`);
-          openTrades.forEach(trade => {
-            const holdTime = Math.round((Date.now() - parseInt(trade.entry_timestamp)) / 60000);
-            console.log(`${trade.symbol} | Open for: ${holdTime}min`);
-          });
-        }
+      // Check if entries are meeting 4%+ threshold
+      const belowThreshold = entryThresholds.filter(x => x < 4.0);
+      if (belowThreshold.length > 0) {
+        console.log(`⚠️  ${belowThreshold.length}/${trades.length} trades entered below 4% threshold`);
       }
     }
     
-    // Check daily PnL
-    const todayStart = new Date();
-    todayStart.setUTCHours(0, 0, 0, 0);
-    
-    const dailyPnl = await pool.query(`
-      SELECT SUM(pnl_usd) as total_pnl, COUNT(*) as trades_count 
-      FROM mean_reversion_positions 
-      WHERE created_at >= $1 AND pnl_usd IS NOT NULL
-    `, [todayStart.getTime()]);
-    
-    const pnl = dailyPnl.rows[0];
-    if (pnl.total_pnl !== null) {
-      console.log(`\n=== TODAY'S PERFORMANCE ===`);
-      console.log(`PnL: $${parseFloat(pnl.total_pnl).toFixed(2)} (${pnl.trades_count} completed trades)`);
+    // Check recent spreads
+    console.log('\n=== CURRENT SPREAD LEVELS ===');
+    const { data: spreads } = await supabase
+      .from('discount_history')
+      .select('symbol, spread_pct, timestamp')
+      .gt('timestamp', new Date(Date.now() - 30*60*1000).toISOString()) // Last 30min
+      .order('timestamp', { ascending: false })
+      .limit(20);
+      
+    if (spreads) {
+      const latestSpreads = {};
+      spreads.forEach(s => {
+        if (!latestSpreads[s.symbol]) {
+          latestSpreads[s.symbol] = s.spread_pct;
+        }
+      });
+      
+      console.log('Latest spreads:');
+      Object.entries(latestSpreads).forEach(([symbol, spread]) => {
+        const signal = Math.abs(spread) >= 4.0 ? '🟢' : '⚪';
+        console.log(`${signal} ${symbol}: ${spread.toFixed(2)}%`);
+      });
     }
     
   } catch (err) {
-    console.error('Database Error:', err.message);
-  } finally {
-    await pool.end();
+    console.error('Analysis error:', err);
   }
-})();
+}
+
+analyze();

@@ -316,6 +316,14 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 - **Longer**: Too many forced max_hold exits (75min = 82.7% max_hold rate vs 77% target rate)
 - **60min sweet spot**: Best balance of allowing mean reversion while preventing extended losers
 
+### Decay Timing Experiments
+| Date | Decay Start | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|-------------|--------|----------|-----|-------------|--------|
+| Current | **30 min** | **48** | **45.8%** | **+$10.59** | **baseline** | **✅ OPTIMAL** |
+| Feb 8 | 20 min | 47 | 46.8% | +$8.61 | -19% | ❌ Worse PnL despite similar WR |
+
+**Key Finding**: **30-minute decay start is optimal**. Earlier decay at 20 minutes shows similar win rate (46.8% vs 45.8%) but worse PnL performance (+$8.61 vs +$10.59). Current timing allows adequate time for natural mean reversion before forcing lower exit thresholds.
+
 ---
 
 ## Deep Analysis: February 6, 2026 (8:20 AM UTC) ✅ SYSTEM HEALTHY - SELECTIVE BEHAVIOR WORKING
