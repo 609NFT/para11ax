@@ -350,7 +350,9 @@ export const CLEANUP_SLIPPAGE_BPS = 300; // 3%
 export const RAYDIUM_COMPUTE_UNITS = 300_000;
 
 /** Priority fee escalation per retry attempt (microLamports per compute unit) */
-export const PRIORITY_FEE_ESCALATION = [0, 1_000, 5_000, 15_000, 50_000];
+// Start with 1000 (not 0) to avoid block height exceeded errors
+// 0 priority fee often results in transactions timing out before inclusion
+export const PRIORITY_FEE_ESCALATION = [1_000, 5_000, 15_000, 50_000, 100_000];
 
 // ============================================================================
 // FEE ESTIMATES

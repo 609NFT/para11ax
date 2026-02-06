@@ -418,6 +418,8 @@ export class RaydiumClient {
       }, 'Executing Raydium CLMM swap');
 
       // Build swap transaction with dynamic priority fee (escalates on retry)
+      // associatedOnly: false allows SDK to create ATAs if they don't exist
+      // checkCreateATAOwner: true ensures ATAs are owned by the correct owner
       const { execute } = await this.raydium!.clmm.swap({
         poolInfo: poolData.poolInfo,
         inputMint: inputMintPubkey,
@@ -428,6 +430,8 @@ export class RaydiumClient {
           useSOLBalance: false,
         },
         remainingAccounts: computeResult.remainingAccounts,
+        associatedOnly: false,  // Allow creating ATAs for output tokens if they don't exist
+        checkCreateATAOwner: true,  // Verify ATA ownership
         txVersion: TxVersion.V0,
         computeBudgetConfig: {
           units: RAYDIUM_COMPUTE_UNITS,
