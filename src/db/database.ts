@@ -361,11 +361,15 @@ export class DatabaseManager {
    * Calculate historical volatility for a token from price history
    * Uses standard deviation of hourly returns over the past week
    * Returns volatility as a percentage (e.g., 2.5 means 2.5% daily volatility)
-   * TODO: Implement Supabase equivalent of this SQLite-based analytical query
    */
-  async getHistoricalVolatility(_stockTicker: string, _windowDays: number = 7): Promise<number | null> {
-    // Stub implementation - returns null until Supabase equivalent is implemented
-    return null;
+  async getHistoricalVolatility(stockTicker: string, windowDays: number = 7): Promise<number | null> {
+    try {
+      const allVolatility = await this.getAllHistoricalVolatility(windowDays);
+      return allVolatility.get(stockTicker) ?? null;
+    } catch (error) {
+      dbLogger.warn({ stockTicker, windowDays, error }, 'Failed to get historical volatility');
+      return null;
+    }
   }
 
 
