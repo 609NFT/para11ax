@@ -479,10 +479,10 @@ async function fetchPoolTVLs(poolAddresses: string[]): Promise<Map<string, PoolI
  * Also refreshes token list from database to pick up newly added tokens.
  */
 export async function refreshLiquidity(): Promise<void> {
-  console.log('[LIQUIDITY] Step 1/6: Refreshing tokens from database...');
+  logger.info('[LIQUIDITY] Step 1/6: Refreshing tokens from database...');
   // First, refresh tokens from database to pick up any new additions
   const tokenRefresh = await refreshTokensFromDb();
-  console.log(`[LIQUIDITY] Token refresh complete: ${tokenRefresh.total} tokens (${tokenRefresh.added} added, ${tokenRefresh.removed} removed)`);
+  logger.info(`[LIQUIDITY] Token refresh complete: ${tokenRefresh.total} tokens (${tokenRefresh.added} added, ${tokenRefresh.removed} removed)`);
   if (tokenRefresh.added > 0 || tokenRefresh.removed > 0) {
     logger.info({
       added: tokenRefresh.added,
@@ -497,7 +497,7 @@ export async function refreshLiquidity(): Promise<void> {
   // Get all enabled tokens
   const enabledTokens = config.tokens.filter(t => t.enabled);
   const allTokens = enabledTokens.map(t => ({ mint: t.mint, symbol: t.symbol }));
-  console.log(`[LIQUIDITY] Step 2/6: Processing ${enabledTokens.length} enabled tokens`);
+  logger.info(`[LIQUIDITY] Step 2/6: Processing ${enabledTokens.length} enabled tokens`);
 
   // Build lookups
   const symbolByMint = new Map<string, string>();
@@ -509,7 +509,7 @@ export async function refreshLiquidity(): Promise<void> {
     }
   }
 
-  console.log('[LIQUIDITY] Step 3/6: Fetching from API sources (Raydium, DexScreener, GeckoTerminal)...');
+  logger.info('[LIQUIDITY] Step 3/6: Fetching from API sources (Raydium, DexScreener, GeckoTerminal)...');
   logger.info({ tokenCount: allTokens.length }, 'Starting liquidity refresh - checking ALL sources for ALL tokens');
 
   // ========================================
@@ -579,18 +579,18 @@ export async function refreshLiquidity(): Promise<void> {
 
   // Wait for all sources (DexScreener and GeckoTerminal can run in parallel)
   // Note: Raydium runs first because it's faster and we need it for comparison
-  console.log('[LIQUIDITY] Waiting for API responses...');
+  logger.info('[LIQUIDITY] Waiting for API responses...');
   const [raydiumTvls, dexScreenerData, geckoTerminalData] = await Promise.all([
     raydiumTvlPromise,
     dexScreenerPromise,
     geckoTerminalPromise,
   ]);
-  console.log('[LIQUIDITY] API responses received successfully');
+  logger.info('[LIQUIDITY] API responses received successfully');
 
   // ========================================
   // STEP 2: For each token, compare ALL sources and use the BEST pool
   // ========================================
-  console.log(`[LIQUIDITY] Step 4/6: Processing ${enabledTokens.length} tokens individually...`);
+  logger.info(`[LIQUIDITY] Step 4/6: Processing ${enabledTokens.length} tokens individually...`);
 
   let raydiumBest = 0;
   let dexScreenerBest = 0;
