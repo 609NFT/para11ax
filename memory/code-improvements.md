@@ -1,36 +1,19 @@
 # Code Improvements Log
 
-## 2026-02-06 - 05:34 UTC
-**Fixed**: Replaced 5 console.log statements with proper logger calls in liquidityChecker.ts
-- Progress logging during token processing
-- Completion message after token processing
-- Percentile threshold calculation status messages
+## 2026-02-06 08:36 - CSS Color Token Cleanup
 
-**Commit**: 75f2e5d
-**Impact**: Better log consistency, proper log levels for filtering
-**Status**: Deployed and running without errors
+**Fixed**: Added `--color-yellow-green` CSS variable and replaced 3 hardcoded `#a3e635` color values
 
-**Remaining**: 72 more console.log statements throughout the codebase to replace with logger
+**Details**:
+- Added `--color-yellow-green: #a3e635;` to CSS variables section in `src/web/templates/dashboard.ts`
+- Replaced 3 TODO comments with proper CSS variable references: `var(--color-yellow-green)`
+- Locations: Lines ~2309, ~2424, ~2554 in dashboard progress bar color logic
 
-## 2026-02-06 - 06:10 UTC
-**Fixed**: Replaced 5 console.log statements with proper logger calls in liquidityChecker.ts
-- Profitable spread calculation progress and results
-- Error handling for profitable spread calculation
-- Summary finalization logging
+**Impact**: 
+- Cleaner, more maintainable CSS
+- Consistent design system usage
+- Removed 3 TODO items from codebase
 
-**Commit**: ba17594
-**Impact**: Consistent structured logging for profitable spread calculations, better log filtering capability
-**Status**: Deployed and running without errors
+**Commit**: `3ce779a` - "chore: add yellow-green CSS color token, fix TODOs"
 
-**Remaining**: ~67 more console.log statements throughout the codebase to replace with logger
-
-## 2026-02-06 - 07:21 UTC
-**Fixed**: Removed 2 duplicate console.log statements in web server startup
-- Removed `console.log("Web dashboard running at...")` - already logged by logger.info
-- Removed `console.log("Warning: Port in use...")` - already logged by logger.warn
-
-**Commit**: 7c47b7a
-**Impact**: Eliminated duplicate log output, cleaner console output
-**Status**: Deployed and running without errors
-
-**Remaining**: ~65 more console.log statements throughout the codebase to replace with logger
+**Verification**: Bot reloaded successfully, no runtime errors

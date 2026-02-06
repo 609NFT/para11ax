@@ -533,6 +533,50 @@ export function getVolatilityEntryMultiplier(symbol: string): number {
 }
 
 /**
+ * Get volatility-adjusted exit threshold multiplier
+ * Higher volatility = exit sooner to capture mean reversion before NAV moves against us
+ *
+ * Formula: 1 - (atrPct - BASE_ATR) * SENSITIVITY
+ * - BASE_ATR = 2.7% (median ATR across our universe)
+ * - SENSITIVITY = 0.2 (moderate adjustment)
+ * - 1.0% ATR stock → 1.34x threshold (stable, can wait longer)
+ * - 2.7% ATR stock → 1.0x threshold (baseline)
+ * - 4.0% ATR stock → 0.74x threshold (volatile, exit faster)
+ * - 6.0% ATR stock → 0.34x threshold (very volatile, exit quickly)
+ *
+ * Capped between 0.4x (floor) and 1.5x (ceiling) to prevent extremes
+ *
+ * Rationale: MSTR can move 5-7% daily (high ATR), wiping out 2-3% spread gains
+ * if we wait too long. SPY moves 1-2% daily, so we can afford to wait for
+ * fuller mean reversion.
+ */
+export function getVolatilityExitMultiplier(symbol: string): number {
+  const BASE_ATR = 2.7;   // Median ATR across our token universe  
+  const SENSITIVITY = 0.2;  // Moderate adjustment - don't be too aggressive
+  const MIN_MULTIPLIER = 0.4;  // Floor: at most 60% reduction (faster exits)
+  const MAX_MULTIPLIER = 1.5;  // Ceiling: at most 50% increase (slower exits)
+
+  const cached = volatilityCache.get(symbol);
+  if (!cached) {
+    return 1.0;
+  }
+
+  // Inverse relationship: higher volatility = lower multiplier = faster exits
+  const rawMultiplier = 1 - (cached.atrPct - BASE_ATR) * SENSITIVITY;
+
+  const multiplier = Math.max(MIN_MULTIPLIER, Math.min(rawMultiplier, MAX_MULTIPLIER));
+
+  feedLogger.debug({
+    symbol,
+    atrPct: cached.atrPct.toFixed(2),
+    rawMultiplier: rawMultiplier.toFixed(3),
+    finalMultiplier: multiplier.toFixed(3),
+  }, 'Volatility exit multiplier');
+
+  return multiplier;
+}
+
+/**
  * Get all cached volatility data (for debugging/dashboard)
  */
 export function getVolatilityCacheSnapshot(): Map<string, VolatilityCache> {

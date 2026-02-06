@@ -1075,15 +1075,25 @@ export function getEntryThresholdDetails(symbol: string): {
 }
 
 /**
- * Get exit threshold for a specific token (TVL-based)
+ * Get exit threshold for a specific token (TVL + volatility adjusted)
  * Lower liquidity = higher slippage = need more appreciation before exit
- * If hasRaydiumPool is false, no additional boost is applied
+ * Higher volatility = faster exits to capture mean reversion before NAV moves
  */
 export function getExitThreshold(symbol: string): number {
   const config = getConfigSync();
   const cached = thresholdCache.get(symbol);
   const baseThreshold = cached ? cached.exitThresholdPct : (config.meanReversionExitSpreadPct ?? 0.8);
-  return baseThreshold;
+  
+  // Apply volatility adjustment to exit timing
+  // Import dynamically to avoid circular dependency issues
+  try {
+    const { getVolatilityExitMultiplier } = require('../feeds/volatilityFeed');
+    const volatilityMultiplier = getVolatilityExitMultiplier(symbol);
+    return baseThreshold * volatilityMultiplier;
+  } catch (error) {
+    // Fallback if volatility feed unavailable
+    return baseThreshold;
+  }
 }
 
 /**
