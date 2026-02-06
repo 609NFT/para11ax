@@ -18,15 +18,14 @@ process.env.DASHBOARD_STANDALONE = 'true';
 const PORT = parseInt(process.env.WEB_PORT || '3001');
 
 async function main() {
-  console.log('═══════════════════════════════════════════════════════');
-  console.log('        PARALLAX - STANDALONE DASHBOARD');
-  console.log('═══════════════════════════════════════════════════════');
-  console.log('Mode: STANDALONE (reading from Supabase)');
-  console.log(`Port: ${PORT}`);
+  logger.info('═══════════════════════════════════════════════════════');
+  logger.info('        PARALLAX - STANDALONE DASHBOARD');
+  logger.info('═══════════════════════════════════════════════════════');
+  logger.info('Mode: STANDALONE (reading from Supabase)');
+  logger.info(`Port: ${PORT}`);
   
   try {
     await startWebServer(PORT);
-    console.log(`Dashboard server running at http://localhost:${PORT}`);
     logger.info({ port: PORT, mode: 'standalone' }, 'Dashboard server started');
     
     // Signal PM2 that we're ready (instant startup)
@@ -35,7 +34,6 @@ async function main() {
       logger.info('Sent ready signal to PM2');
     }
   } catch (error) {
-    console.error('Failed to start dashboard server:', error);
     logger.error({ error }, 'Failed to start dashboard server');
     process.exit(1);
   }
