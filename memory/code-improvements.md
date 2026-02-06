@@ -1,5 +1,31 @@
 # Code Improvements Log
 
+## 2026-02-06 12:27 - Replace Console.log with Logger in Orchestrator Startup
+
+**Fixed**: Replaced 6 console.log calls with logger.info in orchestrator.ts startup sequence
+
+**Details**:
+- Replaced console.log with logger.info for:
+  - Startup banner (3 lines: borders and title)
+  - Mode description
+  - Pool liquidity fetch message
+  - Web server start message
+  - Data pruning message
+  - Heatmap sync message
+- Consolidated duplicate "Initialization complete" messages into single logger.info call
+- All startup messages now use structured logging with proper timestamps
+
+**Impact**:
+- Consistent logging patterns - no more mixed console.log/logger usage in core bot
+- Better structured logging for initialization sequence
+- Proper timestamps on all startup messages
+- Reduced redundancy (removed duplicate initialization message)
+- Maintains all essential startup visibility
+
+**Commit**: `2584c4f` - "chore: replace console.log with logger in orchestrator startup"
+
+**Verification**: Bot reloaded successfully, all startup messages visible with proper timestamps
+
 ## 2026-02-06 11:56 - Removed Duplicate Startup Banner Logger Calls
 
 **Fixed**: Eliminated duplicate logger.info statements for startup banner in orchestrator.ts
