@@ -1153,8 +1153,29 @@ export function getAdaptivePositionSize(symbol: string, spreadPct: number): numb
   }
 
   const config = getConfigSync();
-  const maxUsd = config.maxUsdPerTrade;
   const cached = thresholdCache.get(symbol);
+  const tvl = cached?.tvl ?? 100_000; // Default TVL if unknown
+
+  // Try portfolio-based sizing first (scales with wallet balance)
+  const { PORTFOLIO_SIZING } = require('../constants');
+  if (PORTFOLIO_SIZING.ENABLED) {
+    const { getPortfolioPositionSizeSync } = require('../signals/portfolioSizer');
+    const portfolioSize = getPortfolioPositionSizeSync(symbol, spreadPct, tvl, config.maxUsdPerTrade);
+    
+    if (portfolioSize > 0) {
+      logger.debug({
+        symbol,
+        spreadPct: spreadPct.toFixed(2),
+        tvl,
+        portfolioSize: portfolioSize.toFixed(2),
+        mode: 'portfolio',
+      }, 'Portfolio-based position sizing');
+      return portfolioSize;
+    }
+  }
+
+  // Fallback to fixed maxUsdPerTrade-based sizing
+  const maxUsd = config.maxUsdPerTrade;
 
   if (!cached) {
     // Unknown liquidity - use minimum multiplier for safety
@@ -1194,8 +1215,8 @@ export function getAdaptivePositionSize(symbol: string, spreadPct: number): numb
     spreadMultiplier: spreadMultiplier.toFixed(3),
     liquidityFactor: liquidityFactor.toFixed(3),
     finalPosition: finalPosition.toFixed(0),
-    adaptiveEnabled: ADAPTIVE_POSITION_SIZING.ENABLED,
-  }, 'Adaptive position sizing calculation');
+    mode: 'fixed',
+  }, 'Fixed-base position sizing (fallback)');
 
   return finalPosition;
 }

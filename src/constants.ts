@@ -123,6 +123,27 @@ export const ADAPTIVE_POSITION_SIZING = {
   MAX_SPREAD_MULTIPLIER: 1.3,        // Maximum spread multiplier (130% of base)
 } as const;
 
+/**
+ * Portfolio-Based Position Sizing
+ * 
+ * Automatically scales position size with wallet balance.
+ * Compounds gains (larger positions as you win) and limits losses (smaller as you lose).
+ * 
+ * Formula: wallet_balance × BASE_RISK_PCT × symbol_modifiers
+ */
+export const PORTFOLIO_SIZING = {
+  ENABLED: true,                     // Feature flag
+  BASE_RISK_PCT: 0.03,               // 3% of portfolio per trade (conservative)
+  MIN_POSITION_USD: 5,               // Minimum $5 per trade (avoid dust)
+  MAX_POSITION_USD: 100,             // Maximum $100 per trade (risk cap)
+  BALANCE_CACHE_TTL_MS: 60_000,      // Cache wallet balance for 1 minute
+  PERFORMANCE_SCALING: {
+    ENABLED: true,                   // Scale by symbol win rate
+    MIN_MULTIPLIER: 0.5,             // Poor performers get 50% size minimum
+    MAX_MULTIPLIER: 1.5,             // Good performers get 150% size maximum
+  },
+} as const;
+
 // TVL tier constants - used by liquidityChecker for DISABLED threshold
 export const TVL_ENTRY_THRESHOLDS = {
   TIER_1: { minTvl: 1_000_000, entryPct: 0.5 },

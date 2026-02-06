@@ -34,6 +34,7 @@ import {
 } from './execution/flashTradeClient';
 import { getDatabase } from './db';
 import { initializeShortThresholds } from './signals/shortThresholdCalc';
+import { initPortfolioSizer } from './signals/portfolioSizer';
 import { pruneOldDiscountHistory, upsertHeatmapSummary, getHourlySummaryFromSupabase } from './db/supabaseClient';
 import { Dashboard } from './dashboard';
 import logger, { executionLogger } from './logger';
@@ -51,6 +52,7 @@ import {
   ESTIMATED_FEES_PCT,
   MIN_ORPHAN_VALUE_USD,
   MIN_SELLABLE_VALUE_USD,
+  getSolPriceUsd,
 } from './constants';
 import { startWebServer, stopWebServer } from './web/server';
 import { prewarmInternalVolatility, refreshNextVolatility } from './feeds/volatilityFeed';
@@ -379,6 +381,14 @@ export class Orchestrator {
     const thresholds = getAllThresholds();
     const enabledCount = thresholds.filter(t => t.enabled).length;
     logger.info({ totalTokens: thresholds.length, enabledTokens: enabledCount }, 'Dynamic thresholds initialized');
+
+    // Initialize portfolio-based position sizing
+    logger.info('Initializing portfolio-based position sizing...');
+    initPortfolioSizer(
+      () => this.executor.getBalance(),
+      () => getSolPriceUsd()
+    );
+    logger.info('Portfolio sizer initialized - positions scale with wallet balance');
 
     // Clean up orphan tokens (tokens in wallet with no open position)
     if (config.mode === 'live') {
