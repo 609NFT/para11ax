@@ -341,6 +341,7 @@ The complete absence of trades demonstrates **disciplined execution**:
 ### Exit Target Experiments
 | Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
+| **Feb 10** | **3.0%** | 55 | 56.4% | +$6.07 | **+30%** | ✅ **Good improvement, confirms 2.5% is optimal** |
 | Feb 6 | **2.5%** | 56 | **58.9%** | **+$12.73** | **+57%** | 🔥 **READY FOR DEPLOYMENT** |
 | Feb 7 | **3.0%** | 59 | 57.6% | +$10.69 | +19% | ✅ **Good but not as strong as 2.5%** |
 | Feb 8 | **2.0%** | 154 | 21.4% | +$7.44 | -40% | ❌ **Too aggressive - 87% max_hold exits** |
