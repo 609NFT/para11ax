@@ -799,8 +799,9 @@ export async function getOpenPerpPositions(): Promise<FlashTradePosition[]> {
               openTime,
             });
           }
-        } catch {
-          // Position doesn't exist - that's fine
+        } catch (error) {
+          // Position doesn't exist - that's fine, but log for debugging
+          logger.debug({ positionKey: positionKey.toBase58(), error }, 'Position account not found (expected for closed positions)');
         }
       }
     }
