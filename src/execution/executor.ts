@@ -569,37 +569,34 @@ export class Executor {
     const priorityFeeCalc = calculatePriorityFeeUsd(priorityFee, JUPITER_COMPUTE_UNITS, solPriceUsd);
     const networkFeeCalc = calculateNetworkFeeUsd(solPriceUsd);
 
-    // Calculate execution slippage in USD using ACTUAL output vs quoted
-    // For buys: amount is USDC spent, output is tokens
-    // For sells: amount is raw tokens, output is USDC (in lamports)
-    const expectedOutputUsd = side === 'buy'
-      ? (quote.outputAmount / 1e6) * amount / (quote.inputAmount / 1e6)  // Estimate token value
-      : quote.outputAmount / 1e6;  // USDC output
-    const realOutputUsd = side === 'buy'
-      ? (actualOutputAmount / 1e6) * amount / (freshQuote.inputAmount / 1e6)
-      : actualOutputAmount / 1e6;
-
+    // Calculate execution slippage using token amounts (avoids decimal conversion issues)
+    // Slippage % = (expected - actual) / expected * 100
     const executionSlippagePct = freshQuote.outputAmount > 0
       ? ((freshQuote.outputAmount - actualOutputAmount) / freshQuote.outputAmount) * 100
       : 0;
 
-    // Calculate execution slippage with sanity check
-    // Slippage should never exceed the trade size (would mean >100% loss)
-    const rawSlippageUsd = Math.abs(expectedOutputUsd - realOutputUsd);
-    const tradeSizeUsd = side === 'buy' ? amount : expectedOutputUsd;
-    const maxReasonableSlippage = tradeSizeUsd * 1.0; // Cap at 100% of trade size
+    // Trade size for USD calculations
+    // For buys: amount is USDC spent
+    // For sells: use quote's expected USDC output (already in 6 decimals)
+    const tradeSizeUsd = side === 'buy' ? amount : quote.outputAmount / 1e6;
+
+    // Convert slippage % to USD (simple and decimal-agnostic)
+    // Cap at reasonable bounds to catch parsing errors
+    const rawSlippageUsd = Math.abs(tradeSizeUsd * (executionSlippagePct / 100));
+    const maxReasonableSlippage = tradeSizeUsd * 0.20; // Cap at 20% - anything higher is likely a bug
 
     const executionSlippageUsd = Math.min(rawSlippageUsd, maxReasonableSlippage);
 
     if (rawSlippageUsd > maxReasonableSlippage) {
       executionLogger.warn({
         side,
-        rawSlippageUsd: rawSlippageUsd.toFixed(2),
-        cappedSlippageUsd: executionSlippageUsd.toFixed(2),
+        executionSlippagePct: executionSlippagePct.toFixed(4),
+        rawSlippageUsd: rawSlippageUsd.toFixed(4),
+        cappedSlippageUsd: executionSlippageUsd.toFixed(4),
         tradeSizeUsd: tradeSizeUsd.toFixed(2),
-        expectedOutputUsd: expectedOutputUsd.toFixed(2),
-        realOutputUsd: realOutputUsd.toFixed(2),
-      }, 'Detected unrealistic slippage value - capping to trade size (likely parsing error)');
+        quotedOutput: freshQuote.outputAmount,
+        actualOutput: actualOutputAmount,
+      }, 'Slippage exceeded 20% - capping (likely parsing error or extreme market move)');
     }
 
     // Price impact from quote (already calculated by Jupiter)

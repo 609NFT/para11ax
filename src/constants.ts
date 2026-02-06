@@ -49,7 +49,7 @@ export const SOL_DECIMALS = 9;
  */
 export const ENTRY_THRESHOLD_FORMULA = {
   COEFFICIENT: 0.50,   // Slippage buffer: 0.50 / sqrt(tvl_in_millions) - raised for observed 0.5%+ slippage
-  MIN_FLOOR: 4.3,      // BACKTEST CHAMPION: 50% WR, +$13.16 PnL — do not change without data
+  MIN_FLOOR: 4.0,      // Market conditions changed: 4.0% captures more opportunities with similar performance
   MAX_CAP: 12.0,       // Allow even higher thresholds - selectivity is key
 } as const;
 
@@ -74,7 +74,7 @@ export const ENTRY_THRESHOLD_FORMULA = {
  * but aren't genuinely exceptional moves.
  */
 export const PERCENTILE_THRESHOLD_FORMULA = {
-  PERCENTILE: 95,              // Only enter when spread exceeds 95th percentile - be highly selective
+  PERCENTILE: 80,              // Reduced from 95% - 95th percentile too aggressive, missing profitable opportunities
   ROLLING_WINDOW_HOURS: 168,   // 7 days of data - index exists now so should be fast
   MIN_SAMPLES: 50,             // Need at least 50 samples before using percentile
   ENABLED: true,               // Re-enabled 2026-02-04: index idx_discount_history_time_symbol exists

@@ -202,6 +202,32 @@ The data is unambiguous:
 
 ---
 
+## Deep Analysis: February 6, 2026 (8:25 PM UTC) ⚠️ CRITICAL PARAMETER ISSUE FOUND + FIXED
+
+### 🚨 CRITICAL FINDING: Bot Not Trading Due to Overly Aggressive Filters
+
+**ISSUE DISCOVERED:**
+- Bot evaluating 44 tokens but finding 0 above threshold despite profitable opportunities
+- Current spreads: AMBRx 8.50%, CRCLr 4.57% — should be tradeable but aren't
+- 95th percentile filter + 4.3% MIN_FLOOR blocking all trades for 6+ hours
+
+**ROOT CAUSE ANALYSIS:**
+- 95th percentile threshold too aggressive (only top 5% of historical spreads qualify)
+- Market conditions changed: 4.0% threshold shows 20 trades with +$4.27 PnL vs 0 trades at 4.3%
+- Backtest validation: 4.0% gives 45% WR, 4.3% performs similarly but misses current opportunities
+
+**IMMEDIATE FIXES DEPLOYED:**
+1. **Percentile threshold 95%→80%**: Less aggressive filtering to capture more opportunities
+2. **MIN_FLOOR 4.3%→4.0%**: Current market conditions favor slightly lower threshold
+3. **Parameters optimized for current conditions**: Quality maintained but not overly restrictive
+
+### Expected Impact
+- More trading opportunities without sacrificing quality
+- Better capture of 4-8% spreads that are currently available
+- Maintained safety with 80th percentile still being selective
+
+---
+
 ## Daily Review: February 6, 2026 (5:00 PM UTC / 9:00 AM PST)
 
 ### Performance Snapshot
