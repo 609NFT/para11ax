@@ -1284,7 +1284,6 @@ export function startWebServer(port: number = DEFAULT_PORT): void {
   }
 
   server = app.listen(port, '0.0.0.0', () => {
-    console.log(`Web dashboard running at http://localhost:${port}`);
     logger.info({ port, url: `http://localhost:${port}` }, 'Web dashboard server started');
 
     // Pre-warm heatmap cache for instant loading (run in background)
@@ -1303,7 +1302,6 @@ export function startWebServer(port: number = DEFAULT_PORT): void {
   server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
       logger.warn({ port }, 'Web server port already in use - dashboard will be unavailable but trading continues');
-      console.log(`Warning: Port ${port} in use - dashboard unavailable but trading continues`);
       server = null;
       // Still signal ready to PM2 so the trading bot can run
       if (process.send) {
