@@ -262,7 +262,9 @@ export class DatabaseManager {
       stock_price: snapshot.stockPrice,
       more_discounted: snapshot.moreDiscounted,
       timestamp: snapshot.timestamp,
-    }).catch(() => {});
+    }).catch((err) => {
+      dbLogger.error({ err, ticker: snapshot.stockTicker }, 'Failed to save discount snapshot');
+    });
   }
 
   /**
