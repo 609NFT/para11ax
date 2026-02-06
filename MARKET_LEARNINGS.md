@@ -291,8 +291,8 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 |------|-------------|--------|----------|-----|-------------|--------|
 | Feb 6 | **2.5%** | 56 | **58.9%** | **+$12.73** | **+57%** | 🔥 **READY FOR DEPLOYMENT** |
 | Feb 7 | **3.0%** | 59 | 57.6% | +$10.69 | +19% | ✅ **Good but not as strong as 2.5%** |
-| Feb 7 | **2.0%** | 157 | 19.7% | +$5.31 | -49% | ❌ **Too aggressive** |
-| Current | 0.5% | 48 | 43.8% | +$9.01 | baseline | - |
+| Feb 8 | **2.0%** | 154 | 21.4% | +$7.44 | -40% | ❌ **Too aggressive - 87% max_hold exits** |
+| Current | 0.5% | 49 | 46.9% | +$12.36 | baseline | - |
 
 **Updated Baseline** (3-day backtest, Feb 6): Current 4.0% entry / 0.5% exit yields 48 trades, 54.2% WR, +$8.77 net PnL.
 
