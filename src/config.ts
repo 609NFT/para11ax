@@ -10,6 +10,7 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fetchTokensFromDb } from './db/supabaseClient';
+import logger from './logger';
 
 dotenv.config();
 
@@ -144,8 +145,9 @@ export async function loadConfig(): Promise<Config> {
         // Cache custom tokens for use in refreshTokensFromDb()
         customTokensCache = customTokens;
       }
-    } catch {
+    } catch (error) {
       // Use defaults if config file parsing fails
+      logger.warn({ error, configPath }, 'Failed to parse config file, using defaults');
     }
   }
 
