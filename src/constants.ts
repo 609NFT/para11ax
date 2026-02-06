@@ -170,7 +170,7 @@ export const MIN_TVL_FOR_TRADING = 50_000;
 
 /** Enhanced time-of-day optimization settings */
 export const TIME_OF_DAY_OPTIMIZATION = {
-  ENABLED: true,                     // Enable dynamic time-of-day filtering per token
+  ENABLED: false,                    // DISABLED: DB connectivity issues causing 100+ errors/min
   FALLBACK_TO_GLOBAL: true,          // Use global stats when insufficient token-specific data
 } as const;
 
