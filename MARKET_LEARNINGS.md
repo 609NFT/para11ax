@@ -93,6 +93,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 
 | Date | Change | Commit | Result |
 |------|--------|--------|--------|
+| Feb 6 | **MARKET INTEL: Ondo Finance launched 200+ tokenized stocks on Solana** | N/A | 🚀 **MAJOR OPPORTUNITY** (400% expansion in RWA universe) |
 | Feb 6 | **MIN_FLOOR 4.0%→4.5% (deep analysis + backtest validation)** | [`4849f4c`](https://github.com/609NFT/para11ax/commit/4849f4c) | 🟡 **Monitoring** (expected: 48.9% WR vs 37.5%, +72% profit) |
 | Feb 6 | **Time-of-day filter: avoid 12-13 UTC market open chaos** | [`4b0fb7a`](https://github.com/609NFT/para11ax/commit/4b0fb7a) | 🟡 **Monitoring** (expected: higher WR, minimal trade reduction) |
 | Feb 5 | **Exit overhaul: 60min hold, spread-widening stop, shorter decay** | [`8fbcd9a`](https://github.com/609NFT/para11ax/commit/8fbcd9a) | 🟡 **Monitoring** (8 trades today vs 40 avg) |
@@ -243,6 +244,7 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 | Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
 | Feb 6 | **2.5%** | 56 | **58.9%** | **+$12.73** | **+45%** | 🔥 **PROMISING** |
+| Feb 7 | **2.0%** | 157 | 19.7% | +$5.31 | -49% | ❌ **Too aggressive** |
 | Current | 0.5% | 48 | 54.2% | +$8.77 | baseline | - |
 
 **Updated Baseline** (3-day backtest, Feb 6): Current 4.0% entry / 0.5% exit yields 48 trades, 54.2% WR, +$8.77 net PnL.
