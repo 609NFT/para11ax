@@ -39,6 +39,10 @@ import { getRaydiumClient, RaydiumClient } from './raydiumClient';
 import { getConnectionManager } from './connectionManager';
 import { getJupiterUltraClient, JupiterUltraClient } from './jupiterUltraClient';
 
+// Simulation slippage constants
+const MAX_RANDOM_SLIPPAGE = 0.002; // 0-0.2% random slippage for realism
+const DIRECT_TRADE_SLIPPAGE = 0.001; // 0.1% slippage for direct trade simulation
+
 // Error patterns that Ultra API may handle better than regular Swap API
 const ULTRA_FALLBACK_ERRORS = [
   'BitmapExtensionAccountIsNotProvided',  // Meteora DLMM bitmap issue
@@ -685,7 +689,7 @@ export class Executor {
     _side: 'buy' | 'sell'
   ): TradeResult {
     // Add small random slippage for realism
-    const randomSlippage = Math.random() * 0.002; // 0-0.2%
+    const randomSlippage = Math.random() * MAX_RANDOM_SLIPPAGE;
     const simulatedOutput = quote.outputAmount * (1 - randomSlippage);
 
     return {
@@ -1368,7 +1372,7 @@ export class Executor {
    */
   private simulateDirectTrade(amount: number, side: 'buy' | 'sell'): TradeResult {
     // Simple simulation - assume 0.1% slippage
-    const slippage = 0.001;
+    const slippage = DIRECT_TRADE_SLIPPAGE;
     const outputAmount = side === 'buy'
       ? amount * (1 - slippage)  // Slightly less tokens for buy
       : amount * (1 - slippage); // Slightly less USDC for sell
