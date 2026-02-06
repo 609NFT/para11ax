@@ -34,6 +34,12 @@ interface HolidayCache {
   fetchedAt: number;
 }
 
+interface HolidayApiResponse {
+  atDate: string;
+  eventName: string;
+  tradingHour?: string;
+}
+
 const ALPACA_RATE_LIMIT_PER_MIN = 200;
 
 // Alternate between Alpaca and Finnhub for fresher prices
@@ -579,7 +585,7 @@ export class StockFeed {
       );
 
       if (response.data?.data && Array.isArray(response.data.data)) {
-        const holidays: MarketHoliday[] = response.data.data.map((h: any) => ({
+        const holidays: MarketHoliday[] = response.data.data.map((h: HolidayApiResponse) => ({
           atDate: h.atDate,
           eventName: h.eventName,
           tradingHour: h.tradingHour || '',
