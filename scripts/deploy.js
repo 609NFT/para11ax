@@ -77,6 +77,16 @@ async function deploy() {
     console.log('\x1b[33mNo webhook - agent should post above to #deployments (1469126610908352593)\x1b[0m');
   }
 
+  // Push to both repos (keep them in sync)
+  console.log('\x1b[32mPushing to both repos...\x1b[0m');
+  try {
+    execSync('git push origin main', { stdio: 'inherit' });
+    execSync('git push private main 2>/dev/null || true', { stdio: 'inherit' });
+    console.log('\x1b[32mRepos synced ✓\x1b[0m');
+  } catch (e) {
+    console.log('\x1b[33mWarning: Git push failed - continuing with deploy\x1b[0m');
+  }
+
   // Reload
   console.log('\x1b[32mReloading PM2...\x1b[0m');
   execSync('pm2 reload parallax', { stdio: 'inherit' });
