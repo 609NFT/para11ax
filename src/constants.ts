@@ -149,8 +149,14 @@ export const MIN_TVL_FOR_TRADING = 50_000;
 
 /** Hours (UTC) to avoid trading due to historically low win rates
  *  Analysis (640 trades): 12-14 UTC (7-9 AM EST market open) = 6-8% WR vs 33-54% at 17-20 UTC
+ *  Updated 2026-02-06: Expanded based on 7-day analysis showing poor performance in broader market hours
  *  Market open creates chaotic spreads that don't mean-revert predictably */
-export const AVOID_TRADING_HOURS_UTC = [12, 13]; // 7-9 AM EST market open chaos
+export const AVOID_TRADING_HOURS_UTC = [12, 13, 14]; // 7-10 AM EST market open + extended volatility
+
+/** Hours (UTC) where we require higher entry thresholds due to lower win rates
+ *  These hours have historically lower win rates but not bad enough to completely avoid
+ *  Require additional 1.0% spread buffer during these periods */
+export const HIGH_THRESHOLD_HOURS_UTC = [10, 11, 15, 16]; // Pre-market, lunch hour chaos
 
 // ============================================================================
 // HOLD TIME CONSTANTS

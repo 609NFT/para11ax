@@ -285,6 +285,7 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 | Feb 8 | **5.0%** | 44 | 38.6% | +$9.14 | -14% | ❌ **Too restrictive** |
 | Current | 4.0% | 48 | 45.8% | +$10.59 | baseline | - |
 | Feb 8 | **4.2%** | 51 | 45.1% | **+$11.65** | **+10%** | ✅ **Positive but marginal** |
+| **Feb 9** | **4.1%** | 49 | 42.9% | +$6.82 | -36% | ❌ **Confirms sweet spot at 4.3%** |
 | Feb 6 | 3.5% | 53 | 32.1% | +$3.58 | -62% | Worse |
 | Feb 6 | **3.0%** | 55 | 40.0% | +$5.08 | -46% | **Worse** |
 

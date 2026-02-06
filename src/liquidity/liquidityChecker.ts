@@ -1017,7 +1017,14 @@ export function getEntryThreshold(symbol: string): number {
   const cached = thresholdCache.get(symbol);
 
   // Base threshold from TVL + fee calculation (ensures break-even)
-  const tvlBasedThreshold = cached ? cached.entryThresholdPct : (config.meanReversionEntrySpreadPct ?? 1.5);
+  let tvlBasedThreshold = cached ? cached.entryThresholdPct : (config.meanReversionEntrySpreadPct ?? 1.5);
+
+  // TIME-OF-DAY ADJUSTMENT: Higher thresholds during historically poor performance hours
+  const currentHourUTC = new Date().getUTCHours();
+  const { HIGH_THRESHOLD_HOURS_UTC } = require('../constants');
+  if (HIGH_THRESHOLD_HOURS_UTC.includes(currentHourUTC)) {
+    tvlBasedThreshold += 1.0; // Require additional 1% spread buffer during poor hours
+  }
 
   // Get stock ticker from token symbol (e.g., 'xSPY' -> 'SPY', 'TSLAx' -> 'TSLA')
   // Note: this is a rough mapping for liquidity lookup only; authoritative mapping is in supabaseClient.ts
