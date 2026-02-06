@@ -277,7 +277,7 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 |------|-----------|--------|----------|-----|-------------|--------|
 | Feb 8 | **4.5%** | 47 | **44.7%** | **+$11.90** | **+12%** | 🔥 **READY FOR DEPLOYMENT** |
 | Feb 6 | **4.5%** | 47 | **48.9%** | **+$12.83** | **+58%** | 🔥 **CONFIRMED MULTIPLE TESTS** |
-| Feb 6 | **5.0%** | 44 | 34.1% | +$9.27 | +25% | Marginal |
+| Feb 8 | **5.0%** | 44 | 38.6% | +$9.14 | -14% | ❌ **Too restrictive** |
 | Current | 4.0% | 48 | 45.8% | +$10.59 | baseline | - |
 | Feb 8 | **4.2%** | 51 | 45.1% | **+$11.65** | **+10%** | ✅ **Positive but marginal** |
 | Feb 6 | 3.5% | 53 | 32.1% | +$3.58 | -62% | Worse |
