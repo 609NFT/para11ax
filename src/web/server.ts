@@ -22,6 +22,9 @@ import { getEndpointStats } from '../feeds/endpointTracker';
 import { getStockFeed } from '../feeds/stockFeed';
 import logger from '../logger';
 import { convertMarkdownToHtml } from './utils/markdown';
+
+// Exit fee calculation constants
+const EXIT_SLIPPAGE_BUFFER = 0.002; // 0.2% additional slippage buffer for exit fee estimation
 import {
   checkAdminAuth,
   hasValidSession,
@@ -286,7 +289,7 @@ async function getDashboardData(timeRange: string = 'ALL') {
     } else {
       const currentValue = p.buyAmount * currentTokenPrice;
       const tokenFeeRate = getTokenFeeRate(p.buySymbol);
-      const exitFeeRate = tokenFeeRate + 0.002;
+      const exitFeeRate = tokenFeeRate + EXIT_SLIPPAGE_BUFFER;
       const estimatedExitFeeUsd = currentValue * exitFeeRate;
       unrealizedPnlUsd = currentValue - p.sizeUsd - actualEntryFeesUsd - estimatedExitFeeUsd;
     }
