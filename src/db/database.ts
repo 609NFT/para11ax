@@ -403,31 +403,91 @@ export class DatabaseManager {
 
   /**
    * Export positions to CSV
-   * TODO: Implement Supabase-based CSV export
    */
-  exportPositionsToCSV(_outputPath: string): void {
-    dbLogger.warn('exportPositionsToCSV not yet implemented for Supabase mode');
+  async exportPositionsToCSV(outputPath: string): Promise<void> {
+    try {
+      // Get both open and closed positions
+      const openPositions = await this.getOpenPositions();
+      const closedPositions = await this.getClosedPositions(1000); // Get last 1000 closed
+      const allPositions = [...openPositions, ...closedPositions];
+
+      if (allPositions.length === 0) {
+        dbLogger.info('No positions to export');
+        return;
+      }
+
+      // CSV header
+      const header = 'id,stock_ticker,buy_symbol,entry_spread_pct,entry_timestamp,size_usd,status,exit_spread_pct,exit_timestamp,pnl_usd\n';
+      
+      // CSV rows
+      const rows = allPositions.map(pos => {
+        const entryTime = new Date(pos.entryTimestamp).toISOString();
+        const exitTime = pos.exitTimestamp ? new Date(pos.exitTimestamp).toISOString() : '';
+        
+        return [
+          pos.id,
+          pos.stockTicker,
+          pos.buySymbol,
+          pos.entrySpreadPct.toFixed(4),
+          entryTime,
+          pos.sizeUsd.toFixed(2),
+          pos.status,
+          pos.exitSpreadPct?.toFixed(4) || '',
+          exitTime,
+          pos.pnlUsd?.toFixed(2) || ''
+        ].join(',');
+      }).join('\n');
+
+      fs.writeFileSync(outputPath, header + rows);
+      dbLogger.info({ outputPath, count: allPositions.length }, 'Exported positions to CSV');
+    } catch (error) {
+      dbLogger.error({ error, outputPath }, 'Failed to export positions to CSV');
+    }
   }
 
   /**
    * Export discount history to CSV
-   * TODO: Implement Supabase-based CSV export
    */
-  exportDiscountHistoryToCSV(_outputPath: string): void {
-    dbLogger.warn('exportDiscountHistoryToCSV not yet implemented for Supabase mode');
+  async exportDiscountHistoryToCSV(outputPath: string): Promise<void> {
+    try {
+      // This is a simplified export - getting latest discounts for each ticker
+      const latestDiscounts = await this.getLatestDiscounts();
+      
+      if (latestDiscounts.size === 0) {
+        dbLogger.info('No discount history to export');
+        return;
+      }
+
+      // CSV header
+      const header = 'stock_ticker,latest_discount_pct,timestamp\n';
+      
+      // CSV rows
+      const rows = Array.from(latestDiscounts.entries()).map(([ticker, discount]) => {
+        return [
+          ticker,
+          discount.toFixed(4),
+          new Date().toISOString()
+        ].join(',');
+      }).join('\n');
+
+      fs.writeFileSync(outputPath, header + rows);
+      dbLogger.info({ outputPath, count: latestDiscounts.size }, 'Exported discount history to CSV');
+    } catch (error) {
+      dbLogger.error({ error, outputPath }, 'Failed to export discount history to CSV');
+    }
   }
 
   /**
    * Export all data for analysis
    */
-  exportAllToCSV(outputDir: string): void {
+  async exportAllToCSV(outputDir: string): Promise<void> {
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
     const timestamp = new Date().toISOString().split('T')[0];
-    this.exportPositionsToCSV(path.join(outputDir, `positions_${timestamp}.csv`));
-    this.exportDiscountHistoryToCSV(path.join(outputDir, `discounts_${timestamp}.csv`));
+    await this.exportPositionsToCSV(path.join(outputDir, `positions_${timestamp}.csv`));
+    await this.exportDiscountHistoryToCSV(path.join(outputDir, `discounts_${timestamp}.csv`));
 
     dbLogger.info({ outputDir }, 'Exported all data to CSV');
   }
