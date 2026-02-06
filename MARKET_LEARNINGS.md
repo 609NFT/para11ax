@@ -320,9 +320,13 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 | Date | Decay Start | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
 | Current | **30 min** | **48** | **45.8%** | **+$10.59** | **baseline** | **✅ OPTIMAL** |
+| Feb 8 | 40 min | 46 | 47.8% | +$7.90 | 0% | ❌ No improvement |
 | Feb 8 | 20 min | 47 | 46.8% | +$8.61 | -19% | ❌ Worse PnL despite similar WR |
 
-**Key Finding**: **30-minute decay start is optimal**. Earlier decay at 20 minutes shows similar win rate (46.8% vs 45.8%) but worse PnL performance (+$8.61 vs +$10.59). Current timing allows adequate time for natural mean reversion before forcing lower exit thresholds.
+**Key Finding**: **30-minute decay start is optimal**. Testing both directions (20min and 40min) shows current 30min setting is the sweet spot:
+- **20min**: Earlier decay forces premature exits, worse PnL (-19%)
+- **40min**: Later decay shows no improvement (0% change)
+- **30min**: Optimal balance between allowing natural mean reversion and preventing extended holding
 
 ---
 
