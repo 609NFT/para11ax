@@ -47,8 +47,10 @@ import {
   LENIENT_EXIT_MAX_STALE_MS,
   SPREAD_WIDENING_STOP_PCT,
   AVOID_TRADING_HOURS_UTC,
+  TIME_OF_DAY_OPTIMIZATION,
 } from '../constants';
 import { getDynamicStopLossPct, getVolatilityPositionMultiplier, getVolatilityEntryMultiplier } from '../feeds/volatilityFeed';
+import { isOptimalTradingTime } from './timeOfDayOptimizer';
 
 // Timeout helper for quote fetching
 const QUOTE_TIMEOUT_MS = 10000; // 10 second timeout for quotes
@@ -594,20 +596,39 @@ export class MeanReversionSignalGenerator {
       };
     }
 
-    // Check 0.5: Time-of-day filter - avoid low win-rate trading hours
-    const currentHourUTC = new Date().getUTCHours();
-    if (AVOID_TRADING_HOURS_UTC.includes(currentHourUTC)) {
-      return {
-        shouldTrade: false,
-        pair,
-        spread: this.createEmptySpread(pair),
-        buyToken: token,
-        sellToken: token,
-        suggestedSizeUsd: 0,
-        expectedProfitUsd: 0,
-        expectedProfitPct: 0,
-        reasons: [`❌ Avoiding low win-rate hours (${currentHourUTC}:00 UTC market open chaos)`],
-      };
+    // Check 0.5: Time-of-day filter - enhanced or legacy mode
+    if (TIME_OF_DAY_OPTIMIZATION.ENABLED) {
+      // Enhanced per-token time filtering with global fallback
+      const timeCheck = await isOptimalTradingTime(token.symbol);
+      if (!timeCheck.allowed) {
+        return {
+          shouldTrade: false,
+          pair,
+          spread: this.createEmptySpread(pair),
+          buyToken: token,
+          sellToken: token,
+          suggestedSizeUsd: 0,
+          expectedProfitUsd: 0,
+          expectedProfitPct: 0,
+          reasons: [`❌ ${timeCheck.reason || 'Time filter blocked'}`],
+        };
+      }
+    } else {
+      // Legacy global time filtering
+      const currentHourUTC = new Date().getUTCHours();
+      if (AVOID_TRADING_HOURS_UTC.includes(currentHourUTC)) {
+        return {
+          shouldTrade: false,
+          pair,
+          spread: this.createEmptySpread(pair),
+          buyToken: token,
+          sellToken: token,
+          suggestedSizeUsd: 0,
+          expectedProfitUsd: 0,
+          expectedProfitPct: 0,
+          reasons: [`❌ Avoiding low win-rate hours (${currentHourUTC}:00 UTC market open chaos)`],
+        };
+      }
     }
 
     // Check 0b: Is this token in price impact cooldown? (excessive slippage detected previously)

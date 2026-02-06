@@ -49,7 +49,7 @@ export const SOL_DECIMALS = 9;
  */
 export const ENTRY_THRESHOLD_FORMULA = {
   COEFFICIENT: 0.50,   // Slippage buffer: 0.50 / sqrt(tvl_in_millions) - raised for observed 0.5%+ slippage
-  MIN_FLOOR: 4.3,      // BACKTEST CHAMPION: 50% WR, +$13.16 PnL — best of all tested thresholds
+  MIN_FLOOR: 4.2,      // Slight reduction from 4.3 to 4.2 to capture marginally more opportunities
   MAX_CAP: 12.0,       // Allow even higher thresholds - selectivity is key
 } as const;
 
@@ -117,10 +117,10 @@ export const POSITION_SIZE_FORMULA = {
  */
 export const ADAPTIVE_POSITION_SIZING = {
   ENABLED: true,                     // Feature flag - ENABLED for testing
-  SPREAD_COEFFICIENT: 12,            // Multiplier for spread (12 = 6% spread → 0.72x position)
+  SPREAD_COEFFICIENT: 18,            // Increased from 12 to 18: larger positions for good spreads
   LIQUIDITY_EXPONENT: 0.2,           // How much TVL variation affects sizing (0.2 = conservative)
   MIN_SPREAD_MULTIPLIER: 0.6,        // Minimum spread multiplier (60% of base)
-  MAX_SPREAD_MULTIPLIER: 1.3,        // Maximum spread multiplier (130% of base)
+  MAX_SPREAD_MULTIPLIER: 2.0,        // Increased from 1.3 to 2.0: allow bigger positions for exceptional spreads
 } as const;
 
 /**
@@ -168,10 +168,17 @@ export const MIN_TVL_FOR_TRADING = 50_000;
 // TRADING TIME FILTERS
 // ============================================================================
 
+/** Enhanced time-of-day optimization settings */
+export const TIME_OF_DAY_OPTIMIZATION = {
+  ENABLED: true,                     // Enable dynamic time-of-day filtering per token
+  FALLBACK_TO_GLOBAL: true,          // Use global stats when insufficient token-specific data
+} as const;
+
 /** Hours (UTC) to avoid trading due to historically low win rates
  *  Analysis (640 trades): 12-14 UTC (7-9 AM EST market open) = 6-8% WR vs 33-54% at 17-20 UTC
  *  Updated 2026-02-06: Expanded based on 7-day analysis showing poor performance in broader market hours
- *  Market open creates chaotic spreads that don't mean-revert predictably */
+ *  Market open creates chaotic spreads that don't mean-revert predictably
+ *  NOTE: Used as fallback when TIME_OF_DAY_OPTIMIZATION is disabled */
 export const AVOID_TRADING_HOURS_UTC = [12, 13, 14]; // 7-10 AM EST market open + extended volatility
 
 /** Hours (UTC) where we require higher entry thresholds due to lower win rates
