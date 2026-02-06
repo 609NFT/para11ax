@@ -323,6 +323,7 @@ The complete absence of trades demonstrates **disciplined execution**:
 ### Entry Threshold Experiments
 | Date | Threshold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-----------|--------|----------|-----|-------------|--------|
+| **Feb 13** | **4.7%** | 43 | 34.9% | +$5.44 | **+17%** | ❌ **Modest improvement - pattern shows degradation beyond 4.6%, confirms 4.5% optimal** |
 | **Feb 13** | **4.6%** | 42 | 38.1% | +$4.90 | **+5%** | ❌ **Modest improvement below significance threshold - confirms diminishing returns above 4.5%** |
 | **Feb 10** | **4.5% (3rd test)** | 43 | 32.6% | +$5.20 | **+12%** | ✅ **Positive but modest vs earlier +58%/+12% tests - data variance suggests changing conditions** |
 | **Feb 10** | **3.7%** | 47 | 31.9% | +$1.06 | **-77%** | ❌ **Fills curve between 3.5%/3.8% - confirms degradation accelerates below 4.0%** |
