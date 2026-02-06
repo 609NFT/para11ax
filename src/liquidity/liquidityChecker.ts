@@ -18,6 +18,7 @@
 
 import { getConfigSync, refreshTokensFromDb } from '../config';
 import logger from '../logger';
+import { getPerformanceAdjustmentSync } from '../signals/performanceTracker';
 import {
   TVL_ENTRY_THRESHOLDS,
   MIN_TVL_FOR_TRADING,
@@ -1041,11 +1042,19 @@ export function getEntryThreshold(symbol: string): number {
   }
 
   // Fall back to percentile-based threshold if no historical data
+  let effectiveThreshold = tvlBasedThreshold;
   if (PERCENTILE_THRESHOLD_FORMULA.ENABLED && cached?.percentileThresholdPct) {
-    return Math.max(tvlBasedThreshold, cached.percentileThresholdPct);
+    effectiveThreshold = Math.max(tvlBasedThreshold, cached.percentileThresholdPct);
   }
 
-  return tvlBasedThreshold;
+  // ROLLING PERFORMANCE ADJUSTMENT: Penalize symbols with poor recent win rates
+  // If trailing 20-trade WR < 30%, add +1% to threshold (recovers when performance improves)
+  const performanceAdjustment = getPerformanceAdjustmentSync(symbol);
+  if (performanceAdjustment > 0) {
+    effectiveThreshold += performanceAdjustment;
+  }
+
+  return effectiveThreshold;
 }
 
 /**
@@ -1058,6 +1067,7 @@ export function getEntryThresholdDetails(symbol: string): {
   percentileThreshold: number | null;
   percentileSamples: number;
   usingPercentile: boolean;
+  performanceAdjustment: number;
 } {
   const config = getConfigSync();
   const cached = thresholdCache.get(symbol);
@@ -1070,7 +1080,11 @@ export function getEntryThresholdDetails(symbol: string): {
     percentileThreshold !== null &&
     percentileThreshold > tvlBasedThreshold;
 
-  const effectiveThreshold = usingPercentile ? percentileThreshold! : tvlBasedThreshold;
+  let baseThreshold = usingPercentile ? percentileThreshold! : tvlBasedThreshold;
+  
+  // Include performance adjustment
+  const performanceAdjustment = getPerformanceAdjustmentSync(symbol);
+  const effectiveThreshold = baseThreshold + performanceAdjustment;
 
   return {
     effectiveThreshold,
@@ -1078,6 +1092,7 @@ export function getEntryThresholdDetails(symbol: string): {
     percentileThreshold,
     percentileSamples,
     usingPercentile,
+    performanceAdjustment,
   };
 }
 

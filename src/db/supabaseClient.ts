@@ -34,7 +34,7 @@ function getTokenPool(): Pool {
   return tokenPool;
 }
 
-function getTradesPool(): Pool {
+export function getTradesPool(): Pool {
   if (!tradesPool) {
     const connectionString = process.env.TRADES_DB_URL;
     if (!connectionString) {
