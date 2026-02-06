@@ -1,5 +1,26 @@
 # Code Improvements Log
 
+## 2026-02-06 11:22 - Removed Duplicate Console.log Statements
+
+**Fixed**: Eliminated duplicate console.log statements in orchestrator.ts that were redundant with logger calls
+
+**Details**:
+- Removed 2 console.log statements that duplicated existing logger.info calls:
+  - `console.log('Initializing database...');` (line 356)
+  - `console.log('Initializing price feeds...');` (line 361)
+- Each console.log was immediately followed by identical logger.info call
+- Kept the logger calls which provide proper structured logging
+
+**Impact**:
+- Cleaner initialization logs without redundancy
+- Consistent logging patterns - only using logger for operational messages
+- Reduced console output while maintaining proper log levels
+- Startup banner and final status messages preserved for visibility
+
+**Commit**: `2f9e2d6` - "chore: remove duplicate console.log statements in orchestrator"
+
+**Verification**: Bot reloaded successfully, initialization logs still visible via logger
+
 ## 2026-02-06 10:11 - Dead Code Removal
 
 **Fixed**: Removed unused `getPnlHistory` method from database.ts - dead code cleanup
