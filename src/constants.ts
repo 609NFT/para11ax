@@ -422,7 +422,7 @@ export const ESTIMATED_FEES_PCT = 0.05; // Lowered from 0.1 - actual slippage ~0
  *   $2M    → 0.05%
  */
 export const FEE_ESTIMATE_LINEAR = {
-  MIN_TVL: 100_000,     // Below this, use penalty fee (raised from 50K based on trade data)
+  MIN_TVL: 80_000,      // Below this, use penalty fee (lowered to make MSTR tradeable at 96K TVL)
   MAX_TVL: 2_000_000,   // Above this, use min fee
   MIN_FEE_PCT: 0.05,    // Fee at MAX_TVL
   MAX_FEE_PCT: 0.50,    // Fee at MIN_TVL
