@@ -6,7 +6,7 @@
  */
 
 import { signalLogger } from '../logger';
-import { supabase } from '../db/supabaseClient';
+import { getTradesPool } from '../db/supabaseClient';
 
 interface HourlyStats {
   hour: number;
@@ -102,22 +102,24 @@ export async function isOptimalTradingTime(tokenSymbol: string): Promise<{
 async function refreshTokenTimeProfile(tokenSymbol: string): Promise<TokenTimeProfile> {
   try {
     // Query last 30 days of trades for this token
-    const { data: trades, error } = await supabase
-      .from('trades')
-      .select('entry_timestamp, net_pnl')
-      .eq('buy_symbol', tokenSymbol)
-      .gte('entry_timestamp', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-      .not('net_pnl', 'is', null);
-      
-    if (error) {
-      timeLogger.warn({ token: tokenSymbol, error }, 'Failed to fetch token trades for time profile');
-      return createEmptyProfile(tokenSymbol);
-    }
+    const pool = getTradesPool();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    
+    const result = await pool.query(
+      `SELECT entry_timestamp, net_pnl 
+       FROM trades 
+       WHERE buy_symbol = $1 
+         AND entry_timestamp >= $2 
+         AND net_pnl IS NOT NULL`,
+      [tokenSymbol, thirtyDaysAgo]
+    );
+    
+    const trades = result.rows;
     
     // Group by hour and calculate stats
     const hourlyStats = new Map<number, HourlyStats>();
     
-    trades.forEach(trade => {
+    trades.forEach((trade: { entry_timestamp: string; net_pnl: number }) => {
       const hour = new Date(trade.entry_timestamp).getUTCHours();
       const isWin = trade.net_pnl > 0;
       
@@ -168,26 +170,24 @@ async function refreshTokenTimeProfile(tokenSymbol: string): Promise<TokenTimePr
 async function getGlobalHourlyStats(hour: number): Promise<HourlyStats> {
   try {
     // Query last 14 days of all trades for this hour
-    const { data: trades, error } = await supabase
-      .from('trades')
-      .select('net_pnl')
-      .gte('entry_timestamp', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-      .not('net_pnl', 'is', null);
-      
-    if (error || !trades) {
-      timeLogger.warn({ hour, error }, 'Failed to fetch global trades for hour stats');
-      return { hour, trades: 0, wins: 0, winRate: 0.5, avgPnL: 0, lastUpdated: Date.now() };
-    }
+    const pool = getTradesPool();
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
     
-    // Filter to this specific hour
-    const hourTrades = trades.filter(trade => 
-      new Date(trade.entry_timestamp).getUTCHours() === hour
+    const result = await pool.query(
+      `SELECT entry_timestamp, net_pnl 
+       FROM trades 
+       WHERE entry_timestamp >= $1 
+         AND net_pnl IS NOT NULL
+         AND EXTRACT(HOUR FROM entry_timestamp AT TIME ZONE 'UTC') = $2`,
+      [fourteenDaysAgo, hour]
     );
     
-    const wins = hourTrades.filter(trade => trade.net_pnl > 0).length;
+    const hourTrades = result.rows;
+    
+    const wins = hourTrades.filter((trade: { net_pnl: number }) => trade.net_pnl > 0).length;
     const winRate = hourTrades.length > 0 ? wins / hourTrades.length : 0.5;
     const avgPnL = hourTrades.length > 0 
-      ? hourTrades.reduce((sum, trade) => sum + trade.net_pnl, 0) / hourTrades.length 
+      ? hourTrades.reduce((sum: number, trade: { net_pnl: number }) => sum + trade.net_pnl, 0) / hourTrades.length 
       : 0;
       
     return {
