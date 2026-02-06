@@ -12,6 +12,7 @@
  */
 
 import { dbLogger } from '../logger';
+import { notifyError } from '../notifications/discord';
 
 export interface WriteOperation {
   id: string;
@@ -95,8 +96,8 @@ export class WriteQueue {
             'Write operation failed after max retries - DATA LOSS'
           );
 
-          // TODO: Consider adding alerting here for critical failures
-          // e.g., send to error tracking service, PagerDuty, etc.
+          // Alert on critical data loss
+          await notifyError('WriteQueue Data Loss', `Operation ${op.id} failed after ${op.maxRetries} retries: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
     }
