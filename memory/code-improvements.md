@@ -1,5 +1,26 @@
 # Code Improvements Log
 
+## 2026-02-06 11:56 - Removed Duplicate Startup Banner Logger Calls
+
+**Fixed**: Eliminated duplicate logger.info statements for startup banner in orchestrator.ts
+
+**Details**:
+- Removed 4 redundant logger.info calls that duplicated console.log startup banner:
+  - Banner border lines and title that were logged to both console and structured logs
+  - Mode description that was duplicated between console and logger
+- Kept console.log for user-facing startup banner visibility
+- Removed redundant structured logging of banner information
+
+**Impact**:
+- Cleaner log files without redundant banner information
+- Reduced log verbosity while maintaining user visibility
+- Consistent pattern: console for user output, logger for operational events
+- No functional changes to bot behavior
+
+**Commit**: `46bddb2` - "chore: remove duplicate logger calls for startup banner"
+
+**Verification**: Bot reloaded successfully, startup banner still displays correctly
+
 ## 2026-02-06 11:22 - Removed Duplicate Console.log Statements
 
 **Fixed**: Eliminated duplicate console.log statements in orchestrator.ts that were redundant with logger calls
