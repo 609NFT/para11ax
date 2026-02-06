@@ -219,7 +219,7 @@ export async function initializeFlashClient(): Promise<boolean> {
     logger.info('[FLASH] Starting Flash Trade initialization...');
     
     const config = getConfigSync();
-    console.log('[FLASH] Step 1/6: Config loaded, RPC:', config.rpcEndpoint?.slice(0, 50));
+    logger.info('[FLASH] Step 1/6: Config loaded, RPC:', config.rpcEndpoint?.slice(0, 50));
 
     // Load wallet from private key
     const privateKeyString = process.env.SOLANA_PRIVATE_KEY;
@@ -229,7 +229,7 @@ export async function initializeFlashClient(): Promise<boolean> {
       return false;
     }
 
-    console.log('[FLASH] Step 2/6: Parsing wallet key...');
+    logger.info('[FLASH] Step 2/6: Parsing wallet key...');
     // Parse private key (supports both array and base58 formats)
     let keypair: Keypair;
     try {
@@ -246,9 +246,9 @@ export async function initializeFlashClient(): Promise<boolean> {
       flashInitState = 'failed';
       return false;
     }
-    console.log('[FLASH] Step 2/6: Wallet loaded:', keypair.publicKey.toBase58().slice(0, 10) + '...');
+    logger.info('[FLASH] Step 2/6: Wallet loaded:', keypair.publicKey.toBase58().slice(0, 10) + '...');
 
-    console.log('[FLASH] Step 3/6: Creating connection and provider...');
+    logger.info('[FLASH] Step 3/6: Creating connection and provider...');
     // Create connection and provider
     const connection = new Connection(config.rpcEndpoint, {
       commitment: 'confirmed',
@@ -260,12 +260,12 @@ export async function initializeFlashClient(): Promise<boolean> {
       preflightCommitment: 'confirmed',
     });
 
-    console.log('[FLASH] Step 4/6: Loading pool config...');
+    logger.info('[FLASH] Step 4/6: Loading pool config...');
     // Load Remora pool config
     poolConfig = PoolConfig.fromIdsByName(POOL_NAME, CLUSTER);
-    console.log('[FLASH] Step 4/6: Pool config loaded, programId:', poolConfig.programId.toBase58().slice(0, 10) + '...');
+    logger.info('[FLASH] Step 4/6: Pool config loaded, programId:', poolConfig.programId.toBase58().slice(0, 10) + '...');
 
-    console.log('[FLASH] Step 5/6: Creating PerpetualsClient...');
+    logger.info('[FLASH] Step 5/6: Creating PerpetualsClient...');
     // Create the client
     // useExtOracleAccount = false: program validates oracle account against
     // custody's intOracleAccount (updated by Flash Trade keepers)
@@ -279,16 +279,16 @@ export async function initializeFlashClient(): Promise<boolean> {
         prioritizationFee: 50000, // 50k microlamports
       },
     );
-    console.log('[FLASH] Step 5/6: PerpetualsClient created');
+    logger.info('[FLASH] Step 5/6: PerpetualsClient created');
 
-    console.log('[FLASH] Step 6/6: Loading address lookup tables (30s timeout)...');
+    logger.info('[FLASH] Step 6/6: Loading address lookup tables (30s timeout)...');
     // Load address lookup tables for efficient transactions (with timeout)
     await withTimeout(
       flashClient.loadAddressLookupTable(poolConfig),
       30000,
       'loadAddressLookupTable'
     );
-    console.log('[FLASH] Step 6/6: Address lookup tables loaded');
+    logger.info('[FLASH] Step 6/6: Address lookup tables loaded');
 
     // Discover available short markets from pool config
     discoverShortMarkets();
@@ -300,7 +300,7 @@ export async function initializeFlashClient(): Promise<boolean> {
       availableRStockMarkets: Array.from(availableShortSymbols),
     }, 'Flash Trade client initialized');
     
-    console.log('[FLASH] ✅ Initialization complete!');
+    logger.info('[FLASH] ✅ Initialization complete!');
     flashInitState = 'success';
     return true;
   } catch (error) {
