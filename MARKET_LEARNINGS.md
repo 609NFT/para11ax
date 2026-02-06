@@ -66,7 +66,7 @@ Parallax trades **tokenized stocks on Solana** (rTSLA, rNVDA, rSPY, etc.) agains
 ## Active Parameters
 
 ```
-MIN_FLOOR: 4.00%          # Set to 4.0% — data shows only 4%+ entries profitable
+MIN_FLOOR: 4.50%          # Raised to 4.5% — backtest shows 48.9% WR vs 37.5% at 4.0% (+72% profit)
 MAX_CAP: 10.0%            # Raised from 2.5% — allow high thresholds
 MIN_HOLD_TIME_MS: 5 min   # Raised from 2 min — <5min exits are 10% WR
 MAX_HOLD_TIME_MS: 60 min  # UPDATED Feb 5: was 4h. Data: 0% WR past 2hr, sweet spot 15-30min
@@ -93,6 +93,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 
 | Date | Change | Commit | Result |
 |------|--------|--------|--------|
+| Feb 6 | **MIN_FLOOR 4.0%→4.5% (deep analysis + backtest validation)** | `TBD` | 🟡 **Monitoring** (expected: 48.9% WR vs 37.5%, +72% profit) |
 | Feb 6 | **Time-of-day filter: avoid 12-13 UTC market open chaos** | [`4b0fb7a`](https://github.com/609NFT/para11ax/commit/4b0fb7a) | 🟡 **Monitoring** (expected: higher WR, minimal trade reduction) |
 | Feb 5 | **Exit overhaul: 60min hold, spread-widening stop, shorter decay** | [`8fbcd9a`](https://github.com/609NFT/para11ax/commit/8fbcd9a) | 🟡 **Monitoring** (8 trades today vs 40 avg) |
 | Feb 5 | **Data-driven short thresholds** (on-chain Flash fees + spread analysis) | [`f36b3f6`](https://github.com/609NFT/para11ax/commit/f36b3f6) | 🟡 **Ready** (ENABLE_SHORTING=false) |

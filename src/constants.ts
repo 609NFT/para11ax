@@ -49,7 +49,7 @@ export const SOL_DECIMALS = 9;
  */
 export const ENTRY_THRESHOLD_FORMULA = {
   COEFFICIENT: 0.50,   // Slippage buffer: 0.50 / sqrt(tvl_in_millions) - raised for observed 0.5%+ slippage
-  MIN_FLOOR: 4.00,     // Lowered to 4.0% — 4.5% too aggressive, missing profitable 4%+ entries
+  MIN_FLOOR: 4.50,     // Raised to 4.5% — backtest shows 48.9% WR vs 37.5% at 4.0% (+72% profit)
   MAX_CAP: 10.0,       // Raised from 2.5% — we WANT high thresholds now
 } as const;
 
