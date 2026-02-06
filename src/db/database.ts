@@ -295,7 +295,7 @@ export class DatabaseManager {
    * Prune old discount history to keep database size manageable
    * Keeps last 31 days of data (same as Supabase retention)
    * @returns Number of rows deleted
-   * TODO: Implement Supabase pruning if needed (currently handled by Supabase TTL policies)
+   * Note: Pruning handled by Supabase retention policies in production
    */
   pruneOldDiscountHistory(_retentionDays: number = 8): number {
     // No-op in Supabase mode - pruning handled by database retention policies
@@ -582,7 +582,7 @@ export class DatabaseManager {
   /**
    * Get hourly aggregated discount data for Supabase sync
    * Returns data ready to be pushed to discount_heatmap_summary table
-   * TODO: Not needed in Supabase-only mode
+   * Note: Not used in Supabase-only mode (legacy SQLite compatibility method)
    */
   getHourlySummaryForSync(_sinceTimestamp?: number): Array<{
     symbol: string;
