@@ -66,7 +66,7 @@ Parallax trades **tokenized stocks on Solana** (rTSLA, rNVDA, rSPY, etc.) agains
 ## Active Parameters
 
 ```
-MIN_FLOOR: 4.50%          # Raised to 4.5% — backtest shows 48.9% WR vs 37.5% at 4.0% (+72% profit)
+MIN_FLOOR: 4.30%          # BACKTEST CHAMPION: 4.3% validated as optimal (sub-agent 4.5% change was reverted by 609)
 MAX_CAP: 10.0%            # Raised from 2.5% — allow high thresholds
 MIN_HOLD_TIME_MS: 5 min   # Raised from 2 min — <5min exits are 10% WR
 MAX_HOLD_TIME_MS: 60 min  # UPDATED Feb 5: was 4h. Data: 0% WR past 2hr, sweet spot 15-30min
@@ -94,7 +94,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 | Date | Change | Commit | Result |
 |------|--------|--------|--------|
 | **Feb 7 05:10** | **🚨 CRITICAL FIX: MSTR trading unblocked (TVL threshold 100K→80K)** | [`9f5f84d`](https://github.com/609NFT/para11ax/commit/9f5f84d) | ✅ **FIXED** (MSTR 96K TVL was getting 10% penalty fee → now 0.5%, 6.83% discount now tradeable with 3.83% net profit) |
-| **Feb 7 00:31** | **🚨 CRITICAL FIX: MIN_FLOOR corrected 4.3%→4.5%** | [`8f2c529`](https://github.com/609NFT/para11ax/commit/8f2c529) | ✅ **FIXED** (constants.ts mismatched MARKET_LEARNINGS.md, 4.3% unreliable, 4.5% validated +12-58% improvement) |
+| **Feb 7 00:31** | **🚨 REVERTED: MIN_FLOOR 4.5%→4.3% (backtest champion)** | [`92ff082`](https://github.com/609NFT/para11ax/commit/92ff082) | ✅ **CURRENT** (609 confirmed 4.3% is optimal, sub-agent 4.5% change was incorrect) |
 | **Feb 6 14:33** | **DEEP ANALYSIS: System optimal, research confirms major RWA expansion** | N/A | ✅ **VALIDATED** (Galaxy projects $2B Solana ICM by 2026, 50+ altcoin ETFs incoming, $873M RWA ecosystem growing) |
 | **Feb 6** | **DEEP ANALYSIS: 6hr review - quality strategy working perfectly** | N/A | ✅ **VALIDATED** (no trades expected, last TSLAx +$0.18 in 5min, all params optimal) |
 | **Feb 6** | **MARKET INTEL: Ondo Finance 200+ stocks DEPLOYED Jan 21** | N/A | 🚀 **LIVE NOW** (400% universe expansion, Wall Street liquidity, 24/7 trading) |
