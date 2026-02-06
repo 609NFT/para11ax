@@ -1,16 +1,13 @@
 # Code Improvements Log
 
-## 2026-02-06 - Replace console.log with proper logger in liquidityChecker (commit: dfbc4fe)
+## 2026-02-06 - 05:34 UTC
+**Fixed**: Replaced 5 console.log statements with proper logger calls in liquidityChecker.ts
+- Progress logging during token processing
+- Completion message after token processing
+- Percentile threshold calculation status messages
 
-**Issue**: 6 console.log statements in liquidity/liquidityChecker.ts should use proper logging
-**Fix**: Replaced console.log with logger.info for progress messages during liquidity refresh
-**Impact**: Consistent logging throughout codebase, proper log levels and formatting
-**Files changed**: src/liquidity/liquidityChecker.ts
+**Commit**: 75f2e5d
+**Impact**: Better log consistency, proper log levels for filtering
+**Status**: Deployed and running without errors
 
-**Remaining console.log count**: ~78 (down from 84)
-Most remaining are in dashboard/cli.ts which is appropriate for CLI output.
-
-**Next opportunities**:
-- More console.log replacements in core trading logic
-- TODOs in database.ts about Supabase migration
-- Missing error context in catch blocks
+**Remaining**: 72 more console.log statements throughout the codebase to replace with logger

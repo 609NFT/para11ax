@@ -235,8 +235,9 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 |------|-----------|--------|----------|-----|-------------|--------|
 | Feb 6 | **4.5%** | 47 | **48.9%** | **+$12.83** | **+72%** | 🔥 **PROMISING** |
 | Feb 6 | **5.0%** | 44 | 34.1% | +$9.27 | +25% | Marginal |
-| Current | 4.0% | 48 | 54.2% | +$8.77 | baseline | - |
-| Feb 6 | 3.5% | 53 | 32.1% | +$3.58 | -59% | Worse |
+| Current | 4.0% | 48 | 50.0% | +$9.49 | baseline | - |
+| Feb 6 | 3.5% | 53 | 32.1% | +$3.58 | -62% | Worse |
+| Feb 6 | **3.0%** | 55 | 40.0% | +$5.08 | -46% | **Worse** |
 
 ### Exit Target Experiments
 | Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
