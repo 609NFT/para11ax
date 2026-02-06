@@ -4,7 +4,9 @@
 
 import logger from '../logger';
 
-const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+// Separate webhooks: trades go to #trades, alerts go to #alerts
+const TRADES_WEBHOOK_URL = process.env.DISCORD_TRADES_WEBHOOK_URL;
+const ALERTS_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 interface TradeNotification {
   type: 'entry' | 'exit';
@@ -19,25 +21,29 @@ interface TradeNotification {
 
 /**
  * Send a notification to Discord
+ * @param content - Message content
+ * @param channel - 'trades' or 'alerts' (default: 'alerts')
  */
-async function sendDiscordMessage(content: string): Promise<void> {
-  if (!WEBHOOK_URL) {
-    logger.debug('Discord webhook not configured, skipping notification');
+async function sendDiscordMessage(content: string, channel: 'trades' | 'alerts' = 'alerts'): Promise<void> {
+  const webhookUrl = channel === 'trades' ? TRADES_WEBHOOK_URL : ALERTS_WEBHOOK_URL;
+  
+  if (!webhookUrl) {
+    logger.debug({ channel }, 'Discord webhook not configured, skipping notification');
     return;
   }
 
   try {
-    const response = await fetch(WEBHOOK_URL, {
+    const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     });
 
     if (!response.ok) {
-      logger.warn({ status: response.status }, 'Discord webhook failed');
+      logger.warn({ status: response.status, channel }, 'Discord webhook failed');
     }
   } catch (error) {
-    logger.warn({ error }, 'Failed to send Discord notification');
+    logger.warn({ error, channel }, 'Failed to send Discord notification');
   }
 }
 
@@ -57,7 +63,7 @@ export async function notifyEntry(trade: TradeNotification): Promise<void> {
     solscanLink,
   ].filter(Boolean).join(' • ');
 
-  await sendDiscordMessage(message);
+  await sendDiscordMessage(message, 'trades');
 }
 
 /**
@@ -81,7 +87,7 @@ export async function notifyExit(trade: TradeNotification): Promise<void> {
     solscanLink,
   ].filter(Boolean).join(' • ');
 
-  await sendDiscordMessage(message);
+  await sendDiscordMessage(message, 'trades');
 }
 
 /**
@@ -137,7 +143,7 @@ export async function notifyShortEntry(trade: ShortNotification): Promise<void> 
     solscanLink,
   ].filter(Boolean).join(' • ');
 
-  await sendDiscordMessage(message);
+  await sendDiscordMessage(message, 'trades');
 }
 
 /**
@@ -160,5 +166,5 @@ export async function notifyShortExit(trade: ShortNotification): Promise<void> {
     solscanLink,
   ].filter(Boolean).join(' • ');
 
-  await sendDiscordMessage(message);
+  await sendDiscordMessage(message, 'trades');
 }
