@@ -93,6 +93,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 
 | Date | Change | Commit | Result |
 |------|--------|--------|--------|
+| Feb 6 | **Time-of-day filter: avoid 12-13 UTC market open chaos** | [`4b0fb7a`](https://github.com/609NFT/para11ax/commit/4b0fb7a) | 🟡 **Monitoring** (expected: higher WR, minimal trade reduction) |
 | Feb 5 | **Exit overhaul: 60min hold, spread-widening stop, shorter decay** | [`8fbcd9a`](https://github.com/609NFT/para11ax/commit/8fbcd9a) | 🟡 **Monitoring** (8 trades today vs 40 avg) |
 | Feb 5 | **Data-driven short thresholds** (on-chain Flash fees + spread analysis) | [`f36b3f6`](https://github.com/609NFT/para11ax/commit/f36b3f6) | 🟡 **Ready** (ENABLE_SHORTING=false) |
 | Feb 5 | **Fix anti-churning guard blocking max hold** | [`2dd7583`](https://github.com/609NFT/para11ax/commit/2dd7583) | ✅ **Fixed** (GOOGL stuck 133min→exit) |
@@ -231,8 +232,14 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 ### Entry Threshold Experiments
 | Date | Threshold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-----------|--------|----------|-----|-------------|--------|
-| Feb 6 | **4.5%** | 47 | **48.9%** | **+$12.83** | **+190%** | 🔥 **PROMISING** |
-| Current | 4.0% | - | 20.9% | -$14.18 | baseline | - |
+| Feb 6 | **4.5%** | 47 | **48.9%** | **+$12.83** | **+72%** | 🔥 **PROMISING** |
+| Feb 6 | **5.0%** | 44 | 34.1% | +$9.27 | +25% | Marginal |
+| Current | 4.0% | 48 | 37.5% | +$7.44 | baseline | - |
+| Feb 6 | 3.5% | 53 | 32.1% | +$3.58 | -52% | Worse |
+
+**Updated Baseline** (3-day backtest, Feb 6): Current 4.0% threshold yields 48 trades, 37.5% WR, +$7.44 net PnL.
+
+**Key Finding**: **4.5% threshold remains the sweet spot** - highest win rate (48.9%) and best absolute performance (+$12.83). The higher threshold filters out marginal trades while capturing the highest-quality opportunities.
 
 **Key Finding (Feb 6)**: 4.5% threshold dramatically improves performance:
 - Win rate: 20.9% → 48.9% (+134% relative)
