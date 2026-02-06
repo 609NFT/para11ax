@@ -73,17 +73,7 @@ export class DatabaseManager {
     this.cache.invalidate(`state:${key}`);
   }
 
-  /**
-   * Get system state
-   * MIGRATED: Now reads from Supabase with cache (SQLite removed)
-   * Note: This is rarely used, so we don't implement Supabase read yet
-   * Return null for now (risk state is recalculated on startup anyway)
-   */
-  getState<T>(_key: string): T | null {
-    // TODO: Implement fetchSystemState if needed
-    // For now, return null - risk state is recalculated on startup
-    return null;
-  }
+  // getState method removed - was unused dead code
 
   /**
    * Close database connection (no-op in Supabase mode)
