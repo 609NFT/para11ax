@@ -23,3 +23,14 @@
 **Status**: Deployed and running without errors
 
 **Remaining**: ~67 more console.log statements throughout the codebase to replace with logger
+
+## 2026-02-06 - 07:21 UTC
+**Fixed**: Removed 2 duplicate console.log statements in web server startup
+- Removed `console.log("Web dashboard running at...")` - already logged by logger.info
+- Removed `console.log("Warning: Port in use...")` - already logged by logger.warn
+
+**Commit**: 7c47b7a
+**Impact**: Eliminated duplicate log output, cleaner console output
+**Status**: Deployed and running without errors
+
+**Remaining**: ~65 more console.log statements throughout the codebase to replace with logger
