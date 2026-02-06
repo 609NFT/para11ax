@@ -432,6 +432,13 @@ export class Orchestrator {
       pruneOldDiscountHistory().catch(() => {});
     }, 24 * 60 * 60 * 1000);
 
+    // Schedule log rotation every 6 hours (keeps parallax.log under 50MB)
+    setInterval(() => {
+      this.rotateLogsIfNeeded().catch(err => {
+        logger.warn({ error: err }, 'Log rotation failed');
+      });
+    }, 6 * 60 * 60 * 1000);
+
     // Sync hourly heatmap summary to Supabase for fast 7d queries
     // Run once on startup, then every hour
     logger.info('Syncing heatmap summary to Supabase...');
@@ -453,6 +460,25 @@ export class Orchestrator {
 
     // Discord notification
     notifyStartup().catch(() => {});
+  }
+
+  /**
+   * Rotate parallax.log if it exceeds 50MB
+   * Keeps last 10K lines, archives rest with gzip, deletes archives older than 3 days
+   */
+  private async rotateLogsIfNeeded(): Promise<void> {
+    const { execSync } = require('child_process');
+    const scriptPath = `${process.env.HOME}/parallax/scripts/rotate-logs.sh`;
+    
+    try {
+      const result = execSync(`bash ${scriptPath}`, { encoding: 'utf8' });
+      if (result.includes('Rotated')) {
+        logger.info({ result: result.trim() }, 'Log rotation completed');
+      }
+    } catch (error) {
+      // Script might not exist or fail - not critical
+      logger.debug({ error }, 'Log rotation skipped');
+    }
   }
 
   /**
