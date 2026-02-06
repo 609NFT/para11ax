@@ -216,7 +216,6 @@ export async function initializeFlashClient(): Promise<boolean> {
   }
 
   try {
-    console.log('[FLASH] Starting Flash Trade initialization...');
     logger.info('[FLASH] Starting Flash Trade initialization...');
     
     const config = getConfigSync();
