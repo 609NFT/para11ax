@@ -601,6 +601,20 @@ export async function getSolPriceUsd(): Promise<number> {
   return cachedSolPrice?.price || 180; // $180 fallback
 }
 
+// ============================================================================
+// FEATURE FLAGS
+// ============================================================================
+
+/**
+ * Enhanced Quote Optimization
+ * Uses network congestion-aware tip estimation and route scoring
+ */
+export const ENHANCED_QUOTE_OPTIMIZATION = {
+  ENABLED: true,                     // Feature flag - enable enhanced quote comparison
+  TIP_SCALING_FACTOR: 1.0,          // Scale tips up/down (1.0 = normal)
+  EXECUTION_SCORE_WEIGHT: 0.2,      // Weight of execution probability in selection (0.2 = 20%)
+} as const;
+
 /**
  * Calculate priority fee in USD
  * @param microLamportsPerCu - Priority fee in microLamports per compute unit
