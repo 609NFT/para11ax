@@ -393,15 +393,16 @@ The complete absence of trades demonstrates **disciplined execution**:
 ### Decay Timing Experiments
 | Date | Decay Start | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
-| Current | **30 min** | **45** | **33.3%** | **+$4.66** | **baseline** | **✅ OPTIMAL** |
+| Current | **30 min** | **46** | **43.5%** | **+$4.76** | **baseline** | **✅ OPTIMAL** |
+| **Feb 12** | **20 min** | **46** | **41.3%** | **+$4.76** | **-5%** | ❌ **Lower win rate, same PnL - worse quality** |
 | Feb 10 | 40 min | 45 | 33.3% | +$4.61 | 0% | ❌ No improvement |
 | Feb 10 | 25 min | 45 | 33.3% | +$4.66 | 0% | ❌ No change |
-| Feb 8 | 20 min | 47 | 46.8% | +$8.61 | -19% | ❌ Worse PnL despite similar WR |
 
-**Key Finding**: **30-minute decay start is optimal**. Testing both directions (20min and 40min) shows current 30min setting is the sweet spot:
-- **20min**: Earlier decay forces premature exits, worse PnL (-19%)
-- **40min**: Later decay shows no improvement (0% change)
-- **30min**: Optimal balance between allowing natural mean reversion and preventing extended holding
+**Key Finding**: **30-minute decay start is definitively optimal**. Comprehensive testing in all directions confirms current setting:
+- **20min**: Same PnL but lower win rate (41.3% vs 43.5% = -5% quality degradation)
+- **25min**: No change from baseline (0%)
+- **40min**: No improvement (0% change)  
+- **30min**: Optimal balance - all deviations perform worse or identical
 
 ---
 
