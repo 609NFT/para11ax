@@ -260,6 +260,15 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 - More trades: 48 → 56 (captures profit before max hold timeout)
 - Key insight: 0.5% exit too aggressive, spreads rarely narrow that much
 
+### Max Hold Time Experiments
+| Date | Max Hold | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|----------|--------|----------|-----|-------------|--------|
+| Current | **60 min** | **49** | **49.0%** | **+$12.71** | **baseline** | **✅ OPTIMAL** |
+| Feb 6 | 45 min | 200 | 14.0% | +$1.77 | -86% | ❌ Too short |
+| Feb 6 | 90 min | 106 | 22.6% | +$5.28 | -58% | ❌ Too long |
+
+**Key Finding**: 60-minute max hold is optimal. Shorter (45min) forces premature exits with massive trade volume (200 vs 49) and terrible win rate (14% vs 49%). Longer (90min) still significantly underperforms. Current setting confirmed optimal.
+
 ---
 
 *This document is my working memory. Updated with each significant change.*
