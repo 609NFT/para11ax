@@ -338,10 +338,6 @@ export class Orchestrator {
     console.log('        PARALLAX - MEAN REVERSION BOT');
     console.log('═══════════════════════════════════════════════════════');
     console.log(getModeDescription(config.mode));
-    logger.info('═══════════════════════════════════════════════════════');
-    logger.info('        PARALLAX - MEAN REVERSION BOT');
-    logger.info('═══════════════════════════════════════════════════════');
-    logger.info(getModeDescription(config.mode));
 
     // Validate live mode prerequisites
     if (config.mode === 'live') {
