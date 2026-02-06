@@ -616,6 +616,18 @@ export const ENHANCED_QUOTE_OPTIMIZATION = {
 } as const;
 
 /**
+ * Volatility-Adaptive Exit Strategy
+ * Scales exit thresholds based on token volatility for better exit timing
+ */
+export const VOLATILITY_ADAPTIVE_EXIT = {
+  ENABLED: false,                    // Feature flag - disabled until backtested
+  BASE_MARKET_ATR_PCT: 2.7,         // Baseline market volatility (median ATR)
+  MIN_MULTIPLIER: 0.6,              // Minimum exit threshold multiplier (60%)
+  MAX_MULTIPLIER: 1.8,              // Maximum exit threshold multiplier (180%)
+  SMOOTHING_FACTOR: 0.3,             // How much to smooth volatility scaling (30%)
+} as const;
+
+/**
  * Calculate priority fee in USD
  * @param microLamportsPerCu - Priority fee in microLamports per compute unit
  * @param computeUnits - Number of compute units used
