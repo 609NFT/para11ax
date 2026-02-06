@@ -19,7 +19,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { QuoteInfo, RouteInfo } from '../types';
 import { executionLogger } from '../logger';
 import { getConfigSync } from '../config';
-import { USDC_MINT } from '../constants';
+import { USDC_MINT, USDC_DECIMALS } from '../constants';
 import { recordApiCall } from '../feeds/endpointTracker';
 
 export interface SwapResponse {
@@ -314,11 +314,20 @@ export class JupiterClient {
     const route = this.parseRoute(result.routePlan || []);
     const totalFeePct = this.calculateTotalFeePct(route, inputAmount);
 
+    // Get decimals from response or use known values
+    // Jupiter API includes inputMint/outputMint decimals in some responses
+    const inputDecimals = inputMint === USDC_MINT ? USDC_DECIMALS : 
+                          (result.inputDecimals ?? 9);  // Default to 9 for most Solana tokens
+    const outputDecimals = outputMint === USDC_MINT ? USDC_DECIMALS :
+                           (result.outputDecimals ?? 9);
+
     const quoteInfo: QuoteInfo = {
       inputMint,
       outputMint,
       inputAmount,
       outputAmount: parseInt(result.outAmount),
+      inputDecimals,
+      outputDecimals,
       priceImpactPct: parseFloat(result.priceImpactPct || '0'),
       slippageBps: slippageBps || config.maxSlippageBps,
       route,

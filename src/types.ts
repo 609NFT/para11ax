@@ -47,6 +47,8 @@ export interface QuoteInfo {
   outputMint: string;
   inputAmount: number;
   outputAmount: number;
+  inputDecimals?: number;  // Decimals of input token (avoid hardcoding)
+  outputDecimals?: number; // Decimals of output token (avoid hardcoding)
   priceImpactPct: number;
   slippageBps: number;
   route: RouteInfo[];
