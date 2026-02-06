@@ -1,39 +1,35 @@
 #!/usr/bin/env node
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { Pool } = require('pg');
-const fs = require('fs');
-
-const supabaseConfig = JSON.parse(fs.readFileSync(`${process.env.HOME}/.parallax-secrets/supabase-db.json`, 'utf8'));
 
 const pool = new Pool({
-  host: supabaseConfig.host,
-  port: supabaseConfig.port,
-  database: supabaseConfig.database,
-  user: supabaseConfig.username,
-  password: supabaseConfig.password,
+  connectionString: process.env.TRADES_DB_URL,
   ssl: { rejectUnauthorized: false },
 });
 
 async function queryRecentTrades() {
   try {
-    // Get trades from last 6 hours
-    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+    // Get trades from last 6 hours (convert to milliseconds timestamp)
+    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
     
     const tradesQuery = `
       SELECT 
-        id, symbol, direction, entry_discount_pct, exit_reason, 
-        pnl_usd, real_pnl_usd, created_at, closed_at,
-        entry_amount_usd, exit_amount_usd, duration_ms
-      FROM trades 
-      WHERE created_at >= $1 
-      ORDER BY created_at DESC
+        id, stock_ticker, buy_symbol, entry_spread_pct, exit_reason, 
+        pnl_usd, pnl_pct, 
+        to_timestamp(entry_timestamp / 1000) as entry_time,
+        to_timestamp(exit_timestamp / 1000) as exit_time,
+        size_usd, buy_amount,
+        (exit_timestamp - entry_timestamp) as duration_ms,
+        status
+      FROM mean_reversion_positions 
+      WHERE entry_timestamp >= $1 AND status = 'closed'
+      ORDER BY entry_timestamp DESC
     `;
     
     const result = await pool.query(tradesQuery, [sixHoursAgo]);
     
     console.log(`=== TRADES ANALYSIS (Last 6 Hours) ===`);
-    console.log(`Since: ${sixHoursAgo}`);
+    console.log(`Since: ${new Date(sixHoursAgo).toISOString()}`);
     console.log(`Total trades: ${result.rows.length}`);
     
     if (result.rows.length === 0) {
@@ -44,17 +40,17 @@ async function queryRecentTrades() {
     // Analyze patterns
     const trades = result.rows;
     const exitReasons = trades.reduce((acc, t) => {
-      acc[t.exit_reason] = (acc[t.exit_reason] || 0) + 1;
+      acc[t.exit_reason || 'unknown'] = (acc[t.exit_reason || 'unknown'] || 0) + 1;
       return acc;
     }, {});
     
-    const avgEntry = trades.reduce((sum, t) => sum + parseFloat(t.entry_discount_pct || 0), 0) / trades.length;
-    const totalPnL = trades.reduce((sum, t) => sum + parseFloat(t.real_pnl_usd || 0), 0);
+    const avgEntry = trades.reduce((sum, t) => sum + parseFloat(t.entry_spread_pct || 0), 0) / trades.length;
+    const totalPnL = trades.reduce((sum, t) => sum + parseFloat(t.pnl_usd || 0), 0);
     const avgDuration = trades.reduce((sum, t) => sum + parseInt(t.duration_ms || 0), 0) / trades.length;
     
     console.log('\n--- SUMMARY ---');
-    console.log(`Average entry discount: ${avgEntry.toFixed(2)}%`);
-    console.log(`Total real PnL: $${totalPnL.toFixed(2)}`);
+    console.log(`Average entry spread: ${avgEntry.toFixed(2)}%`);
+    console.log(`Total PnL: $${totalPnL.toFixed(2)}`);
     console.log(`Average duration: ${(avgDuration / 1000 / 60).toFixed(1)} minutes`);
     
     console.log('\n--- EXIT REASONS ---');
@@ -63,8 +59,9 @@ async function queryRecentTrades() {
     });
     
     console.log('\n--- RECENT TRADES ---');
-    trades.slice(0, 5).forEach(trade => {
-      console.log(`${trade.symbol} ${trade.direction} | Entry: ${trade.entry_discount_pct}% | Exit: ${trade.exit_reason} | PnL: $${trade.real_pnl_usd} | Duration: ${Math.round(trade.duration_ms/1000/60)}min`);
+    trades.slice(0, 10).forEach(trade => {
+      const duration = Math.round(trade.duration_ms/1000/60);
+      console.log(`${trade.stock_ticker} (${trade.buy_symbol}) | Entry: ${trade.entry_spread_pct}% | Exit: ${trade.exit_reason || 'unknown'} | PnL: $${trade.pnl_usd || '0.00'} | Duration: ${duration}min`);
     });
     
   } catch (error) {
