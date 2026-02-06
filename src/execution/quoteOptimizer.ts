@@ -19,6 +19,14 @@ const PRICE_IMPACT_THRESHOLDS = {
   HIGH: 2.0,         // > 2.0% price impact
 } as const;
 
+// Network congestion time thresholds (UTC hours)
+const CONGESTION_HOURS = {
+  PEAK_START: 14,     // Market hours start
+  PEAK_END: 21,       // Market hours end
+  MEDIUM_START: 12,   // Pre-market activity
+  MEDIUM_END: 22,     // After-hours activity
+} as const;
+
 const PRICE_IMPACT_SCORES = {
   EXCELLENT: 10,
   GOOD: 5,
@@ -79,10 +87,9 @@ function getNetworkCongestion(): CongestionLevel {
   const hour = new Date().getUTCHours();
   
   // Simple heuristic based on time of day
-  // Market hours (14-21 UTC) = higher congestion
-  if (hour >= 14 && hour <= 21) {
+  if (hour >= CONGESTION_HOURS.PEAK_START && hour <= CONGESTION_HOURS.PEAK_END) {
     return CongestionLevel.HIGH;
-  } else if (hour >= 12 && hour <= 22) {
+  } else if (hour >= CONGESTION_HOURS.MEDIUM_START && hour <= CONGESTION_HOURS.MEDIUM_END) {
     return CongestionLevel.MEDIUM;
   }
   return CongestionLevel.LOW;
