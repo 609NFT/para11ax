@@ -1667,11 +1667,12 @@ export class MeanReversionSignalGenerator {
     // Example: Entry at 2.5% discount, exit at 1.7% looks like 0.8% capture
     //          But if stock dropped 0.8%, we actually lost money (NAV degradation)
     // Only apply this guard if we've captured > 0.3% spread (meaningful narrowing)
-    // EXCEPTION: Never block forced exits (max_hold_time, spread_widening_stop)
+    // EXCEPTION: Never block forced exits (max_hold_time, spread_widening_stop, stop_loss)
     const isPastMaxHold = holdTimeMs > MAX_HOLD_TIME_MS;
     const isSpreadWidening = position.entrySpreadPct !== undefined &&
       currentDiscount > position.entrySpreadPct + SPREAD_WIDENING_STOP_PCT;
-    if (discountCaptured > 0.3 && stockChangePct < -0.3 && !isPastMaxHold && !isSpreadWidening) {
+    const isStopLoss = currentDiscount <= stopLossDiscountPct && holdTimeMs >= STOP_LOSS_GRACE_PERIOD_MS;
+    if (discountCaptured > 0.3 && stockChangePct < -0.3 && !isPastMaxHold && !isSpreadWidening && !isStopLoss) {
       // Spread narrowed, but stock also dropped significantly
       // This is likely a losing trade disguised as profit - continue holding
       signalLogger.info({
