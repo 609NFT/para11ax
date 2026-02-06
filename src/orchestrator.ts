@@ -143,13 +143,16 @@ export class Orchestrator {
           consecutiveLossAmount: this.consecutiveLossAmount.toFixed(2),
         }, '🚨 CIRCUIT BREAKER TRIPPED: 10 consecutive losing trades with >$1 loss - stopping bot');
 
-        // Log to console so it's visible even when dashboard is down
-        console.log('\n' + '='.repeat(60));
-        console.log('🚨 CIRCUIT BREAKER TRIPPED');
-        console.log(`   ${this.consecutiveLosses} consecutive losing trades`);
-        console.log(`   $${this.consecutiveLossAmount.toFixed(2)} cumulative loss`);
-        console.log('   Bot has been stopped to prevent further losses');
-        console.log('='.repeat(60) + '\n');
+        // Log circuit breaker event for visibility
+        const breakerMsg = [
+          '=' + '='.repeat(58) + '=',
+          '🚨 CIRCUIT BREAKER TRIPPED',
+          `   ${this.consecutiveLosses} consecutive losing trades`,
+          `   $${this.consecutiveLossAmount.toFixed(2)} cumulative loss`,
+          '   Bot has been stopped to prevent further losses',
+          '=' + '='.repeat(58) + '='
+        ].join('\n');
+        logger.error(breakerMsg);
 
         // Discord notification
         notifyCircuitBreaker(this.consecutiveLosses, this.consecutiveLossAmount).catch(() => {});
