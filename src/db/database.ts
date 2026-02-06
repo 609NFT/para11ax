@@ -34,6 +34,10 @@ import { getWriteQueue } from './writeQueue';
 
 type DiscountSnapshot = PairSpread;
 
+// Cache TTL constants
+const CACHE_TTL_SHORT = 30000;   // 30 seconds for frequently changing data
+const CACHE_TTL_MEDIUM = 300000; // 5 minutes for stable data
+
 export class DatabaseManager {
   private initialized: boolean = false;
   private cache = getQueryCache();
@@ -148,7 +152,7 @@ export class DatabaseManager {
 
     const rows = await fetchOpenPositions();
     const positions = rows.map((row) => this.rowToPosition(row as unknown as Record<string, unknown>));
-    this.cache.set(cacheKey, positions, 30000); // 30s TTL
+    this.cache.set(cacheKey, positions, CACHE_TTL_SHORT); // 30s TTL
     return positions;
   }
 
@@ -162,7 +166,7 @@ export class DatabaseManager {
 
     // Note: maxAgeMs not yet supported by fetchClosedPositions - always returns most recent
     const rows = await fetchClosedPositions(limit);
-    this.cache.set(cacheKey, rows, 300000); // 5min TTL
+    this.cache.set(cacheKey, rows, CACHE_TTL_MEDIUM); // 5min TTL
     return rows.map(row => this.rowToPosition(row as unknown as Record<string, unknown>));
   }
 
@@ -277,7 +281,7 @@ export class DatabaseManager {
     if (cached) return cached;
 
     const result = await fetchDiscountAtTimestamp(stockTicker, tokenSymbol, timestamp);
-    if (result) this.cache.set(cacheKey, result, 300000); // 5min TTL - historical data doesn't change
+    if (result) this.cache.set(cacheKey, result, CACHE_TTL_MEDIUM); // 5min TTL - historical data doesn't change
     return result;
   }
 
@@ -308,7 +312,7 @@ export class DatabaseManager {
 
     const rows = await fetchRollingDiscountHistory(tokenSymbol, windowMs);
     const discounts = rows.map(r => r.discount);
-    this.cache.set(cacheKey, discounts, 300000); // 5min TTL
+    this.cache.set(cacheKey, discounts, CACHE_TTL_MEDIUM); // 5min TTL
     return discounts;
   }
 
@@ -329,7 +333,7 @@ export class DatabaseManager {
     for (const [symbol, rows] of rawMap.entries()) {
       map.set(symbol, rows.map(r => r.discount));
     }
-    this.cache.set(cacheKey, map, 300000); // 5min TTL
+    this.cache.set(cacheKey, map, CACHE_TTL_MEDIUM); // 5min TTL
     return map;
   }
 
@@ -345,7 +349,7 @@ export class DatabaseManager {
     if (cached) return cached;
 
     const map = await fetchAllPercentileThresholds(windowMs, percentile);
-    this.cache.set(cacheKey, map, 300000); // 5min TTL
+    this.cache.set(cacheKey, map, CACHE_TTL_MEDIUM); // 5min TTL
     return map;
   }
 
@@ -478,7 +482,7 @@ export class DatabaseManager {
 
     const rows = await fetchOpenShortPositions();
     const positions = rows.map((row) => this.rowToShortPosition(row as unknown as Record<string, unknown>));
-    this.cache.set(cacheKey, positions, 30000); // 30s TTL
+    this.cache.set(cacheKey, positions, CACHE_TTL_SHORT); // 30s TTL
     return positions;
   }
 
@@ -492,7 +496,7 @@ export class DatabaseManager {
 
     const rows = await fetchClosedShortPositions(limit);
     const positions = rows.map((row) => this.rowToShortPosition(row as unknown as Record<string, unknown>));
-    this.cache.set(cacheKey, positions, 300000); // 5min TTL
+    this.cache.set(cacheKey, positions, CACHE_TTL_MEDIUM); // 5min TTL
     return positions;
   }
 
