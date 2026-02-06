@@ -81,7 +81,9 @@ export function getPerformanceAdjustmentSync(symbol: string): number {
   }
   
   // Trigger async refresh but return safe default
-  getSymbolPerformance(symbol).catch(() => {});
+  getSymbolPerformance(symbol).catch(error => {
+    logger.debug({ symbol, error }, 'Failed to refresh symbol performance (background)');
+  });
   return 0;
 }
 
