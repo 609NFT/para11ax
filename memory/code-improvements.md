@@ -1,5 +1,25 @@
 # Code Improvements Log
 
+## 2026-02-06 10:11 - Dead Code Removal
+
+**Fixed**: Removed unused `getPnlHistory` method from database.ts - dead code cleanup
+
+**Details**:
+- Removed `getPnlHistory` method that was marked with TODO for removal
+- Method only returned empty array and was never called anywhere in codebase
+- Eliminated 9 lines of dead code including comments and stub implementation
+- TODO comment indicated it should use `fetchPnlHistoryFromSupabase` directly instead
+
+**Impact**:
+- Cleaner codebase with less dead code
+- Removed one TODO item
+- Reduced maintenance burden
+- No functional changes (method wasn't used)
+
+**Commit**: `909b1ef` - "chore: remove unused getPnlHistory method - dead code cleanup"
+
+**Verification**: Build successful, no runtime impact (dead code removal)
+
 ## 2026-02-06 09:08 - Circuit Breaker Logging Improvement
 
 **Fixed**: Replaced console.log with structured logger for circuit breaker messages in orchestrator.ts
