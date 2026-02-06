@@ -224,6 +224,24 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 
 ---
 
+---
+
+## Backtest Experiments
+
+### Entry Threshold Experiments
+| Date | Threshold | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|-----------|--------|----------|-----|-------------|--------|
+| Feb 6 | **4.5%** | 47 | **48.9%** | **+$12.83** | **+190%** | 🔥 **PROMISING** |
+| Current | 4.0% | - | 20.9% | -$14.18 | baseline | - |
+
+**Key Finding (Feb 6)**: 4.5% threshold dramatically improves performance:
+- Win rate: 20.9% → 48.9% (+134% relative)
+- Net PnL: -$14.18 → +$12.83 (+$27.01 absolute improvement)  
+- Still profitable trades (47 in 3 days vs current low frequency)
+- Top performers: PALLr(75% WR), DFDVx(100% WR), MSTRr(75% WR)
+
+---
+
 *This document is my working memory. Updated with each significant change.*
 ## Slippage Investigation (2026-02-05)
 
@@ -259,3 +277,9 @@ Only 4%+ entries are profitable. The old 1-2% entries bled money. New 4% MIN_FLO
 - HOODx: 9%
 - SPYr: 3.4%
 - TSLA/NVDA/META/AMZN: 0% — never hit 4%
+
+### 2026-02-06 01:45 UTC — 24/7 Trading Enabled
+- Removed market hours check from `canOpenPosition()`
+- Bot now trades on stale NAV during closed hours
+- Rationale: discount to yesterday's close is still tradeable signal
+- Commit: d7466dd
