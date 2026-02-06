@@ -306,8 +306,6 @@ export async function initializeFlashClient(): Promise<boolean> {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     const errStack = error instanceof Error ? error.stack : '';
-    console.error('[FLASH] ❌ ERROR:', errMsg);
-    console.error('[FLASH] Stack:', errStack?.slice(0, 500));
     logger.error({
       error: errMsg,
       stack: errStack?.slice(0, 500),

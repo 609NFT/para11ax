@@ -9,7 +9,7 @@
  */
 
 import { signalLogger } from '../logger';
-import { getVolatilityDataCached } from '../feeds/volatilityFeed';
+import { getVolatilityPct } from '../feeds/volatilityFeed';
 
 const vadaptiveLogger = signalLogger.child({ component: 'volatility-adaptive-exit' });
 
@@ -55,9 +55,9 @@ export async function getVolatilityAdjustedExitThreshold(
 
   try {
     // Get volatility data for this token's underlying stock
-    const volatilityData = await getVolatilityDataCached(stockTicker);
+    const tokenATR = await getVolatilityPct(stockTicker);
     
-    if (!volatilityData || !volatilityData.atrPct) {
+    if (!tokenATR || tokenATR <= 0) {
       vadaptiveLogger.debug({ token: tokenSymbol, ticker: stockTicker }, 'No volatility data - using base threshold');
       return {
         adjustedThreshold: baseExitThreshold,
@@ -66,8 +66,6 @@ export async function getVolatilityAdjustedExitThreshold(
         reasoning: 'no-volatility-data',
       };
     }
-
-    const tokenATR = volatilityData.atrPct;
     const { BASE_MARKET_ATR_PCT, MIN_MULTIPLIER, MAX_MULTIPLIER, SMOOTHING_FACTOR } = VOLATILITY_ADAPTIVE_EXIT;
     
     // Calculate raw volatility ratio
@@ -146,17 +144,15 @@ export async function getVolatilityAdjustedTrailingStop(
   }
 
   try {
-    const volatilityData = await getVolatilityDataCached(stockTicker);
+    const tokenATR = await getVolatilityPct(stockTicker);
     
-    if (!volatilityData || !volatilityData.atrPct) {
+    if (!tokenATR || tokenATR <= 0) {
       return {
         adjustedTrailingStop: baseTrailingStopPct,
         multiplier: 1.0,
         reasoning: 'no-volatility-data',
       };
     }
-
-    const tokenATR = volatilityData.atrPct;
     const { BASE_MARKET_ATR_PCT, MIN_MULTIPLIER, MAX_MULTIPLIER, SMOOTHING_FACTOR } = VOLATILITY_ADAPTIVE_EXIT;
     
     // For trailing stops, we want the opposite behavior:
