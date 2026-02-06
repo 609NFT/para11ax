@@ -131,6 +131,15 @@ export const TVL_ENTRY_THRESHOLDS = {
 export const MIN_TVL_FOR_TRADING = 50_000;
 
 // ============================================================================
+// TRADING TIME FILTERS
+// ============================================================================
+
+/** Hours (UTC) to avoid trading due to historically low win rates
+ *  Analysis (640 trades): 12-14 UTC (7-9 AM EST market open) = 6-8% WR vs 33-54% at 17-20 UTC
+ *  Market open creates chaotic spreads that don't mean-revert predictably */
+export const AVOID_TRADING_HOURS_UTC = [12, 13]; // 7-9 AM EST market open chaos
+
+// ============================================================================
 // HOLD TIME CONSTANTS
 // ============================================================================
 

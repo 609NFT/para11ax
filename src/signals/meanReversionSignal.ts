@@ -46,6 +46,7 @@ import {
   MIN_EXIT_THRESHOLD_PCT,
   LENIENT_EXIT_MAX_STALE_MS,
   SPREAD_WIDENING_STOP_PCT,
+  AVOID_TRADING_HOURS_UTC,
 } from '../constants';
 import { getDynamicStopLossPct, getVolatilityPositionMultiplier, getVolatilityEntryMultiplier } from '../feeds/volatilityFeed';
 
@@ -585,6 +586,22 @@ export class MeanReversionSignalGenerator {
         expectedProfitUsd: 0,
         expectedProfitPct: 0,
         reasons: [`❌ In cooldown after failed trade (${remainingSec}s remaining)`],
+      };
+    }
+
+    // Check 0.5: Time-of-day filter - avoid low win-rate trading hours
+    const currentHourUTC = new Date().getUTCHours();
+    if (AVOID_TRADING_HOURS_UTC.includes(currentHourUTC)) {
+      return {
+        shouldTrade: false,
+        pair,
+        spread: this.createEmptySpread(pair),
+        buyToken: token,
+        sellToken: token,
+        suggestedSizeUsd: 0,
+        expectedProfitUsd: 0,
+        expectedProfitPct: 0,
+        reasons: [`❌ Avoiding low win-rate hours (${currentHourUTC}:00 UTC market open chaos)`],
       };
     }
 
