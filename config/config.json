@@ -18,7 +18,7 @@
       "symbol": "xSPY",
       "mint": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
       "stockTicker": "SPY",
-      "enabled": false,
+      "enabled": true,
       "poolAddress": "7sHMnvE7WqP7vQFWJGEnMT4vZg6Za9K7PpddDoXJCqME",
       "decimals": 8
     },
@@ -58,7 +58,7 @@
       "symbol": "xMSTR",
       "mint": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
       "stockTicker": "MSTR",
-      "enabled": false,
+      "enabled": true,
       "poolAddress": "RyhF4cksVZY7vcqJpoytHcxcGNKRp27PEGhSnEPpbGv",
       "decimals": 8
     },
@@ -266,7 +266,7 @@
       "symbol": "xGLD",
       "mint": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
       "stockTicker": "GLD",
-      "enabled": false,
+      "enabled": true,
       "poolAddress": "9742CEMLXgRdWPZRGzd9CwBgVjkKVVAn4yZUfzHCHJgs",
       "decimals": 8
     },
