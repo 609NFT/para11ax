@@ -109,6 +109,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       --color-green: #22c55e;
       --color-red: #ef4444;
       --color-yellow: #eab308;
+      --color-yellow-green: #a3e635;
       --color-orange: #f97316;
       --color-purple: #a855f7;
       --color-blue: #3b82f6;
@@ -2305,7 +2306,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
             } else if (rawProgress >= 100) {
               progressColor = 'var(--green)';
             } else if (rawProgress >= 85) {
-              progressColor = '#a3e635'; /* TODO: add --color-yellow-green token */
+              progressColor = 'var(--color-yellow-green)';
             } else if (rawProgress >= 60) {
               progressColor = 'var(--yellow)';
             } else {
@@ -2420,7 +2421,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
             } else if (rawProgress >= 100) {
               progressColor = 'var(--green)';
             } else if (rawProgress >= 85) {
-              progressColor = '#a3e635'; /* TODO: add --color-yellow-green token */
+              progressColor = 'var(--color-yellow-green)';
             } else if (rawProgress >= 60) {
               progressColor = 'var(--yellow)';
             } else {
@@ -2550,7 +2551,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
             } else if (rawProgress >= 100) {
               progressColor = 'var(--green)';
             } else if (rawProgress >= 85) {
-              progressColor = '#a3e635'; /* TODO: add --color-yellow-green token */
+              progressColor = 'var(--color-yellow-green)';
             } else if (rawProgress >= 60) {
               progressColor = 'var(--yellow)';
             } else {
