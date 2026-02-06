@@ -37,7 +37,7 @@ async function main(): Promise<void> {
 
   const config = await getConfig();
 
-  console.log('Starting up bot...');
+  logger.info('Starting up bot...');
 
   // Safety warning for live mode
   if (config.mode === 'live') {
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
     await orchestrator.start();
 
     // Keep process running
-    console.log('Bot is running.');
+    logger.info('Bot is running.');
   } catch (error) {
     const err = error as Error;
     logger.error({
