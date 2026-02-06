@@ -800,8 +800,9 @@ export async function getOpenPerpPositions(): Promise<FlashTradePosition[]> {
             });
           }
         } catch (error) {
-          // Position doesn't exist - that's fine, but log for debugging
-          logger.debug({ positionKey: positionKey.toBase58(), error }, 'Position account not found (expected for closed positions)');
+          // Position doesn't exist - that's fine (expected for closed positions)
+          // Note: positionKey may not be defined if error occurred during key derivation
+          logger.debug({ symbol, side: side === Side.Long ? 'long' : 'short', error }, 'Position not found or error (expected for closed positions)');
         }
       }
     }
