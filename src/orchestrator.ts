@@ -386,9 +386,10 @@ export class Orchestrator {
     logger.info('Initializing portfolio-based position sizing...');
     initPortfolioSizer(
       () => this.executor.getBalance(),
-      () => getSolPriceUsd()
+      () => getSolPriceUsd(),
+      () => this.riskManager.getMarketSession()  // For market hours position scaling
     );
-    logger.info('Portfolio sizer initialized - positions scale with wallet balance');
+    logger.info('Portfolio sizer initialized - positions scale with wallet balance and market hours');
 
     // Clean up orphan tokens (tokens in wallet with no open position)
     if (config.mode === 'live') {

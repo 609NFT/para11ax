@@ -142,6 +142,15 @@ export const PORTFOLIO_SIZING = {
     MIN_MULTIPLIER: 0.5,             // Poor performers get 50% size minimum
     MAX_MULTIPLIER: 1.5,             // Good performers get 150% size maximum
   },
+  // Market hours position scaling
+  // Outside market hours: NAV is frozen, only spread risk exists
+  // Inside market hours: NAV moves constantly, higher risk
+  MARKET_HOURS_SCALING: {
+    ENABLED: true,
+    OFF_MARKET_MULTIPLIER: 2.0,      // 2x position size when market closed (NAV stable)
+    PRE_POST_MULTIPLIER: 1.5,        // 1.5x during pre/post (NAV semi-stable)
+    REGULAR_MULTIPLIER: 1.0,         // Normal size during regular hours (NAV volatile)
+  },
 } as const;
 
 // TVL tier constants - used by liquidityChecker for DISABLED threshold

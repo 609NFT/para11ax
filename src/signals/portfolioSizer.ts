@@ -11,6 +11,9 @@ import { PORTFOLIO_SIZING, POSITION_SIZE_FORMULA, ADAPTIVE_POSITION_SIZING } fro
 import { getSymbolPerformance, getAllSymbolPerformance } from './performanceTracker';
 import loggerInstance from '../logger';
 
+// Market session getter (injected during init to avoid circular deps)
+let marketSessionGetter: (() => 'pre-market' | 'regular' | 'post-market' | 'closed') | null = null;
+
 const logger = loggerInstance.child({ module: 'portfolioSizer' });
 
 // ==================== Types ====================
@@ -50,11 +53,44 @@ const AVG_WR_UPDATE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
  */
 export function initPortfolioSizer(
   getBalance: () => Promise<{ sol: number; usdc: number } | null>,
-  getSolPrice: () => Promise<number>
+  getSolPrice: () => Promise<number>,
+  getMarketSession?: () => 'pre-market' | 'regular' | 'post-market' | 'closed'
 ): void {
   balanceFetcher = getBalance;
   solPriceFetcher = getSolPrice;
+  if (getMarketSession) {
+    marketSessionGetter = getMarketSession;
+  }
   logger.info('Portfolio sizer initialized');
+}
+
+/**
+ * Get market hours multiplier based on current session.
+ * Higher multiplier = larger positions when NAV is stable.
+ */
+export function getMarketHoursMultiplier(): number {
+  if (!PORTFOLIO_SIZING.MARKET_HOURS_SCALING?.ENABLED) {
+    return 1.0;
+  }
+
+  if (!marketSessionGetter) {
+    return 1.0; // Not initialized, use default
+  }
+
+  const session = marketSessionGetter();
+  const scaling = PORTFOLIO_SIZING.MARKET_HOURS_SCALING;
+
+  switch (session) {
+    case 'closed':
+      logger.debug({ session, multiplier: scaling.OFF_MARKET_MULTIPLIER }, 'Off-market: NAV stable, higher position size');
+      return scaling.OFF_MARKET_MULTIPLIER;
+    case 'pre-market':
+    case 'post-market':
+      return scaling.PRE_POST_MULTIPLIER;
+    case 'regular':
+    default:
+      return scaling.REGULAR_MULTIPLIER;
+  }
 }
 
 // ==================== Core Functions ====================
@@ -249,12 +285,16 @@ export async function calculatePortfolioPositionSize(
   // Performance multiplier (symbol WR vs average)
   const performanceMultiplier = await getPerformanceMultiplier(symbol);
   
-  // Final calculation
-  let sizeUsd = baseSize * tvlMultiplier * spreadMultiplier * performanceMultiplier;
+  // Market hours multiplier (higher when NAV is stable)
+  const marketHoursMultiplier = getMarketHoursMultiplier();
   
-  // Apply min/max caps
+  // Final calculation
+  let sizeUsd = baseSize * tvlMultiplier * spreadMultiplier * performanceMultiplier * marketHoursMultiplier;
+  
+  // Apply min/max caps (max scales with market hours too)
+  const effectiveMax = PORTFOLIO_SIZING.MAX_POSITION_USD * marketHoursMultiplier;
   sizeUsd = Math.max(PORTFOLIO_SIZING.MIN_POSITION_USD, sizeUsd);
-  sizeUsd = Math.min(PORTFOLIO_SIZING.MAX_POSITION_USD, sizeUsd);
+  sizeUsd = Math.min(effectiveMax, sizeUsd);
   
   logger.debug({
     symbol,
@@ -263,6 +303,7 @@ export async function calculatePortfolioPositionSize(
     tvlMultiplier: tvlMultiplier.toFixed(3),
     spreadMultiplier: spreadMultiplier.toFixed(3),
     performanceMultiplier: performanceMultiplier.toFixed(3),
+    marketHoursMultiplier: marketHoursMultiplier.toFixed(2),
     finalSize: sizeUsd.toFixed(2),
   }, 'Portfolio position size calculated');
   
@@ -322,10 +363,14 @@ export function getPortfolioPositionSizeSync(
   // Performance multiplier (sync version)
   const performanceMultiplier = getPerformanceMultiplierSync(symbol);
   
+  // Market hours multiplier (higher when NAV is stable)
+  const marketHoursMultiplier = getMarketHoursMultiplier();
+  
   // Final calculation with caps
-  let sizeUsd = baseSize * tvlMultiplier * spreadMultiplier * performanceMultiplier;
+  const effectiveMax = PORTFOLIO_SIZING.MAX_POSITION_USD * marketHoursMultiplier;
+  let sizeUsd = baseSize * tvlMultiplier * spreadMultiplier * performanceMultiplier * marketHoursMultiplier;
   sizeUsd = Math.max(PORTFOLIO_SIZING.MIN_POSITION_USD, sizeUsd);
-  sizeUsd = Math.min(PORTFOLIO_SIZING.MAX_POSITION_USD, sizeUsd);
+  sizeUsd = Math.min(effectiveMax, sizeUsd);
   
   return sizeUsd;
 }
