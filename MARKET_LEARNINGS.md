@@ -320,14 +320,15 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 ### Max Hold Time Experiments
 | Date | Max Hold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|----------|--------|----------|-----|-------------|--------|
-| Current | **60 min** | **49** | **39.6%** | **+$8.56** | **baseline** | **✅ OPTIMAL** |
+| Current | **60 min** | **49** | **46.9%** | **+$12.77** | **baseline** | **✅ OPTIMAL** |
+| Feb 8 | **45 min** | 49 | 46.9% | +$11.64 | -9% | ❌ **Premature exits reduce PnL** |
 | Feb 7 | 75 min | 133 | 23.3% | +$5.88 | -31% | ❌ Too long (110 max_hold exits) |
 | Feb 6 | 90 min | 106 | 22.6% | +$5.28 | -58% | ❌ Too long |
 | Feb 6 | 45 min | 200 | 14.0% | +$1.77 | -86% | ❌ Too short (190 max_hold exits) |
 | Feb 7 | 30 min | 299 | 11.4% | -$6.45 | -175% | ❌ Catastrophic (279 max_hold exits) |
 
 **Key Finding**: **60-minute max hold is definitively optimal**. Comprehensive testing shows clear degradation in both directions:
-- **Shorter**: Catastrophic premature exits (30min = 299 trades with -$6.45 loss)
+- **Shorter**: Even 45min (-9% PnL) forces premature exits on profitable trades. 30min catastrophic (-175%).
 - **Longer**: Too many forced max_hold exits (75min = 82.7% max_hold rate vs 77% target rate)
 - **60min sweet spot**: Best balance of allowing mean reversion while preventing extended losers
 
