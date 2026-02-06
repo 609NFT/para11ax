@@ -353,12 +353,10 @@ export class Orchestrator {
     }
 
     // Initialize database
-    console.log('Initializing database...');
     logger.info('Initializing database...');
     this.database.initialize();
 
     // Initialize feeds
-    console.log('Initializing price feeds...');
     logger.info('Initializing price feeds...');
     await this.feedAggregator.initialize();
 
