@@ -1,14 +1,59 @@
 #!/usr/bin/env node
 /**
  * Auto-deploy script that summarizes and posts to #deployments
+ * Also auto-captures to memory files for continuity
  * 
  * Usage: node scripts/deploy.js "Optional extra context"
  */
 
 const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const DEPLOYMENTS_WEBHOOK = process.env.DISCORD_DEPLOYMENTS_WEBHOOK_URL;
+const MEMORY_DIR = path.join(process.env.HOME, '.openclaw/workspace/memory');
+
+function getToday() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getTime() {
+  return new Date().toISOString().split('T')[1].substring(0, 5);
+}
+
+function captureToMemory({ commit, commitMsg, filesChanged, constantsChanges, extraContext }) {
+  const today = getToday();
+  const time = getTime();
+  const filePath = path.join(MEMORY_DIR, `${today}.md`);
+  
+  // Ensure memory dir exists
+  if (!fs.existsSync(MEMORY_DIR)) {
+    fs.mkdirSync(MEMORY_DIR, { recursive: true });
+  }
+  
+  // Create file with header if new
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, `# ${today} — Session Notes\n`);
+  }
+  
+  // Format the entry
+  const files = filesChanged.split('\n').filter(f => f).slice(0, 8);
+  let entry = `\n## Deploy: ${commitMsg.split('\n')[0]} (${time} UTC)\n`;
+  entry += `**Commit**: \`${commit}\`\n`;
+  if (files.length > 0) {
+    entry += `**Files**: ${files.join(', ')}\n`;
+  }
+  if (constantsChanges) {
+    entry += `**Parameters**: ${constantsChanges.replace(/\*\*/g, '').replace('Constants:', '').trim()}\n`;
+  }
+  if (extraContext) {
+    entry += `**Context**: ${extraContext}\n`;
+  }
+  
+  fs.appendFileSync(filePath, entry);
+  console.log(`\x1b[32mCaptured to memory ✓\x1b[0m (${filePath})`);
+}
 
 async function deploy() {
   const extraContext = process.argv.slice(2).join(' ');
@@ -76,6 +121,9 @@ async function deploy() {
     console.log('\x1b[33m--- DEPLOYMENT_SUMMARY_END ---\x1b[0m');
     console.log('\x1b[33mNo webhook - agent should post above to #deployments (1469126610908352593)\x1b[0m');
   }
+
+  // Capture to memory (auto-documentation)
+  captureToMemory({ commit, commitMsg, filesChanged, constantsChanges, extraContext });
 
   // Push to both repos (keep them in sync)
   console.log('\x1b[32mPushing to both repos...\x1b[0m');
