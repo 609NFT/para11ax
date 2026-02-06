@@ -602,7 +602,7 @@ export async function refreshLiquidity(): Promise<void> {
   for (const token of enabledTokens) {
     processed++;
     if (processed % 10 === 0 || processed === 1) {
-      console.log(`[LIQUIDITY] Processing token ${processed}/${enabledTokens.length}: ${token.symbol}`);
+      logger.info(`Processing token ${processed}/${enabledTokens.length}: ${token.symbol}`);
     }
     const { symbol, mint } = token;
     const configPoolAddress = token.poolAddress;
@@ -853,13 +853,13 @@ export async function refreshLiquidity(): Promise<void> {
   }
 
   lastRefreshTime = now;
-  console.log(`[LIQUIDITY] Token processing complete: ${enabledCount} enabled, ${disabledCount} disabled`);
+  logger.info(`Token processing complete: ${enabledCount} enabled, ${disabledCount} disabled`);
 
   // ========================================
   // STEP 3: Calculate percentile-based adaptive thresholds
   // ========================================
   if (PERCENTILE_THRESHOLD_FORMULA.ENABLED) {
-    console.log('[LIQUIDITY] Step 5/7: Calculating percentile thresholds from historical data...');
+    logger.info('Step 5/7: Calculating percentile thresholds from historical data...');
     try {
       // Add 45-second timeout to prevent hang on large historical dataset
       // Query takes ~32s on 7-day window with 11M rows
@@ -867,10 +867,10 @@ export async function refreshLiquidity(): Promise<void> {
         setTimeout(() => reject(new Error('Percentile threshold calculation timeout after 45s')), 45000)
       );
       await Promise.race([refreshPercentileThresholds(), timeoutPromise]);
-      console.log('[LIQUIDITY] Percentile thresholds calculated successfully');
+      logger.info('Percentile thresholds calculated successfully');
     } catch (error) {
       logger.warn({ error }, 'Percentile threshold calculation failed or timed out - using TVL-based thresholds only');
-      console.log('[LIQUIDITY] Percentile calculation skipped (timeout or error) - using TVL-based thresholds');
+      logger.info('Percentile calculation skipped (timeout or error) - using TVL-based thresholds');
     }
   }
 
