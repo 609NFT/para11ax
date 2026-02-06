@@ -193,10 +193,9 @@ export class RiskManager {
    * Check if we can open a new position
    */
   canOpenPosition(symbol: string): { allowed: boolean; reason: string } {
-    // Check market hours first
-    if (!this.isMarketOpen()) {
-      return { allowed: false, reason: 'Market is closed' };
-    }
+    // NOTE: We trade 24/7 on stale NAV. Token prices move continuously, and a discount
+    // to yesterday's close is still a valid signal. When market opens, NAV updates and
+    // the spread either confirms (profit) or corrects (time decay exit handles it).
 
     // Check global kill switch
     if (this.state.globalKillSwitch) {
