@@ -4,12 +4,11 @@ require('dns').setDefaultResultOrder('ipv4first');
 const fs = require('fs');
 const path = require('path');
 
-// Load DB credentials
-const dbPath = path.join(process.env.HOME, '.parallax-secrets', 'supabase-db.json');
-const dbCreds = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+// Load environment
+require('dotenv').config();
 
-// Create connection string
-const connectionString = `postgresql://${dbCreds.username}:${dbCreds.password}@${dbCreds.host}/${dbCreds.database}`;
+// Use pooler connection from environment  
+const connectionString = process.env.TRADES_DB_URL;
 
 const pool = new Pool({
   connectionString,
