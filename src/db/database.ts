@@ -177,16 +177,6 @@ export class DatabaseManager {
   }
 
   /**
-   * Get cumulative PnL history for charting
-   * Returns array of {timestamp, cumulativePnl} sorted by time ascending
-   * TODO: Remove this method - use fetchPnlHistoryFromSupabase directly instead
-   */
-  async getPnlHistory(_sinceTimestamp?: number): Promise<Array<{ timestamp: number; cumulativePnl: number }>> {
-    // Stub - return empty array until properly implemented
-    return [];
-  }
-
-  /**
    * Convert row to Position
    */
   private rowToPosition(row: Record<string, unknown>): MeanReversionPosition {
