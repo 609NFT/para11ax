@@ -1,5 +1,24 @@
 # Code Improvements Log
 
+## 2026-02-06 09:08 - Circuit Breaker Logging Improvement
+
+**Fixed**: Replaced console.log with structured logger for circuit breaker messages in orchestrator.ts
+
+**Details**:
+- Replaced 6 console.log statements with single logger.error call
+- Combined circuit breaker messages into structured multi-line string
+- Maintains visual formatting while providing proper log levels
+- Messages still visible but now properly categorized as errors
+
+**Impact**:
+- Better structured logging for critical events
+- Consistent logging patterns throughout codebase
+- Circuit breaker events properly categorized at error level
+
+**Commit**: `69fc620` - "chore: replace console.log with logger for circuit breaker messages"
+
+**Verification**: Bot reloaded successfully, initialization complete without errors
+
 ## 2026-02-06 08:36 - CSS Color Token Cleanup
 
 **Fixed**: Added `--color-yellow-green` CSS variable and replaced 3 hardcoded `#a3e635` color values
