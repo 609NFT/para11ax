@@ -334,10 +334,10 @@ export class Orchestrator {
     // Initialize signal generator after config is loaded (so custom tokens are included)
     this.signalGenerator = getMeanReversionSignalGenerator();
 
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('        PARALLAX - MEAN REVERSION BOT');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log(getModeDescription(config.mode));
+    logger.info('═══════════════════════════════════════════════════════');
+    logger.info('        PARALLAX - MEAN REVERSION BOT');
+    logger.info('═══════════════════════════════════════════════════════');
+    logger.info(getModeDescription(config.mode));
 
     // Validate live mode prerequisites
     if (config.mode === 'live') {
@@ -363,7 +363,7 @@ export class Orchestrator {
     }
 
     // Initialize liquidity-based thresholds with timeout protection
-    console.log('Fetching pool liquidity (with 2 minute timeout)...');
+    logger.info('Fetching pool liquidity (with 2 minute timeout)...');
     logger.info('Fetching pool liquidity for dynamic thresholds...');
     try {
       const timeoutPromise = new Promise((_, reject) =>
@@ -407,12 +407,12 @@ export class Orchestrator {
     // Start web dashboard server if enabled
     const webPort = parseInt(process.env.WEB_PORT || '3000');
     if (process.env.WEB_ENABLED !== 'false') {
-      console.log(`Starting web server on port ${webPort}...`);
+      logger.info(`Starting web server on port ${webPort}...`);
       startWebServer(webPort);
     }
 
     // Prune old discount history from both SQLite and Supabase (keep last 8 days)
-    console.log('Pruning old data...');
+    logger.info('Pruning old data...');
     this.database.pruneOldDiscountHistory();
     await pruneOldDiscountHistory();
 
@@ -424,7 +424,7 @@ export class Orchestrator {
 
     // Sync hourly heatmap summary to Supabase for fast 7d queries
     // Run once on startup, then every hour
-    console.log('Syncing heatmap summary to Supabase...');
+    logger.info('Syncing heatmap summary to Supabase...');
     this.syncHeatmapSummary().catch(err => {
       logger.warn({ error: err }, 'Failed initial heatmap summary sync');
     });
@@ -434,8 +434,7 @@ export class Orchestrator {
       });
     }, 60 * 60 * 1000); // Every hour
 
-    console.log('Initialization complete. Bot is running.');
-    logger.info('Initialization complete');
+    logger.info('Initialization complete. Bot is running.');
 
     // Signal PM2 that we're ready (enables zero-downtime reload)
     if (process.send) {
