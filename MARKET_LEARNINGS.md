@@ -235,10 +235,16 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 |------|-----------|--------|----------|-----|-------------|--------|
 | Feb 6 | **4.5%** | 47 | **48.9%** | **+$12.83** | **+72%** | 🔥 **PROMISING** |
 | Feb 6 | **5.0%** | 44 | 34.1% | +$9.27 | +25% | Marginal |
-| Current | 4.0% | 48 | 37.5% | +$7.44 | baseline | - |
-| Feb 6 | 3.5% | 53 | 32.1% | +$3.58 | -52% | Worse |
+| Current | 4.0% | 48 | 54.2% | +$8.77 | baseline | - |
+| Feb 6 | 3.5% | 53 | 32.1% | +$3.58 | -59% | Worse |
 
-**Updated Baseline** (3-day backtest, Feb 6): Current 4.0% threshold yields 48 trades, 37.5% WR, +$7.44 net PnL.
+### Exit Target Experiments
+| Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|-------------|--------|----------|-----|-------------|--------|
+| Feb 6 | **2.5%** | 56 | **58.9%** | **+$12.73** | **+45%** | 🔥 **PROMISING** |
+| Current | 0.5% | 48 | 54.2% | +$8.77 | baseline | - |
+
+**Updated Baseline** (3-day backtest, Feb 6): Current 4.0% entry / 0.5% exit yields 48 trades, 54.2% WR, +$8.77 net PnL.
 
 **Key Finding**: **4.5% threshold remains the sweet spot** - highest win rate (48.9%) and best absolute performance (+$12.83). The higher threshold filters out marginal trades while capturing the highest-quality opportunities.
 
@@ -247,6 +253,12 @@ Despite AMBRx showing **80% time above 4% threshold**, entries aren't triggering
 - Net PnL: -$14.18 → +$12.83 (+$27.01 absolute improvement)  
 - Still profitable trades (47 in 3 days vs current low frequency)
 - Top performers: PALLr(75% WR), DFDVx(100% WR), MSTRr(75% WR)
+
+**Key Finding (Feb 6)**: 2.5% exit target significantly improves performance:
+- Win rate: 54.2% → 58.9% (+9% relative)
+- Net PnL: +$8.77 → +$12.73 (+45% improvement)
+- More trades: 48 → 56 (captures profit before max hold timeout)
+- Key insight: 0.5% exit too aggressive, spreads rarely narrow that much
 
 ---
 
