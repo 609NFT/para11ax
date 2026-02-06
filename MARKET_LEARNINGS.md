@@ -93,7 +93,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 
 | Date | Change | Commit | Result |
 |------|--------|--------|--------|
-| Feb 6 | **MIN_FLOOR 4.0%→4.5% (deep analysis + backtest validation)** | `TBD` | 🟡 **Monitoring** (expected: 48.9% WR vs 37.5%, +72% profit) |
+| Feb 6 | **MIN_FLOOR 4.0%→4.5% (deep analysis + backtest validation)** | [`4849f4c`](https://github.com/609NFT/para11ax/commit/4849f4c) | 🟡 **Monitoring** (expected: 48.9% WR vs 37.5%, +72% profit) |
 | Feb 6 | **Time-of-day filter: avoid 12-13 UTC market open chaos** | [`4b0fb7a`](https://github.com/609NFT/para11ax/commit/4b0fb7a) | 🟡 **Monitoring** (expected: higher WR, minimal trade reduction) |
 | Feb 5 | **Exit overhaul: 60min hold, spread-widening stop, shorter decay** | [`8fbcd9a`](https://github.com/609NFT/para11ax/commit/8fbcd9a) | 🟡 **Monitoring** (8 trades today vs 40 avg) |
 | Feb 5 | **Data-driven short thresholds** (on-chain Flash fees + spread analysis) | [`f36b3f6`](https://github.com/609NFT/para11ax/commit/f36b3f6) | 🟡 **Ready** (ENABLE_SHORTING=false) |
