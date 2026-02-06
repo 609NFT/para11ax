@@ -1119,6 +1119,42 @@ export function isTokenEnabledByLiquidity(symbol: string): boolean {
 }
 
 /**
+ * Check if token should be enabled for a specific spread value
+ * Uses tiered liquidity requirements: high spreads get relaxed TVL requirements
+ * 
+ * @param symbol Token symbol
+ * @param spreadPct Current discount/spread percentage (positive = discount)
+ * @returns true if token should be tradeable given this spread
+ */
+export function isTokenEnabledForSpread(symbol: string, spreadPct: number): boolean {
+  const cached = thresholdCache.get(symbol);
+  if (!cached) {
+    // If not in cache, token hasn't been evaluated yet - disable until refresh
+    return false;
+  }
+  
+  const tvl = cached.tvl;
+  
+  // Tiered liquidity requirements based on spread size
+  let minTvlRequired: number;
+  
+  if (spreadPct >= 6.0) {
+    // High spread (6%+): Very relaxed requirements
+    // Large spreads can absorb higher slippage and still be profitable
+    minTvlRequired = 25_000; // 50% of standard requirement
+  } else if (spreadPct >= 4.5) {
+    // Medium spread (4.5-6%): Standard requirements
+    minTvlRequired = MIN_TVL_FOR_TRADING; // 50K standard
+  } else {
+    // Low spread (<4.5%): Strict requirements
+    // Marginal trades need perfect execution to be profitable
+    minTvlRequired = MIN_TVL_FOR_TRADING * 1.5; // 75K for low spreads
+  }
+  
+  return tvl >= minTvlRequired;
+}
+
+/**
  * Get TVL for a token
  */
 export function getTokenTVL(symbol: string): number {

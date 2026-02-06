@@ -18,7 +18,7 @@ import {
 import { signalLogger } from '../logger';
 import { getConfigSync } from '../config';
 import { getOnchainFeed, getStockFeed } from '../feeds';
-import { getEntryThreshold, getExitThreshold, getPositionSize, isTokenEnabledByLiquidity, getTokenTVL, getSwapRouting } from '../liquidity/liquidityChecker';
+import { getEntryThreshold, getExitThreshold, getPositionSize, isTokenEnabledByLiquidity, isTokenEnabledForSpread, getTokenTVL, getSwapRouting } from '../liquidity/liquidityChecker';
 import { isEquityMarketOpen } from '../execution/flashTradeClient';
 import { fetchBatchDexScreenerPrices } from '../feeds/dexScreenerFeed';
 import { getRaydiumClient, getJupiterClient } from '../execution';
@@ -557,20 +557,25 @@ export class MeanReversionSignalGenerator {
     let shouldTrade = true;
     const token = pair.tokenA;  // For mean reversion, tokenA === tokenB
 
-    // Check -1: Is this token disabled due to low liquidity?
+    // Basic liquidity check - ensure token has been evaluated and isn't completely disabled
+    // The more sophisticated spread-aware check happens later after we have price data
     if (!isTokenEnabledByLiquidity(token.symbol)) {
       const tvl = getTokenTVL(token.symbol);
-      return {
-        shouldTrade: false,
-        pair,
-        spread: this.createEmptySpread(pair),
-        buyToken: token,
-        sellToken: token,
-        suggestedSizeUsd: 0,
-        expectedProfitUsd: 0,
-        expectedProfitPct: 0,
-        reasons: [`❌ Disabled due to low liquidity (TVL: $${tvl.toFixed(0)})`],
-      };
+      if (tvl < 25_000) {
+        // Completely disabled - TVL too low even for high spreads
+        return {
+          shouldTrade: false,
+          pair,
+          spread: this.createEmptySpread(pair),
+          buyToken: token,
+          sellToken: token,
+          suggestedSizeUsd: 0,
+          expectedProfitUsd: 0,
+          expectedProfitPct: 0,
+          reasons: [`❌ Disabled due to very low liquidity (TVL: $${tvl.toFixed(0)})`],
+        };
+      }
+      // Otherwise, continue to spread-aware check later
     }
 
     // Check 0: Is this token in failure cooldown?
@@ -687,6 +692,25 @@ export class MeanReversionSignalGenerator {
     }
 
     const discount = spread.tokenA.discountVsStock ?? 0;
+
+    // SPREAD-AWARE LIQUIDITY CHECK: Now that we have the actual discount, check if token should be enabled
+    // Use tiered TVL requirements: high spreads get relaxed liquidity rules
+    if (!isTokenEnabledForSpread(token.symbol, Math.abs(discount))) {
+      const tvl = getTokenTVL(token.symbol);
+      const requiredTvl = Math.abs(discount) >= 6.0 ? 25_000 : 
+                         Math.abs(discount) >= 4.5 ? 50_000 : 75_000;
+      return {
+        shouldTrade: false,
+        pair,
+        spread,
+        buyToken: token,
+        sellToken: token,
+        suggestedSizeUsd: 0,
+        expectedProfitUsd: 0,
+        expectedProfitPct: 0,
+        reasons: [`❌ Insufficient liquidity for ${Math.abs(discount).toFixed(1)}% spread (TVL: $${tvl.toFixed(0)}, need: $${requiredTvl.toFixed(0)})`],
+      };
+    }
 
     // SANITY CHECK: Reject absurd price deviations
     if (Math.abs(discount) > MAX_REASONABLE_DEVIATION_PCT) {
