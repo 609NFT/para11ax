@@ -11,7 +11,7 @@
  * - Caches results with 5-minute TTL to minimize DB load
  */
 
-import { getTradesPool } from '../db/supabaseClient';
+import { getTradesPool, MeanReversionPositionRow } from '../db/supabaseClient';
 import loggerInstance from '../logger';
 
 const logger = loggerInstance.child({ module: 'performanceTracker' });
@@ -156,7 +156,7 @@ async function fetchSymbolPerformance(symbol: string): Promise<SymbolPerformance
       };
     }
 
-    const winningTrades = trades.filter((t: any) => Number(t.pnl_usd) > 0).length;
+    const winningTrades = trades.filter((t: MeanReversionPositionRow) => Number(t.pnl_usd) > 0).length;
     const winRate = winningTrades / totalTrades;
 
     // Calculate adjustment
@@ -207,7 +207,7 @@ export async function getAllSymbolPerformance(): Promise<SymbolPerformance[]> {
         AND exit_timestamp > $1
     `, [Date.now() - 7 * 24 * 60 * 60 * 1000]); // Last 7 days
 
-    const symbols = symbolsResult.rows.map((r: any) => r.buy_symbol);
+    const symbols = symbolsResult.rows.map((r: { buy_symbol: string }) => r.buy_symbol);
     
     // Fetch performance for each (uses cache)
     const performances = await Promise.all(
