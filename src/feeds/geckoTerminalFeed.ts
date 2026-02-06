@@ -99,7 +99,7 @@ export interface GeckoTerminalPrice {
 }
 
 // Rate limiting - 20 requests/minute = 3000ms between calls
-let lastCallTime = 0;
+let lastCallTime: number = 0;
 const MIN_CALL_INTERVAL_MS = 3000;
 
 /**

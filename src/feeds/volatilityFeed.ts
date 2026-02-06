@@ -72,8 +72,8 @@ function getApiKey(): string | null {
 // Each symbol needs 2 calls (ATR + quote) = 4 symbols per minute max
 // Be conservative: 20 seconds between symbols to avoid rate limits
 const MIN_DELAY_BETWEEN_SYMBOLS_MS = 20000; // 20 seconds between symbols
-let lastApiCallTime = 0;
-let startupDelayApplied = false;
+let lastApiCallTime: number = 0;
+let startupDelayApplied: boolean = false;
 const STARTUP_DELAY_MS = 60000; // 60 second delay on startup to let rate limit window reset
 let rateLimitBackoffMs = 0; // Additional backoff when rate limited
 

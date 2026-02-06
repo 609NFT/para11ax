@@ -84,7 +84,7 @@ export interface DexScreenerPrice {
 const priceCache: Map<string, DexScreenerPrice> = new Map();
 
 // Rate limiting
-let lastCallTime = 0;
+let lastCallTime: number = 0;
 const MIN_CALL_INTERVAL_MS = 200; // 300/min = 200ms between calls
 
 /**

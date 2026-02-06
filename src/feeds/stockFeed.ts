@@ -43,7 +43,7 @@ interface HolidayApiResponse {
 const ALPACA_RATE_LIMIT_PER_MIN = 200;
 
 // Alternate between Alpaca and Finnhub for fresher prices
-let useAlpacaNext = true;
+let useAlpacaNext: boolean = true;
 
 export class StockFeed {
   private priceCache: Map<string, PriceCache> = new Map();
