@@ -878,23 +878,23 @@ export async function refreshLiquidity(): Promise<void> {
   // STEP 4: Calculate historically profitable spreads (algorithmic)
   // ========================================
   if (now - profitableSpreadLastRefresh > PROFITABLE_SPREAD_REFRESH_MS) {
-    console.log('[LIQUIDITY] Step 6/7: Calculating profitable spreads from trade history...');
+    logger.info('Step 6/7: Calculating profitable spreads from trade history...');
     try {
       profitableSpreadCache = await calculateAllProfitableSpreads();
       profitableSpreadLastRefresh = now;
-      console.log(`[LIQUIDITY] Profitable spreads calculated for ${profitableSpreadCache.size} tokens`);
+      logger.info({ tokenCount: profitableSpreadCache.size }, 'Profitable spreads calculated');
       // Log cache contents for debugging
       for (const [ticker, data] of profitableSpreadCache) {
-        console.log(`[LIQUIDITY]   ${ticker}: ${data.minProfitableSpread}% (${data.confidence}, ${data.sampleSize} samples)`);
+        logger.info({ ticker, minProfitableSpread: data.minProfitableSpread, confidence: data.confidence, sampleSize: data.sampleSize }, 'Profitable spread calculated');
       }
     } catch (error) {
       logger.warn({ error }, 'Profitable spread calculation failed');
-      console.log('[LIQUIDITY] Profitable spread calculation skipped (error)');
+      logger.warn('Profitable spread calculation skipped due to error');
     }
   }
 
   // Log summary
-  console.log('[LIQUIDITY] Step 7/7: Finalizing and logging summary...');
+  logger.info('Step 7/7: Finalizing and logging summary...');
   logger.info({
     totalTokens: enabledTokens.length,
     enabledTokens: enabledCount,
