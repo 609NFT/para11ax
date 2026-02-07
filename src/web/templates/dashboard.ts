@@ -1843,7 +1843,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
     // Server-side config for skeleton loaders
     const ENABLED_TOKEN_COUNT = ${enabledTokenCount};
 
-    function formatHoldTime(ms) {
+    function formatHoldTime(ms: number): string {
       if (!ms || ms < 0) return '0s';
       const seconds = Math.floor(ms / 1000);
       const minutes = Math.floor(seconds / 60);
@@ -1853,7 +1853,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       return seconds + 's';
     }
 
-    function formatUsd(value) {
+    function formatUsd(value: number): string {
       // Show decimals only if not a whole number, with comma separators
       if (value % 1 === 0) {
         return '$' + Math.abs(value).toLocaleString('en-US');
@@ -1861,7 +1861,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       return '$' + Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function formatPnl(value) {
+    function formatPnl(value: number): string {
       const sign = value >= 0 ? '+' : '-';
       // Show up to 3 decimal places for precision on small trades, with comma separators
       if (value % 1 === 0) {
@@ -1870,11 +1870,11 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       return sign + '$' + Math.abs(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
     }
 
-    function formatTime(timestamp) {
+    function formatTime(timestamp: number): string {
       return new Date(timestamp).toLocaleTimeString();
     }
 
-    function formatTimeSince(timestamp) {
+    function formatTimeSince(timestamp: number | null): string {
       if (!timestamp) return '--';
       const now = Date.now();
       const diff = now - timestamp;
