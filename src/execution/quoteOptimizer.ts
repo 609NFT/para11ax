@@ -80,8 +80,12 @@ function estimateTip(tradeUsd: number, congestion: CongestionLevel): number {
 }
 
 /**
- * Get current network congestion level
+ * Get current network congestion level based on UTC time heuristics
+ * 
+ * Uses simple time-based rules since most Solana activity follows Western trading hours.
  * TODO: Could integrate with Solana RPC for real congestion metrics
+ * 
+ * @returns {CongestionLevel} Current estimated congestion level
  */
 function getNetworkCongestion(): CongestionLevel {
   const hour = new Date().getUTCHours();
