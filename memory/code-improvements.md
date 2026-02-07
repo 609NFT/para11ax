@@ -36,3 +36,16 @@
 **Files Changed:** `src/signals/performanceTracker.ts`
 
 **Build:** ✅ Clean compile, no errors
+
+## 2026-02-07 — Error Handling in JSON Stringify Fallback (commit ed8b478)
+
+**Fixed:** Improved error handling in Raydium execution error fallback:
+- Added proper error capture for JSON.stringify failure
+- Added warning log when stringify fails to help debug future issues
+- Fixed bug using wrong variable name (`err` → `error`) in Object.keys fallback
+
+**Impact:** Better visibility into error serialization issues and more robust error messages
+
+**Files Changed:** `src/execution/raydiumClient.ts`
+
+**Build:** ✅ Clean compile, successful PM2 reload
