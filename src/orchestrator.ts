@@ -158,7 +158,9 @@ export class Orchestrator {
         logger.error(breakerMsg);
 
         // Discord notification
-        notifyCircuitBreaker(this.consecutiveLosses, this.consecutiveLossAmount).catch(() => {});
+        notifyCircuitBreaker(this.consecutiveLosses, this.consecutiveLossAmount).catch((err) => {
+          logger.warn({ error: err }, 'Failed to send circuit breaker Discord notification');
+        });
 
         // Stop the bot
         this.stop();
@@ -461,7 +463,9 @@ export class Orchestrator {
     }
 
     // Discord notification
-    notifyStartup().catch(() => {});
+    notifyStartup().catch((err) => {
+      logger.warn({ error: err }, 'Failed to send startup Discord notification');
+    });
   }
 
   /**
