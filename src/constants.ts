@@ -49,7 +49,7 @@ export const SOL_DECIMALS = 9;
  */
 export const ENTRY_THRESHOLD_FORMULA = {
   COEFFICIENT: 0.50,   // Slippage buffer: 0.50 / sqrt(tvl_in_millions) - raised for observed 0.5%+ slippage
-  MIN_FLOOR: 4.0,      // Market conditions changed: 4.0% captures more opportunities with similar performance
+  MIN_FLOOR: 3.5,      // Lowered for opportunity capture - 4.0% was too restrictive in current market
   MAX_CAP: 12.0,       // Allow even higher thresholds - selectivity is key
 } as const;
 
