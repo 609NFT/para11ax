@@ -100,6 +100,19 @@ export const EXIT_THRESHOLD_FORMULA = {
 } as const;
 
 /**
+ * Liquidity-Informed Dynamic Exit Strategy (2026-02-07)
+ * Adapts exit thresholds based on pool TVL for optimized reversion timing
+ */
+export const LIQUIDITY_INFORMED_EXIT = {
+  ENABLED: true,                    // Feature flag
+  HIGH_TVL_THRESHOLD_MILLIONS: 1.0, // $1M+ = high liquidity
+  MEDIUM_TVL_THRESHOLD_MILLIONS: 0.2, // $200K+ = medium liquidity
+  HIGH_TVL_EXIT_PCT: 2.0,          // Fast exits for high liquidity
+  MEDIUM_TVL_EXIT_PCT: 2.5,        // Standard exits for medium liquidity  
+  LOW_TVL_EXIT_PCT: 3.5,           // Patient exits for low liquidity
+} as const;
+
+/**
  * Position size formula parameters
  * Scales position size with liquidity: min(1.0, sqrt(tvl_in_millions) * COEFFICIENT)
  * Higher liquidity = can trade larger % of maxUsdPerTrade

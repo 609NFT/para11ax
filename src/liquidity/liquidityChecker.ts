@@ -28,6 +28,7 @@ import {
   USDC_MINT,
   SOL_MINT,
   ENTRY_THRESHOLD_FORMULA,
+  LIQUIDITY_INFORMED_EXIT,
   EXIT_THRESHOLD_FORMULA,
   POSITION_SIZE_FORMULA,
   PERCENTILE_THRESHOLD_FORMULA,
@@ -1104,7 +1105,37 @@ export function getEntryThresholdDetails(symbol: string): {
 export function getExitThreshold(symbol: string): number {
   const config = getConfigSync();
   const cached = thresholdCache.get(symbol);
-  const baseThreshold = cached ? cached.exitThresholdPct : (config.meanReversionExitSpreadPct ?? 0.8);
+  
+  // Start with base threshold from cached calculation or config fallback
+  let baseThreshold = cached ? cached.exitThresholdPct : (config.meanReversionExitSpreadPct ?? 0.8);
+  const originalThreshold = baseThreshold;
+  
+  // Apply Liquidity-Informed Dynamic Exit Strategy (2026-02-07)
+  if (LIQUIDITY_INFORMED_EXIT.ENABLED && cached && cached.tvl > 0) {
+    const tvlMillions = cached.tvl / 1_000_000;
+    
+    if (tvlMillions >= LIQUIDITY_INFORMED_EXIT.HIGH_TVL_THRESHOLD_MILLIONS) {
+      // High TVL (>$1M): Fast reversion expected, exit early
+      baseThreshold = Math.min(baseThreshold, LIQUIDITY_INFORMED_EXIT.HIGH_TVL_EXIT_PCT);
+    } else if (tvlMillions >= LIQUIDITY_INFORMED_EXIT.MEDIUM_TVL_THRESHOLD_MILLIONS) {
+      // Medium TVL ($200K-1M): Current strategy (2.5%)
+      baseThreshold = Math.min(baseThreshold, LIQUIDITY_INFORMED_EXIT.MEDIUM_TVL_EXIT_PCT);
+    } else {
+      // Low TVL (<$200K): Slow reversion, need bigger moves
+      baseThreshold = Math.max(baseThreshold, LIQUIDITY_INFORMED_EXIT.LOW_TVL_EXIT_PCT);
+    }
+    
+    // Log liquidity-informed adjustment
+    if (Math.abs(baseThreshold - originalThreshold) > 0.01) {
+      logger.debug({
+        symbol,
+        tvlUsd: cached.tvl,
+        originalThreshold: originalThreshold.toFixed(2),
+        adjustedThreshold: baseThreshold.toFixed(2),
+        liquidityTier: tvlMillions >= 1.0 ? 'high' : tvlMillions >= 0.2 ? 'medium' : 'low'
+      }, 'Liquidity-informed exit threshold adjustment');
+    }
+  }
   
   // Apply volatility adjustment to exit timing
   // Import dynamically to avoid circular dependency issues
