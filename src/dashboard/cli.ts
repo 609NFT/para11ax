@@ -174,7 +174,7 @@ export class Dashboard {
     const totalPnL = stats.totalPnlUsd;
     const totalPnLColor = totalPnL >= 0 ? chalk.green : chalk.red;
 
-    console.log(`Total PnL:       ${totalPnLColor('$' + totalPnL.toFixed(2))}`);
+    console.log(`Total PnL:       ${totalPnLColor(`$${totalPnL.toFixed(2)}`)}`);
     console.log();
 
     // Stats
@@ -183,8 +183,8 @@ export class Dashboard {
       console.log('─'.repeat(50));
       console.log(`Total Trades:    ${stats.totalTrades}`);
       console.log(`Win Rate:        ${(stats.winRate * 100).toFixed(1)}%`);
-      console.log(`Largest Win:     ${chalk.green('$' + stats.largestWin.toFixed(2))}`);
-      console.log(`Largest Loss:    ${chalk.red('$' + stats.largestLoss.toFixed(2))}`);
+      console.log(`Largest Win:     ${chalk.green(`$${stats.largestWin.toFixed(2)}`)}`);
+      console.log(`Largest Loss:    ${chalk.red(`$${stats.largestLoss.toFixed(2)}`)}`);
       console.log();
     }
   }
