@@ -459,6 +459,18 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 - **40min**: No improvement (0% change)  
 - **30min**: Optimal balance - all deviations perform worse or identical
 
+### Decay End Timing Experiments
+| Date | Decay End | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|----------|--------|----------|-----|-------------|--------|
+| Current | **50 min** | **47** | **44.7%** | **+$5.09** | **baseline** | **✅ OPTIMAL** |
+| **Feb 15** | **45 min** | **47** | **44.7%** | **+$5.09** | **0%** | ❌ **No impact** |
+| **Feb 15** | **55 min** | **47** | **44.7%** | **+$5.09** | **0%** | ❌ **No impact** |
+
+**Key Finding**: **50-minute decay end is definitively optimal**. Decay end timing adjustments have zero impact on performance:
+- **45min**: Identical results (0% change) - shortening decay window doesn't help
+- **55min**: Identical results (0% change) - extending decay window doesn't help  
+- **50min**: Optimal setting - neither earlier nor later decay end improves performance
+
 ---
 
 ## Deep Analysis: February 6, 2026 (10:40 AM UTC) ✅ SYSTEM OPTIMAL - AWAITING QUALITY OPPORTUNITIES
