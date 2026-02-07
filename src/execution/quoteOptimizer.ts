@@ -34,6 +34,12 @@ const PRICE_IMPACT_SCORES = {
   HIGH_PENALTY: -20,
 } as const;
 
+// TVL-based scoring thresholds
+const TVL_THRESHOLDS = {
+  HIGH: 1_000_000,    // $1M+ TVL pools (reliable)
+  LOW: 100_000,       // <$100K TVL pools (risky)
+} as const;
+
 // Tip scaling constants
 const TIP_SCALING = {
   MAX_MULTIPLIER: 2.0,      // Maximum tip multiplier for large trades
@@ -142,8 +148,8 @@ function calculateExecutionScore(
   }
 
   // High TVL pools are more reliable
-  if (tvl && tvl > 1_000_000) score += 10;
-  else if (tvl && tvl < 100_000) score -= 10;
+  if (tvl && tvl > TVL_THRESHOLDS.HIGH) score += 10;
+  else if (tvl && tvl < TVL_THRESHOLDS.LOW) score -= 10;
 
   return Math.max(0, Math.min(100, score));
 }
