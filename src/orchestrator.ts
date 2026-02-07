@@ -57,6 +57,7 @@ import {
 import { startWebServer, stopWebServer } from './web/server';
 import { prewarmInternalVolatility, refreshNextVolatility } from './feeds/volatilityFeed';
 import { notifyEntry, notifyExit, notifyStartup, notifyCircuitBreaker, notifyShortEntry, notifyShortExit } from './notifications/discord';
+import { scanCrossDexOpportunities } from './signals/crossDexMonitor';
 
 export class Orchestrator {
   private running: boolean = false;
@@ -872,6 +873,9 @@ export class Orchestrator {
     // Update discount snapshots and save to DB
     const discounts = await this.updateDiscounts();
 
+    // Monitor cross-DEX arbitrage opportunities (research/logging phase)
+    await this.monitorCrossDexOpportunities(discounts);
+
     // Check for exit signals on open positions (LONG positions)
     await this.checkExitSignals(openPositions);
 
@@ -881,6 +885,33 @@ export class Orchestrator {
     // Premium shorting (if enabled)
     if (isShortingEnabled()) {
       await this.runPremiumShortingLoop(discounts);
+    }
+  }
+
+  /**
+   * Monitor cross-DEX arbitrage opportunities (research phase)
+   */
+  private async monitorCrossDexOpportunities(discounts: PairSpread[]): Promise<void> {
+    try {
+      // Extract token info from current discount analysis
+      const tokens = discounts.map(spread => ({
+        mint: spread.tokenA.mint,
+        symbol: spread.tokenA.symbol
+      }));
+      
+      // Scan for cross-DEX opportunities (non-blocking)
+      const opportunities = await scanCrossDexOpportunities(tokens);
+      
+      // Log summary if opportunities found
+      if (opportunities.length > 0) {
+        logger.info({
+          opportunities: opportunities.length,
+          totalPotentialProfit: opportunities.reduce((sum, opp) => sum + opp.estimatedProfit, 0).toFixed(2),
+          topOpportunity: opportunities[0],
+        }, 'Cross-DEX arbitrage opportunities detected');
+      }
+    } catch (error) {
+      logger.debug({ error }, 'Error monitoring cross-DEX opportunities');
     }
   }
 
