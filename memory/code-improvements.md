@@ -1,5 +1,24 @@
 # Code Improvements Log
 
+## 2026-02-08 - Add explicit return type annotations to singleton getters
+
+**What was fixed:**
+- Added explicit return type annotations to `getQueryCache()` and `getWriteQueue()` functions
+- Changed `getQueryCache = () => cacheInstance` to `getQueryCache = (): QueryCache => cacheInstance`
+- Changed `getWriteQueue = () => queueInstance` to `getWriteQueue = (): WriteQueue => queueInstance`
+
+**Technical details:**
+- Located in `src/db/queryCache.ts` and `src/db/writeQueue.ts`
+- Improves TypeScript type safety and IDE intellisense
+- Follows best practice of explicit return type annotations for public API functions
+
+**Verification:**
+- TypeScript build successful (`npm run build`)
+- PM2 reload completed without errors
+- Change committed to git: `073288a`
+
+**Impact:** Small improvement to type safety - helps catch type mismatches at compile time.
+
 ## 2026-02-07 - Extract hardcoded TTL constant for price data cache
 
 **What was fixed:**
