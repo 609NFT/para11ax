@@ -49,7 +49,7 @@ import {
   ORPHAN_CLEANUP_DELAY_MS,
   EXIT_SLIPPAGE_ESCALATION_BPS,
   MAX_SLIPPAGE_BPS,
-  ESTIMATED_FEES_PCT,
+  getEstimatedFeesPct,
   MIN_ORPHAN_VALUE_USD,
   MIN_SELLABLE_VALUE_USD,
   getSolPriceUsd,
@@ -2198,7 +2198,8 @@ export class Orchestrator {
           // PAPER MODE: Estimate PnL from discount change
           // Mean reversion: profit = (entryDiscount - exitDiscount) - fees
           const discountChange = position.entrySpreadPct - currentDiscountPct;
-          pnlPct = discountChange - ESTIMATED_FEES_PCT;
+          const estimatedFeesPct = getEstimatedFeesPct(position.entryTvlUsd || 50000);
+          pnlPct = discountChange - estimatedFeesPct;
           pnlUsd = position.sizeUsd * (pnlPct / 100);
         }
       }
