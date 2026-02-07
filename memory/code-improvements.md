@@ -37,3 +37,22 @@
 - Change committed to git: `a8d956f`
 
 **Impact:** Small but positive - makes cache TTL configuration more consistent and self-documenting.
+
+## 2026-02-07 - Extract magic number for query cache cleanup interval
+
+**What was fixed:**
+- Replaced hardcoded `60000` with named constant `CLEANUP_INTERVAL_MS` in `src/db/queryCache.ts`
+- Added documentation: "1 minute" comment for clarity
+- Improves code maintainability by making the interval configurable
+
+**Technical details:**
+- Located in setInterval call for cache cleanup
+- 60000ms = 1 minute cleanup cycle for expired cache entries
+- Follows pattern of extracting magic numbers to named constants
+
+**Verification:**
+- TypeScript build successful (`npm run build`)
+- No runtime errors in PM2 logs (only harmless bigint warnings)
+- Change committed to git: `6050799`
+
+**Impact:** Small improvement to code readability and maintainability.
