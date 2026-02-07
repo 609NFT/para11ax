@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { TradeStats, MeanReversionPosition, PairSpread } from '../types';
 import { dbLogger } from '../logger';
+import { MS_PER_DAY, MS_PER_WEEK } from '../utils/timeConstants';
 import type { ShortPosition } from '../signals/premiumShortSignal';
 import type { MeanReversionPositionRow } from './supabaseClient';
 import {
@@ -306,7 +307,7 @@ export class DatabaseManager {
    * @param windowMs - Rolling window in milliseconds (default 7 days)
    * @returns Array of discount values (positive only)
    */
-  async getRollingDiscountHistory(tokenSymbol: string, windowMs: number = 7 * 24 * 60 * 60 * 1000): Promise<number[]> {
+  async getRollingDiscountHistory(tokenSymbol: string, windowMs: number = MS_PER_WEEK): Promise<number[]> {
     const cacheKey = `discount:rolling:${tokenSymbol}:${windowMs}`;
     const cached = this.cache.get<number[]>(cacheKey);
     if (cached) return cached;
@@ -324,7 +325,7 @@ export class DatabaseManager {
    * @param windowMs - Rolling window in milliseconds (default 7 days)
    * @returns Map of token symbol -> array of discount values
    */
-  async getAllRollingDiscountHistory(windowMs: number = 7 * 24 * 60 * 60 * 1000): Promise<Map<string, number[]>> {
+  async getAllRollingDiscountHistory(windowMs: number = MS_PER_WEEK): Promise<Map<string, number[]>> {
     const cacheKey = `discount:rolling:all:${windowMs}`;
     const cached = this.cache.get<Map<string, number[]>>(cacheKey);
     if (cached) return cached;
@@ -342,7 +343,7 @@ export class DatabaseManager {
    * Get percentile thresholds for all tokens (memory efficient - calculated in PostgreSQL)
    */
   async getAllPercentileThresholds(
-    windowMs: number = 7 * 24 * 60 * 60 * 1000,
+    windowMs: number = MS_PER_WEEK,
     percentile: number = 90
   ): Promise<Map<string, { percentileValue: number; sampleCount: number }>> {
     const cacheKey = `percentile:all:${windowMs}:${percentile}`;
@@ -606,7 +607,7 @@ export class DatabaseManager {
     timestamps: number[];
     data: (number | null)[][];  // [symbolIndex][timeIndex] = discount or null
   }> {
-    const since = _sinceTimestamp || Date.now() - 24 * 60 * 60 * 1000;
+    const since = _sinceTimestamp || Date.now() - MS_PER_DAY;
     const cacheKey = `heatmap:${since}:${bucketMinutes}`;
     const cached = this.cache.get<{
       symbols: string[];
