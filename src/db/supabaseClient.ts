@@ -4,7 +4,7 @@
 
 import { Pool } from 'pg';
 import { TokenConfig } from '../types';
-import logger from '../logger';
+import { dbLogger } from '../logger';
 
 // Database connection timeout constants
 const TOKEN_POOL_IDLE_TIMEOUT_MS = 30000; // 30 seconds
@@ -34,7 +34,7 @@ function getTokenPool(): Pool {
 
     // Add error handler
     tokenPool.on('error', (err) => {
-      logger.error({ error: err }, 'Unexpected error on token pool client');
+      dbLogger.error({ error: err }, 'Unexpected error on token pool client');
     });
   }
   return tokenPool;
@@ -57,7 +57,7 @@ export function getTradesPool(): Pool {
 
     // Add error handler
     tradesPool.on('error', (err) => {
-      logger.error({ error: err }, 'Unexpected error on trades pool client');
+      dbLogger.error({ error: err }, 'Unexpected error on trades pool client');
     });
   }
   return tradesPool;
@@ -74,7 +74,7 @@ export async function validateDatabaseConnections(): Promise<void> {
   try {
     const tokenPool = getTokenPool();
     await tokenPool.query('SELECT 1');
-    logger.info('Token database connection validated');
+    dbLogger.info('Token database connection validated');
   } catch (error) {
     const err = error as Error;
     errors.push(`Token DB (DIRECT_URL): ${err.message}`);
@@ -84,7 +84,7 @@ export async function validateDatabaseConnections(): Promise<void> {
   try {
     const tradesPool = getTradesPool();
     await tradesPool.query('SELECT 1');
-    logger.info('Trades database connection validated');
+    dbLogger.info('Trades database connection validated');
   } catch (error) {
     const err = error as Error;
     errors.push(`Trades DB (TRADES_DB_URL): ${err.message}`);
@@ -202,7 +202,7 @@ export async function upsertMeanReversionPosition(position: MeanReversionPositio
       position.entry_stock_price, Date.now()
     ]);
   } catch (error) {
-    logger.error({ error, positionId: position.id }, 'Failed to sync mean reversion position to Supabase');
+    dbLogger.error({ error, positionId: position.id }, 'Failed to sync mean reversion position to Supabase');
   }
 }
 
@@ -232,7 +232,7 @@ export async function fetchRecentClosedPositions(limit: number = 10, withinMs: n
 
     return result.rows.map(coercePositionRow);
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch recent closed positions from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch recent closed positions from Supabase');
     return [];
   }
 }
@@ -261,7 +261,7 @@ export async function fetchOpenPositions(): Promise<MeanReversionPositionRow[]> 
 
     return result.rows.map(coercePositionRow);
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch open positions from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch open positions from Supabase');
     return [];
   }
 }
@@ -290,7 +290,7 @@ export async function fetchClosedPositions(limit: number = 100): Promise<MeanRev
 
     return result.rows.map(coercePositionRow);
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch closed positions from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch closed positions from Supabase');
     return [];
   }
 }
@@ -352,7 +352,7 @@ export async function upsertShortPosition(position: ShortPositionRow): Promise<v
       position.exit_tx_signature, position.pnl_usd, position.pnl_pct, Date.now()
     ]);
   } catch (error) {
-    logger.error({ error, positionId: position.id }, 'Failed to sync short position to Supabase');
+    dbLogger.error({ error, positionId: position.id }, 'Failed to sync short position to Supabase');
   }
 }
 
@@ -378,7 +378,7 @@ export async function fetchOpenShortPositions(): Promise<ShortPositionRow[]> {
 
     return result.rows as ShortPositionRow[];
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch open short positions from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch open short positions from Supabase');
     return [];
   }
 }
@@ -405,7 +405,7 @@ export async function fetchClosedShortPositions(limit: number = 100): Promise<Sh
 
     return result.rows as ShortPositionRow[];
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch closed short positions from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch closed short positions from Supabase');
     return [];
   }
 }
@@ -486,7 +486,7 @@ async function flushDiscountHistoryBatch(): Promise<void> {
       ) VALUES ${placeholders.join(', ')}
     `, values);
   } catch (error) {
-    logger.error({ error, batchSize: batch.length }, 'Failed to sync discount history batch to Supabase');
+    dbLogger.error({ error, batchSize: batch.length }, 'Failed to sync discount history batch to Supabase');
   }
 }
 
@@ -512,11 +512,11 @@ export async function pruneOldDiscountHistory(): Promise<{ deleted: number }> {
 
     const deleted = result.rowCount || 0;
     if (deleted > 0) {
-      logger.info({ deleted, retentionDays: RETENTION_DAYS }, 'Pruned old discount history from Supabase');
+      dbLogger.info({ deleted, retentionDays: RETENTION_DAYS }, 'Pruned old discount history from Supabase');
     }
     return { deleted };
   } catch (error) {
-    logger.error({ error }, 'Failed to prune discount history from Supabase');
+    dbLogger.error({ error }, 'Failed to prune discount history from Supabase');
     return { deleted: 0 };
   }
 }
@@ -564,7 +564,7 @@ export async function fetchLatestDiscount(
     `, [stockTicker]);
     return result.rows[0] || null;
   } catch (error) {
-    logger.error({ error, stockTicker, tokenSymbol }, 'Failed to fetch latest discount from Supabase');
+    dbLogger.error({ error, stockTicker, tokenSymbol }, 'Failed to fetch latest discount from Supabase');
     return null;
   }
 }
@@ -594,7 +594,7 @@ export async function fetchDiscountAtTimestamp(
     `, [stockTicker, tokenSymbol, timestamp]);
     return result.rows[0] || null;
   } catch (error) {
-    logger.error({ error, stockTicker, tokenSymbol, timestamp }, 'Failed to fetch discount at timestamp from Supabase');
+    dbLogger.error({ error, stockTicker, tokenSymbol, timestamp }, 'Failed to fetch discount at timestamp from Supabase');
     return null;
   }
 }
@@ -621,7 +621,7 @@ export async function fetchLatestDiscounts(): Promise<Map<string, number>> {
     }
     return map;
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch latest discounts from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch latest discounts from Supabase');
     return new Map();
   }
 }
@@ -649,7 +649,7 @@ export async function fetchRollingDiscountHistory(
 
     return result.rows;
   } catch (error) {
-    logger.error({ error, tokenSymbol, windowMs }, 'Failed to fetch rolling discount history from Supabase');
+    dbLogger.error({ error, tokenSymbol, windowMs }, 'Failed to fetch rolling discount history from Supabase');
     return [];
   }
 }
@@ -684,7 +684,7 @@ export async function fetchAllRollingDiscountHistory(
     }
     return map;
   } catch (error) {
-    logger.error({ error, windowMs }, 'Failed to fetch all rolling discount history from Supabase');
+    dbLogger.error({ error, windowMs }, 'Failed to fetch all rolling discount history from Supabase');
     return new Map();
   }
 }
@@ -723,7 +723,7 @@ export async function fetchAllPercentileThresholds(
       });
     }
 
-    logger.info({
+    dbLogger.info({
       tokens: map.size,
       percentile,
       windowHours: windowMs / (60 * 60 * 1000)
@@ -731,7 +731,7 @@ export async function fetchAllPercentileThresholds(
 
     return map;
   } catch (error) {
-    logger.error({ error, windowMs, percentile }, 'Failed to fetch percentile thresholds from Supabase');
+    dbLogger.error({ error, windowMs, percentile }, 'Failed to fetch percentile thresholds from Supabase');
     return new Map();
   }
 }
@@ -751,7 +751,7 @@ export async function upsertSystemState(key: string, value: string): Promise<voi
         updated_at = EXCLUDED.updated_at
     `, [key, value, Date.now()]);
   } catch (error) {
-    logger.error({ error, key }, 'Failed to sync system state to Supabase');
+    dbLogger.error({ error, key }, 'Failed to sync system state to Supabase');
   }
 }
 
@@ -807,7 +807,7 @@ export async function getHourlySummaryFromSupabase(sinceTimestamp?: number): Pro
       sample_count: parseInt(row.sample_count, 10),
     }));
   } catch (error) {
-    logger.error({ error }, 'Failed to get hourly summary from Supabase');
+    dbLogger.error({ error }, 'Failed to get hourly summary from Supabase');
     return [];
   }
 }
@@ -840,9 +840,9 @@ export async function upsertHeatmapSummary(rows: HeatmapSummaryRow[]): Promise<v
         sample_count = EXCLUDED.sample_count
     `, values);
 
-    logger.debug({ rows: rows.length }, 'Upserted heatmap summary to Supabase');
+    dbLogger.debug({ rows: rows.length }, 'Upserted heatmap summary to Supabase');
   } catch (error) {
-    logger.error({ error, rows: rows.length }, 'Failed to upsert heatmap summary to Supabase');
+    dbLogger.error({ error, rows: rows.length }, 'Failed to upsert heatmap summary to Supabase');
   }
 }
 
@@ -898,7 +898,7 @@ export async function fetchHeatmapSummary(sinceTimestamp: number): Promise<{
 
     return { symbols, timestamps, data };
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch heatmap summary from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch heatmap summary from Supabase');
     return { symbols: [], timestamps: [], data: [] };
   }
 }
@@ -967,7 +967,7 @@ export async function fetchDiscountHeatmapFromSupabase(
 
     return { symbols, timestamps, data };
   } catch (error) {
-    logger.error({ error, sinceTimestamp, bucketMinutes }, 'Failed to fetch discount heatmap from Supabase');
+    dbLogger.error({ error, sinceTimestamp, bucketMinutes }, 'Failed to fetch discount heatmap from Supabase');
     return { symbols: [], timestamps: [], data: [] };
   }
 }
@@ -1131,7 +1131,7 @@ export async function fetchStatsFromSupabase(sinceTimestamp?: number): Promise<T
       grossPnlUsd: totalPnlUsd + totalFeesUsd,
     };
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch stats from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch stats from Supabase');
     return getEmptyStats();
   }
 }
@@ -1176,7 +1176,7 @@ export async function fetchPnlHistoryFromSupabase(sinceTimestamp?: number): Prom
       };
     });
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch PnL history from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch PnL history from Supabase');
     return [];
   }
 }
@@ -1351,7 +1351,7 @@ export async function fetchAllHistoricalVolatilityFromSupabase(windowDays: numbe
 
     return volatilityMap;
   } catch (error) {
-    logger.error({ error }, 'Failed to fetch historical volatility from Supabase');
+    dbLogger.error({ error }, 'Failed to fetch historical volatility from Supabase');
     return new Map();
   }
 }

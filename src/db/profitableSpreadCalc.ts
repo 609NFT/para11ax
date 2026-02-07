@@ -6,7 +6,7 @@
  */
 
 import { Pool } from 'pg';
-import logger from '../logger';
+import { dbLogger } from '../logger';
 
 // Pool singleton (same pattern as supabaseClient.ts)
 let pool: Pool | null = null;
@@ -101,7 +101,7 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
       });
     }
 
-    logger.info({
+    dbLogger.info({
       tokensWithData: map.size,
       lookbackDays: LOOKBACK_DAYS,
       minWinRate: MIN_WIN_RATE,
@@ -109,7 +109,7 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
 
     return map;
   } catch (error: unknown) {
-    logger.error({ error }, 'Failed to calculate profitable spreads');
+    dbLogger.error({ error }, 'Failed to calculate profitable spreads');
     return new Map();
   }
 }
