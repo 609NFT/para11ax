@@ -17,7 +17,7 @@ process.env.DASHBOARD_STANDALONE = 'true';
 
 const PORT = parseInt(process.env.WEB_PORT || '3001');
 
-async function main() {
+async function main(): Promise<void> {
   logger.info('═══════════════════════════════════════════════════════');
   logger.info('        PARALLAX - STANDALONE DASHBOARD');
   logger.info('═══════════════════════════════════════════════════════');
