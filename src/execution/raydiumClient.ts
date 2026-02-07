@@ -627,8 +627,9 @@ export class RaydiumClient {
           // Last resort: stringify the whole object
           try {
             errorMessage = JSON.stringify(error, null, 2);
-          } catch {
-            errorMessage = `Unknown error object: ${Object.keys(err).join(', ')}`;
+          } catch (stringifyError) {
+            executionLogger.warn({ stringifyError: stringifyError instanceof Error ? stringifyError.message : String(stringifyError) }, 'Failed to stringify error object');
+            errorMessage = `Unknown error object: ${Object.keys(error).join(', ')}`;
           }
         }
       } else {
