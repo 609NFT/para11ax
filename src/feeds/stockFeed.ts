@@ -659,7 +659,8 @@ export class StockFeed {
       try {
         const result = await this.fetchFromPolygon(testSymbol);
         if (result) return true;
-      } catch {
+      } catch (error) {
+        feedLogger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Polygon connectivity test failed');
         // Continue to next source
       }
     }
@@ -668,7 +669,8 @@ export class StockFeed {
       try {
         const result = await this.fetchFromFinnhub(testSymbol);
         if (result) return true;
-      } catch {
+      } catch (error) {
+        feedLogger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Finnhub connectivity test failed');
         // Continue to next source
       }
     }
