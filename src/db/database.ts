@@ -638,6 +638,9 @@ export class DatabaseManager {
 // Singleton
 let databaseInstance: DatabaseManager | null = null;
 
+/**
+ * Get the singleton DatabaseManager instance, creating it if it doesn't exist
+ */
 export function getDatabase(): DatabaseManager {
   if (!databaseInstance) {
     databaseInstance = new DatabaseManager();
