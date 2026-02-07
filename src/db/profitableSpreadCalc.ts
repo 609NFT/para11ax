@@ -1,6 +1,6 @@
 /**
  * Algorithmic Entry Threshold Calculator
- * 
+ *
  * Calculates minimum profitable entry spread per token based on historical data.
  * Falls back to TVL-based calculation if insufficient data.
  */
@@ -47,17 +47,17 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
 
   try {
     const cutoffTime = Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
-    
+
     // Find the minimum spread bucket with win rate >= MIN_WIN_RATE for each token
     const result = await db.query(`
       WITH spread_stats AS (
-        SELECT 
+        SELECT
           stock_ticker,
           FLOOR(entry_spread_pct * 2) / 2 as spread_bucket,  -- 0.5% buckets
           COUNT(*) as trades,
           SUM(CASE WHEN pnl_usd > 0 THEN 1 ELSE 0 END)::float / COUNT(*) as win_rate
         FROM mean_reversion_positions
-        WHERE status = 'closed' 
+        WHERE status = 'closed'
           AND exit_timestamp >= $1
           AND entry_spread_pct IS NOT NULL
           AND entry_spread_pct > 0
@@ -65,7 +65,7 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
         HAVING COUNT(*) >= $2
       ),
       profitable_spreads AS (
-        SELECT 
+        SELECT
           stock_ticker,
           spread_bucket,
           trades,
@@ -74,7 +74,7 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
         FROM spread_stats
         WHERE win_rate >= $3
       )
-      SELECT 
+      SELECT
         stock_ticker,
         spread_bucket as min_profitable_spread,
         trades as sample_size,
@@ -85,12 +85,12 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
     `, [cutoffTime, MIN_SAMPLES_MEDIUM_CONFIDENCE, MIN_WIN_RATE]);
 
     const map = new Map<string, TokenProfitableSpread>();
-    
+
     for (const row of result.rows) {
-      const confidence = row.sample_size >= MIN_SAMPLES_HIGH_CONFIDENCE ? 'high' 
-        : row.sample_size >= MIN_SAMPLES_MEDIUM_CONFIDENCE ? 'medium' 
+      const confidence = row.sample_size >= MIN_SAMPLES_HIGH_CONFIDENCE ? 'high'
+        : row.sample_size >= MIN_SAMPLES_MEDIUM_CONFIDENCE ? 'medium'
         : 'low';
-      
+
       map.set(row.stock_ticker, {
         stockTicker: row.stock_ticker,
         minProfitableSpread: parseFloat(row.min_profitable_spread),
@@ -124,9 +124,9 @@ export function getDynamicEntryThreshold(
   tvlBasedThreshold: number,
   percentileThreshold?: number
 ): { threshold: number; source: string } {
-  
+
   const historicalData = profitableSpreads.get(stockTicker);
-  
+
   // If we have high-confidence historical data, use it
   if (historicalData && historicalData.confidence === 'high') {
     // Add 0.5% buffer to historical minimum
@@ -134,12 +134,12 @@ export function getDynamicEntryThreshold(
       historicalData.minProfitableSpread + 0.5,
       tvlBasedThreshold  // Never go below TVL-based minimum
     );
-    return { 
-      threshold, 
-      source: `historical (${historicalData.winRateAtThreshold.toFixed(0)}% WR at ${historicalData.minProfitableSpread}%)` 
+    return {
+      threshold,
+      source: `historical (${historicalData.winRateAtThreshold.toFixed(0)}% WR at ${historicalData.minProfitableSpread}%)`
     };
   }
-  
+
   // If we have medium-confidence data, blend with percentile
   if (historicalData && historicalData.confidence === 'medium' && percentileThreshold) {
     const historicalWithBuffer = historicalData.minProfitableSpread + 0.5;
@@ -149,11 +149,11 @@ export function getDynamicEntryThreshold(
     );
     return { threshold, source: 'blended (historical + percentile)' };
   }
-  
+
   // Fall back to percentile or TVL-based
   if (percentileThreshold && percentileThreshold > tvlBasedThreshold) {
     return { threshold: percentileThreshold, source: 'percentile' };
   }
-  
+
   return { threshold: tvlBasedThreshold, source: 'tvl-based' };
 }

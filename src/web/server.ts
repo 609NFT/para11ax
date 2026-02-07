@@ -1019,9 +1019,9 @@ app.get('/api/trades', async (req: Request, res: Response) => {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
     const token = req.query.token as string;
     const since = req.query.since ? Number(req.query.since) : undefined;
-    
+
     const cacheKey = `${limit}-${token || 'all'}-${since || 'all'}`;
-    
+
     // Check cache first
     const cached = tradesCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < TRADES_CACHE_MS) {
@@ -1030,28 +1030,28 @@ app.get('/api/trades', async (req: Request, res: Response) => {
 
     // Fetch positions with larger limit to filter afterwards
     const positions = await fetchClosedPositions(limit * 2);
-    
+
     // Filter by token if specified
     let filteredPositions = positions;
     if (token) {
-      filteredPositions = positions.filter(pos => 
+      filteredPositions = positions.filter(pos =>
         pos.buy_symbol?.toLowerCase().includes(token.toLowerCase()) ||
         pos.stock_ticker?.toLowerCase().includes(token.toLowerCase())
       );
     }
-    
+
     // Filter by timestamp if specified
     if (since) {
-      filteredPositions = filteredPositions.filter(pos => 
+      filteredPositions = filteredPositions.filter(pos =>
         pos.exit_timestamp && pos.exit_timestamp >= since
       );
     }
-    
+
     // Sort by exit_timestamp descending and apply offset/limit
     filteredPositions.sort((a, b) => (b.exit_timestamp || 0) - (a.exit_timestamp || 0));
     const offset = Number(req.query.offset) || 0;
     filteredPositions = filteredPositions.slice(offset, offset + limit);
-    
+
     // Format response with camelCase fields for frontend
     const trades = filteredPositions.map(pos => ({
       id: pos.id,
@@ -1083,7 +1083,7 @@ app.get('/api/trades', async (req: Request, res: Response) => {
 app.get('/api/analytics', async (_req: Request, res: Response) => {
   try {
     const cacheKey = 'analytics-7d';
-    
+
     // Check cache first
     const cached = analyticsCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < ANALYTICS_CACHE_MS) {
@@ -1093,7 +1093,7 @@ app.get('/api/analytics', async (_req: Request, res: Response) => {
     // Fetch recent positions from last 7 days
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
     const positions = await fetchRecentClosedPositions(1000, sevenDaysMs);
-    
+
     // Initialize analytics object
     const analytics = {
       byToken: {} as Record<string, { trades: number; wins: number; losses: number; winRate: number; totalPnl: number; avgPnl: number; avgHoldTime: number }>,
@@ -1138,7 +1138,7 @@ app.get('/api/analytics', async (_req: Request, res: Response) => {
     // Process by hour (24 hour buckets)
     const hourStats: Record<number, { trades: number; wins: number; totalPnl: number }> = {};
     for (let i = 0; i < 24; i++) hourStats[i] = { trades: 0, wins: 0, totalPnl: 0 };
-    
+
     positions.forEach(pos => {
       if (pos.exit_timestamp) {
         const hour = new Date(pos.exit_timestamp).getHours();
@@ -1206,7 +1206,7 @@ app.get('/api/analytics', async (_req: Request, res: Response) => {
       { range: "3-5%", min: 3, max: 5 },
       { range: "5%+", min: 5, max: 100 }
     ];
-    
+
     const bucketCounts = spreadBuckets.map(bucket => ({ range: bucket.range, count: 0 }));
     positions.forEach(pos => {
       const entryDiscount = Math.abs(pos.entry_spread_pct || 0);

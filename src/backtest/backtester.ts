@@ -10,30 +10,30 @@ export interface BacktestConfig {
   // Entry conditions
   minEntrySpread: number;      // Minimum spread % to enter (e.g., 3.5)
   maxEntrySpread?: number;     // Maximum spread % to enter (optional cap)
-  
+
   // Exit conditions
   targetSpread: number;        // Target spread % to exit (e.g., 0.5)
   stopLossSpread?: number;     // Stop loss spread % (optional)
   minHoldMs: number;           // Minimum hold time before exit allowed
   maxHoldMs: number;           // Maximum hold time (force exit)
-  
+
   // Time-decaying exit
   decayStartMs?: number;       // When to start decay (default: 2h)
-  decayEndMs?: number;         // When decay completes (default: 3.5h) 
+  decayEndMs?: number;         // When decay completes (default: 3.5h)
   minDecayedSpread?: number;   // Final decayed exit threshold (default: 1.0%)
-  
+
   // Trailing stop
   trailingStopPullbackPct?: number;  // Pullback % from peak to exit (default: 0.05%)
-  
+
   // Position sizing
   positionSizeUsd: number;     // Size per trade in USD
   maxConcurrentPositions: number;  // Max positions at once
-  
+
   // Filters
   tokens?: string[];           // Specific tokens to test (null = all)
   startTime?: number;          // Start timestamp (null = all available)
   endTime?: number;            // End timestamp (null = now)
-  
+
   // Fee assumptions
   entryFeePct: number;         // Entry fee as % of position (e.g., 0.3)
   exitFeePct: number;          // Exit fee as % of position
@@ -54,13 +54,13 @@ export interface BacktestTrade {
 
 export interface BacktestResult {
   config: BacktestConfig;
-  
+
   // Summary stats
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
   winRate: number;
-  
+
   // P&L
   totalPnlUsd: number;
   grossPnlUsd: number;
@@ -68,35 +68,35 @@ export interface BacktestResult {
   avgPnlPerTrade: number;
   largestWin: number;
   largestLoss: number;
-  
+
   // Risk metrics
   sharpeRatio: number;         // Annualized Sharpe ratio (365 trading days)
   maxDrawdown: number;         // Maximum peak-to-trough drawdown in USD
-  
+
   // Time stats
   avgHoldTimeMs: number;
   avgHoldTimeMin: number;
-  
+
   // Equity curve
   equityCurve: { timestamp: number; equity: number }[];
-  
+
   // By token
   byToken: Map<string, {
     trades: number;
     winRate: number;
     pnlUsd: number;
   }>;
-  
+
   // By hour (UTC)
   byHour: Map<number, {
     trades: number;
     winRate: number;
     pnlUsd: number;
   }>;
-  
+
   // Individual trades
   trades: BacktestTrade[];
-  
+
   // Data coverage
   dataStartTime: number;
   dataEndTime: number;
@@ -119,7 +119,7 @@ interface OpenPosition {
 
 export class Backtester {
   private pool: Pool;
-  
+
   constructor() {
     const connectionString = process.env.TRADES_DB_URL;
     if (!connectionString) {
@@ -131,11 +131,11 @@ export class Backtester {
       max: 5,
     });
   }
-  
+
   async close(): Promise<void> {
     await this.pool.end();
   }
-  
+
   /**
    * Fetch historical spread data from discount_history
    * Downsampled to reduce memory usage - takes 1 sample per 5 minutes per token
@@ -148,23 +148,23 @@ export class Backtester {
     // Default to last 3 days if no start time specified (8 days max retention)
     const effectiveStartTime = startTime || (Date.now() - 3 * 24 * 60 * 60 * 1000);
     const effectiveEndTime = endTime || Date.now();
-    
+
     const conditions: string[] = [`timestamp >= $1`, `timestamp <= $2`];
     const params: (number | string)[] = [effectiveStartTime, effectiveEndTime];
     let paramIdx = 3;
-    
+
     if (tokens && tokens.length > 0) {
       conditions.push(`token_a_symbol = ANY($${paramIdx++})`);
       params.push(tokens as unknown as string);
     }
-    
+
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
-    
+
     // Downsample to 5-minute buckets to reduce data volume
     const BUCKET_MS = 5 * 60 * 1000;
-    
+
     const result = await this.pool.query(`
-      SELECT 
+      SELECT
         token_a_symbol as token,
         (FLOOR(timestamp / ${BUCKET_MS}) * ${BUCKET_MS})::bigint as timestamp,
         AVG(COALESCE(token_a_discount_vs_stock, 0)) as spread
@@ -173,73 +173,73 @@ export class Backtester {
       GROUP BY token_a_symbol, FLOOR(timestamp / ${BUCKET_MS})
       ORDER BY timestamp ASC
     `, params);
-    
+
     return result.rows.map(row => ({
       token: row.token,
       timestamp: Number(row.timestamp),
       spread: Number(row.spread),
     }));
   }
-  
+
   /**
    * Run backtest with given configuration
    */
   async run(config: BacktestConfig): Promise<BacktestResult> {
     logger.info({ config }, 'Starting backtest');
-    
+
     // Set defaults for new parameters
     const decayStartMs = config.decayStartMs ?? (2 * 60 * 60 * 1000);      // 2 hours
-    const decayEndMs = config.decayEndMs ?? (3.5 * 60 * 60 * 1000);       // 3.5 hours  
+    const decayEndMs = config.decayEndMs ?? (3.5 * 60 * 60 * 1000);       // 3.5 hours
     const minDecayedSpread = config.minDecayedSpread ?? 1.0;               // 1.0%
     const trailingStopPullbackPct = config.trailingStopPullbackPct ?? 0.05; // 0.05%
-    
+
     // Fetch spread data
     const spreadData = await this.fetchSpreadData(
       config.startTime,
       config.endTime,
       config.tokens
     );
-    
+
     if (spreadData.length === 0) {
       throw new Error('No spread data found for backtest period');
     }
-    
-    logger.info({ 
+
+    logger.info({
       dataPoints: spreadData.length,
       startTime: new Date(spreadData[0].timestamp).toISOString(),
       endTime: new Date(spreadData[spreadData.length - 1].timestamp).toISOString(),
     }, 'Loaded spread data');
-    
+
     // Track state
     const openPositions = new Map<string, OpenPosition>();  // token -> position
     const trades: BacktestTrade[] = [];
     const uniqueTokens = new Set<string>();
     const equityCurve: { timestamp: number; equity: number }[] = [];
     let cumulativePnl = 0;
-    
+
     // Process each data point chronologically
     for (const dataPoint of spreadData) {
       uniqueTokens.add(dataPoint.token);
       const { token, timestamp, spread } = dataPoint;
-      
+
       // Check for exits first
       const position = openPositions.get(token);
       if (position) {
         const holdTime = timestamp - position.entryTime;
         let shouldExit = false;
         let exitReason: BacktestTrade['exitReason'] = 'target';
-        
+
         // Update trailing stop tracking
         const currentImprovement = position.entrySpread - spread;  // How much spread has improved
         if (currentImprovement > position.peakImprovement) {
           position.peakImprovement = currentImprovement;
         }
-        
+
         // Track if position has ever been in profit
         if (spread < position.entrySpread) {
           position.inProfit = true;
         }
-        
+
         // Check exit conditions (only after min hold time)
         if (holdTime >= config.minHoldMs) {
           // Calculate time-decaying exit threshold
@@ -254,7 +254,7 @@ export class Backtester {
               exitThreshold = config.targetSpread + decayProgress * (minDecayedSpread - config.targetSpread);
             }
           }
-          
+
           // Target reached (spread collapsed below decaying threshold)
           if (spread <= exitThreshold) {
             shouldExit = true;
@@ -266,19 +266,19 @@ export class Backtester {
             exitReason = 'stop_loss';
           }
           // Trailing stop: position was profitable but pulled back
-          else if (position.inProfit && 
+          else if (position.inProfit &&
                    currentImprovement <= position.peakImprovement - trailingStopPullbackPct) {
             shouldExit = true;
             exitReason = 'trailing_stop';
           }
         }
-        
+
         // Max hold time exceeded
         if (holdTime >= config.maxHoldMs) {
           shouldExit = true;
           exitReason = 'max_hold';
         }
-        
+
         if (shouldExit) {
           const trade = this.closeTrade(position, timestamp, spread, exitReason, config);
           trades.push(trade);
@@ -286,7 +286,7 @@ export class Backtester {
           openPositions.delete(token);
         }
       }
-      
+
       // Check for entry
       if (!openPositions.has(token) && openPositions.size < config.maxConcurrentPositions) {
         // Entry conditions
@@ -302,14 +302,14 @@ export class Backtester {
           }
         }
       }
-      
+
       // Record equity curve at regular intervals (every hour)
-      if (equityCurve.length === 0 || 
+      if (equityCurve.length === 0 ||
           timestamp - equityCurve[equityCurve.length - 1].timestamp >= 60 * 60 * 1000) {
         equityCurve.push({ timestamp, equity: cumulativePnl });
       }
     }
-    
+
     // Close any remaining positions at end of data
     const endTime = spreadData[spreadData.length - 1].timestamp;
     openPositions.forEach((position, token) => {
@@ -317,21 +317,21 @@ export class Backtester {
       const lastSpread = spreadData
         .filter(d => d.token === token)
         .pop()?.spread ?? position.entrySpread;
-      
+
       const trade = this.closeTrade(position, endTime, lastSpread, 'end_of_data', config);
       trades.push(trade);
       cumulativePnl += trade.netPnlUsd;
     });
-    
+
     // Ensure final equity point
     if (equityCurve.length === 0 || equityCurve[equityCurve.length - 1].timestamp < endTime) {
       equityCurve.push({ timestamp: endTime, equity: cumulativePnl });
     }
-    
+
     // Calculate results
     return this.calculateResults(config, trades, spreadData, Array.from(uniqueTokens), equityCurve);
   }
-  
+
   private closeTrade(
     position: OpenPosition,
     exitTime: number,
@@ -340,7 +340,7 @@ export class Backtester {
     config: BacktestConfig
   ): BacktestTrade {
     const holdTimeMs = exitTime - position.entryTime;
-    
+
     // P&L calculation:
     // Entry at X% discount, exit at Y% discount
     // Profit = (entrySpread - exitSpread) as % of position
@@ -349,7 +349,7 @@ export class Backtester {
     const totalFeePct = config.entryFeePct + config.exitFeePct;
     const netPnlPct = grossPnlPct - totalFeePct;
     const netPnlUsd = (netPnlPct / 100) * config.positionSizeUsd;
-    
+
     return {
       token: position.token,
       entryTime: position.entryTime,
@@ -363,7 +363,7 @@ export class Backtester {
       holdTimeMs,
     };
   }
-  
+
   private calculateResults(
     config: BacktestConfig,
     trades: BacktestTrade[],
@@ -373,11 +373,11 @@ export class Backtester {
   ): BacktestResult {
     const winningTrades = trades.filter(t => t.netPnlUsd > 0);
     const losingTrades = trades.filter(t => t.netPnlUsd <= 0);
-    
+
     const totalPnlUsd = trades.reduce((sum, t) => sum + t.netPnlUsd, 0);
     const grossPnlUsd = trades.reduce((sum, t) => sum + (t.grossPnlPct / 100) * config.positionSizeUsd, 0);
     const totalFeesUsd = grossPnlUsd - totalPnlUsd;
-    
+
     // Calculate Sharpe ratio
     let sharpeRatio = 0;
     if (trades.length > 1) {
@@ -385,7 +385,7 @@ export class Backtester {
       const mean = tradePnls.reduce((sum, pnl) => sum + pnl, 0) / tradePnls.length;
       const variance = tradePnls.reduce((sum, pnl) => sum + Math.pow(pnl - mean, 2), 0) / (tradePnls.length - 1);
       const stdDev = Math.sqrt(variance);
-      
+
       if (stdDev > 0) {
         // Annualize assuming 365 trading days
         // Adjust for trade frequency: if we made N trades over D days, daily return = mean * (N/D)
@@ -394,11 +394,11 @@ export class Backtester {
         const tradesPerDay = trades.length / durationDays;
         const dailyExpectedReturn = mean * tradesPerDay;
         const dailyStdDev = stdDev * Math.sqrt(tradesPerDay);
-        
+
         sharpeRatio = (dailyExpectedReturn / dailyStdDev) * Math.sqrt(365);
       }
     }
-    
+
     // Calculate max drawdown from equity curve
     let maxDrawdown = 0;
     let peak = 0;
@@ -411,7 +411,7 @@ export class Backtester {
         maxDrawdown = drawdown;
       }
     }
-    
+
     // By token stats
     const byToken = new Map<string, { trades: number; winRate: number; pnlUsd: number }>();
     for (const token of uniqueTokens) {
@@ -423,7 +423,7 @@ export class Backtester {
         pnlUsd: tokenTrades.reduce((sum, t) => sum + t.netPnlUsd, 0),
       });
     }
-    
+
     // By hour stats
     const byHour = new Map<number, { trades: number; winRate: number; pnlUsd: number }>();
     for (let hour = 0; hour < 24; hour++) {
@@ -435,11 +435,11 @@ export class Backtester {
         pnlUsd: hourTrades.reduce((sum, t) => sum + t.netPnlUsd, 0),
       });
     }
-    
+
     const avgHoldTimeMs = trades.length > 0
       ? trades.reduce((sum, t) => sum + t.holdTimeMs, 0) / trades.length
       : 0;
-    
+
     return {
       config,
       totalTrades: trades.length,
@@ -490,7 +490,7 @@ export async function runBacktest(config: Partial<BacktestConfig> = {}): Promise
     entryFeePct: config.entryFeePct ?? 0.3,
     exitFeePct: config.exitFeePct ?? 0.3,
   };
-  
+
   const backtester = new Backtester();
   try {
     return await backtester.run(fullConfig);
@@ -506,11 +506,11 @@ export async function compareConfigs(
   configs: Partial<BacktestConfig>[]
 ): Promise<{ config: Partial<BacktestConfig>; result: BacktestResult }[]> {
   const results: { config: Partial<BacktestConfig>; result: BacktestResult }[] = [];
-  
+
   for (const config of configs) {
     const result = await runBacktest(config);
     results.push({ config, result });
   }
-  
+
   return results;
 }

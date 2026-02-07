@@ -420,12 +420,12 @@ export class DatabaseManager {
 
       // CSV header
       const header = 'id,stock_ticker,buy_symbol,entry_spread_pct,entry_timestamp,size_usd,status,exit_spread_pct,exit_timestamp,pnl_usd\n';
-      
+
       // CSV rows
       const rows = allPositions.map(pos => {
         const entryTime = new Date(pos.entryTimestamp).toISOString();
         const exitTime = pos.exitTimestamp ? new Date(pos.exitTimestamp).toISOString() : '';
-        
+
         return [
           pos.id,
           pos.stockTicker,
@@ -454,7 +454,7 @@ export class DatabaseManager {
     try {
       // This is a simplified export - getting latest discounts for each ticker
       const latestDiscounts = await this.getLatestDiscounts();
-      
+
       if (latestDiscounts.size === 0) {
         dbLogger.info('No discount history to export');
         return;
@@ -462,7 +462,7 @@ export class DatabaseManager {
 
       // CSV header
       const header = 'stock_ticker,latest_discount_pct,timestamp\n';
-      
+
       // CSV rows
       const rows = Array.from(latestDiscounts.entries()).map(([ticker, discount]) => {
         return [

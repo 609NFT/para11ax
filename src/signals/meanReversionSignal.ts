@@ -718,7 +718,7 @@ export class MeanReversionSignalGenerator {
     // Use tiered TVL requirements: high spreads get relaxed liquidity rules
     if (!isTokenEnabledForSpread(token.symbol, Math.abs(discount))) {
       const tvl = getTokenTVL(token.symbol);
-      const requiredTvl = Math.abs(discount) >= 6.0 ? 25_000 : 
+      const requiredTvl = Math.abs(discount) >= 6.0 ? 25_000 :
                          Math.abs(discount) >= 4.5 ? 50_000 : 75_000;
       return {
         shouldTrade: false,

@@ -522,11 +522,11 @@ export function checkShortExit(position: ShortPosition, currentSpread: PairSprea
   // Calculate RELATIVE thresholds based on actual entry premium
   // Entry premium is negative (e.g., -4.25% means 4.25% premium)
   const entryPremium = position.entryPremiumPct;
-  
+
   // Profit target: premium should retrace toward 0
   // e.g., entry -4.25% * 0.4 = -1.7% (take profit when premium shrinks to 1.7%)
   const profitTarget = entryPremium * SHORT_PROFIT_RETRACEMENT;
-  
+
   // Stop-loss: premium worsens (becomes more negative)
   // e.g., entry -4.25% * 1.3 = -5.525% (stop if premium expands to 5.5%)
   const stopLoss = entryPremium * SHORT_STOP_LOSS_MULTIPLIER;

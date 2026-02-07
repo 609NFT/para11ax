@@ -1,9 +1,9 @@
 /**
  * Standalone Dashboard Server
- * 
+ *
  * Runs independently of the trading bot for zero-downtime deploys.
  * Reads all data from Supabase instead of in-memory state.
- * 
+ *
  * Start with: pm2 start dist/standalone-dashboard.js --name parallax-dashboard
  */
 
@@ -23,11 +23,11 @@ async function main(): Promise<void> {
   logger.info('═══════════════════════════════════════════════════════');
   logger.info('Mode: STANDALONE (reading from Supabase)');
   logger.info(`Port: ${PORT}`);
-  
+
   try {
     await startWebServer(PORT);
     logger.info({ port: PORT, mode: 'standalone' }, 'Dashboard server started');
-    
+
     // Signal PM2 that we're ready (instant startup)
     if (process.send) {
       process.send('ready');

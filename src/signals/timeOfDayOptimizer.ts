@@ -1,6 +1,6 @@
 /**
  * Time-of-Day Trading Optimizer
- * 
+ *
  * Provides dynamic time-of-day filtering based on historical performance.
  * Gradually learns optimal trading windows per token instead of static global filters.
  */
@@ -43,23 +43,23 @@ export async function isOptimalTradingTime(tokenSymbol: string): Promise<{
   tokenWinRate?: number;
 }> {
   const currentHour = new Date().getUTCHours();
-  
+
   // Get or refresh token profile
   let profile = timeProfiles.get(tokenSymbol);
   const now = Date.now();
-  
+
   if (!profile || now - profile.lastRefresh > REFRESH_INTERVAL_MS) {
     profile = await refreshTokenTimeProfile(tokenSymbol);
     timeProfiles.set(tokenSymbol, profile);
   }
-  
+
   // Check token-specific stats for this hour
   const hourStats = profile.hourlyStats.get(currentHour);
-  
+
   if (hourStats && hourStats.trades >= MIN_TRADES_FOR_FILTERING) {
     // Have sufficient token-specific data
     const allowed = hourStats.winRate >= MIN_WIN_RATE_THRESHOLD;
-    
+
     timeLogger.debug({
       token: tokenSymbol,
       hour: currentHour,
@@ -68,18 +68,18 @@ export async function isOptimalTradingTime(tokenSymbol: string): Promise<{
       avgPnL: hourStats.avgPnL,
       allowed,
     }, `Token-specific time filter: ${allowed ? 'ALLOWED' : 'BLOCKED'}`);
-    
+
     return {
       allowed,
       reason: allowed ? undefined : `Low win rate (${(hourStats.winRate * 100).toFixed(1)}%) at ${currentHour}:00 UTC`,
       tokenWinRate: hourStats.winRate,
     };
   }
-  
+
   // Fall back to global stats if insufficient token-specific data
   const globalStats = await getGlobalHourlyStats(currentHour);
   const allowed = globalStats.winRate >= GLOBAL_BACKUP_THRESHOLD;
-  
+
   timeLogger.debug({
     token: tokenSymbol,
     hour: currentHour,
@@ -88,7 +88,7 @@ export async function isOptimalTradingTime(tokenSymbol: string): Promise<{
     allowed,
     reason: 'fallback-to-global',
   }, `Global time filter: ${allowed ? 'ALLOWED' : 'BLOCKED'}`);
-  
+
   return {
     allowed,
     reason: allowed ? undefined : `Low global win rate (${(globalStats.winRate * 100).toFixed(1)}%) at ${currentHour}:00 UTC`,
@@ -104,25 +104,25 @@ async function refreshTokenTimeProfile(tokenSymbol: string): Promise<TokenTimePr
     // Query last 30 days of trades for this token
     const pool = getTradesPool();
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    
+
     const result = await pool.query(
-      `SELECT entry_timestamp, net_pnl 
-       FROM trades 
-       WHERE buy_symbol = $1 
-         AND entry_timestamp >= $2 
+      `SELECT entry_timestamp, net_pnl
+       FROM trades
+       WHERE buy_symbol = $1
+         AND entry_timestamp >= $2
          AND net_pnl IS NOT NULL`,
       [tokenSymbol, thirtyDaysAgo]
     );
-    
+
     const trades = result.rows;
-    
+
     // Group by hour and calculate stats
     const hourlyStats = new Map<number, HourlyStats>();
-    
+
     trades.forEach((trade: { entry_timestamp: string; net_pnl: number }) => {
       const hour = new Date(trade.entry_timestamp).getUTCHours();
       const isWin = trade.net_pnl > 0;
-      
+
       if (!hourlyStats.has(hour)) {
         hourlyStats.set(hour, {
           hour,
@@ -133,31 +133,31 @@ async function refreshTokenTimeProfile(tokenSymbol: string): Promise<TokenTimePr
           lastUpdated: Date.now(),
         });
       }
-      
+
       const stats = hourlyStats.get(hour)!;
       stats.trades++;
       if (isWin) stats.wins++;
       stats.avgPnL = ((stats.avgPnL * (stats.trades - 1)) + trade.net_pnl) / stats.trades;
     });
-    
+
     // Calculate win rates
     hourlyStats.forEach(stats => {
       stats.winRate = stats.trades > 0 ? stats.wins / stats.trades : 0;
     });
-    
+
     timeLogger.info({
       token: tokenSymbol,
       totalTrades: trades.length,
       hoursWithData: hourlyStats.size,
     }, 'Refreshed token time profile');
-    
+
     return {
       symbol: tokenSymbol,
       hourlyStats,
       lastRefresh: Date.now(),
       sampleSize: trades.length,
     };
-    
+
   } catch (error) {
     timeLogger.error({ token: tokenSymbol, error }, 'Error refreshing token time profile');
     return createEmptyProfile(tokenSymbol);
@@ -172,24 +172,24 @@ async function getGlobalHourlyStats(hour: number): Promise<HourlyStats> {
     // Query last 14 days of all trades for this hour
     const pool = getTradesPool();
     const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-    
+
     const result = await pool.query(
-      `SELECT entry_timestamp, net_pnl 
-       FROM trades 
-       WHERE entry_timestamp >= $1 
+      `SELECT entry_timestamp, net_pnl
+       FROM trades
+       WHERE entry_timestamp >= $1
          AND net_pnl IS NOT NULL
          AND EXTRACT(HOUR FROM entry_timestamp AT TIME ZONE 'UTC') = $2`,
       [fourteenDaysAgo, hour]
     );
-    
+
     const hourTrades = result.rows;
-    
+
     const wins = hourTrades.filter((trade: { net_pnl: number }) => trade.net_pnl > 0).length;
     const winRate = hourTrades.length > 0 ? wins / hourTrades.length : 0.5;
-    const avgPnL = hourTrades.length > 0 
-      ? hourTrades.reduce((sum: number, trade: { net_pnl: number }) => sum + trade.net_pnl, 0) / hourTrades.length 
+    const avgPnL = hourTrades.length > 0
+      ? hourTrades.reduce((sum: number, trade: { net_pnl: number }) => sum + trade.net_pnl, 0) / hourTrades.length
       : 0;
-      
+
     return {
       hour,
       trades: hourTrades.length,
@@ -198,7 +198,7 @@ async function getGlobalHourlyStats(hour: number): Promise<HourlyStats> {
       avgPnL,
       lastUpdated: Date.now(),
     };
-    
+
   } catch (error) {
     timeLogger.error({ hour, error }, 'Error fetching global hourly stats');
     return { hour, trades: 0, wins: 0, winRate: 0.5, avgPnL: 0, lastUpdated: Date.now() };
@@ -230,7 +230,7 @@ export function getTimeProfileSummary(): Array<{
     const hours = Array.from(profile.hourlyStats.entries())
       .filter(([, stats]) => stats.trades >= MIN_TRADES_FOR_FILTERING)
       .sort(([, a], [, b]) => b.winRate - a.winRate);
-      
+
     return {
       symbol,
       sampleSize: profile.sampleSize,

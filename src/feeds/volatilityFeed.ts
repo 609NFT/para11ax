@@ -342,7 +342,7 @@ let incrementalIndex = 0;
 export function initIncrementalVolatilityRefresh(symbols: string[]): void {
   incrementalSymbols = symbols;
   incrementalIndex = 0;
-  feedLogger.info({ 
+  feedLogger.info({
     symbolCount: symbols.length,
     cycleTimeMin: Math.ceil(symbols.length * 20 / 60) // ~20 seconds per symbol
   }, 'Initialized incremental volatility refresh');
@@ -351,49 +351,49 @@ export function initIncrementalVolatilityRefresh(symbols: string[]): void {
 /**
  * Refresh volatility for ONE symbol from Twelve Data API
  * Call this once per main loop cycle (~20 seconds) to gradually refresh all symbols
- * 
+ *
  * Benefits over bulk prewarm:
  * - Never hits rate limits (1 symbol every 20s = 3/min, well under 8 credit limit)
  * - No startup delay needed
  * - Cache stays fresh continuously
  * - Graceful degradation if API is down
- * 
+ *
  * Returns the symbol that was refreshed, or null if skipped
  */
 export async function refreshNextVolatility(): Promise<string | null> {
   // Skip if no symbols configured or no API key
   if (incrementalSymbols.length === 0) return null;
   if (!getApiKey()) return null;
-  
+
   // Get next symbol in rotation
   const symbol = incrementalSymbols[incrementalIndex];
   incrementalIndex = (incrementalIndex + 1) % incrementalSymbols.length;
-  
+
   // Skip symbols whose tokens aren't enabled by liquidity (TVL too low)
   // This reduces API calls from ~36 stocks to ~14 that actually pass TVL checks
   if (!isStockEnabledByAnyToken(symbol)) {
     feedLogger.debug({ symbol }, 'Skipping volatility refresh - no tokens enabled for this stock');
     return null;
   }
-  
+
   // Check if cache is still fresh - skip if so to save API credits
   const cached = volatilityCache.get(symbol);
   const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
   const REFRESH_THRESHOLD_MS = 6 * 60 * 60 * 1000; // Refresh if older than 6 hours
-  
+
   if (cacheAge < REFRESH_THRESHOLD_MS) {
-    feedLogger.debug({ symbol, cacheAgeMin: Math.round(cacheAge / 60000) }, 
+    feedLogger.debug({ symbol, cacheAgeMin: Math.round(cacheAge / 60000) },
       'Skipping volatility refresh - cache still fresh');
     return null;
   }
-  
+
   // Fetch fresh data from API
   const result = await getVolatilityPct(symbol, true);
   if (result !== null) {
     feedLogger.debug({ symbol, atrPct: result.toFixed(2) }, 'Refreshed API volatility');
     return symbol;
   }
-  
+
   return null;
 }
 
@@ -551,7 +551,7 @@ export function getVolatilityEntryMultiplier(symbol: string): number {
  * fuller mean reversion.
  */
 export function getVolatilityExitMultiplier(symbol: string): number {
-  const BASE_ATR = 2.7;   // Median ATR across our token universe  
+  const BASE_ATR = 2.7;   // Median ATR across our token universe
   const SENSITIVITY = 0.2;  // Moderate adjustment - don't be too aggressive
   const MIN_MULTIPLIER = 0.4;  // Floor: at most 60% reduction (faster exits)
   const MAX_MULTIPLIER = 1.5;  // Ceiling: at most 50% increase (slower exits)
@@ -599,38 +599,38 @@ let cachedRegimeMultiplier: { value: number; timestamp: number; regime: string }
 
 /**
  * Calculate market regime multiplier based on median volatility across all tokens
- * 
+ *
  * Calm market (median ATR <2%): 0.85 (lower floors, more opportunities)
  * Normal market: 1.0
  * Volatile market (median ATR >3.5%): 1.20 (higher floors, more selective)
  */
 export function getMarketRegimeMultiplier(): number {
   if (!MARKET_REGIME.ENABLED) return 1.0;
-  
+
   const now = Date.now();
-  if (cachedRegimeMultiplier && 
+  if (cachedRegimeMultiplier &&
       now - cachedRegimeMultiplier.timestamp < MARKET_REGIME.REFRESH_INTERVAL_MS) {
     return cachedRegimeMultiplier.value;
   }
-  
+
   // Get all cached volatilities
   const volatilities = Array.from(volatilityCache.values())
     .map(v => v.atrPct)
     .filter(v => v > 0 && v < 20); // Filter outliers
-    
+
   if (volatilities.length < 5) {
     // Not enough data, use normal regime
     cachedRegimeMultiplier = { value: 1.0, timestamp: now, regime: 'normal' };
     return 1.0;
   }
-  
+
   // Use median (robust to outliers like MSTR at 6%+)
   volatilities.sort((a, b) => a - b);
   const median = volatilities[Math.floor(volatilities.length / 2)];
-  
+
   let multiplier = 1.0;
   let regime = 'normal';
-  
+
   if (median < MARKET_REGIME.CALM_THRESHOLD) {
     multiplier = MARKET_REGIME.CALM_MULTIPLIER;
     regime = 'calm';
@@ -638,30 +638,30 @@ export function getMarketRegimeMultiplier(): number {
     multiplier = MARKET_REGIME.VOLATILE_MULTIPLIER;
     regime = 'volatile';
   }
-  
+
   cachedRegimeMultiplier = { value: multiplier, timestamp: now, regime };
-  
-  feedLogger.info({ 
-    medianATR: median.toFixed(2), 
-    multiplier, 
+
+  feedLogger.info({
+    medianATR: median.toFixed(2),
+    multiplier,
     regime,
     samples: volatilities.length
   }, 'Market regime calculated');
-  
+
   return multiplier;
 }
 
 /**
  * Get dynamic entry floor for a specific token based on its volatility
- * 
+ *
  * Formula: floor = BASE_FLOOR + (ATR% × VOLATILITY_COEFFICIENT) × regime_multiplier
- * 
+ *
  * Examples (normal regime):
  *   SPY (1.2% ATR): 2.0 + 1.2×0.6 = 2.72%
  *   AAPL (2.5% ATR): 2.0 + 2.5×0.6 = 3.50%
  *   TSLA (4.5% ATR): 2.0 + 4.5×0.6 = 4.70%
  *   MSTR (6.0% ATR): capped at 5.5%
- * 
+ *
  * @param symbol Stock ticker (e.g., 'TSLA', 'SPY')
  * @returns Dynamic floor percentage
  */
@@ -669,27 +669,27 @@ export function getDynamicFloor(symbol: string): number {
   if (!DYNAMIC_FLOOR_FORMULA.ENABLED) {
     return 3.5; // Fallback to old static floor
   }
-  
+
   // Get volatility for this symbol
   const cached = volatilityCache.get(symbol);
   const atrPct = cached?.atrPct ?? DYNAMIC_FLOOR_FORMULA.FALLBACK_ATR;
-  
+
   // Get market regime multiplier
   const regimeMultiplier = getMarketRegimeMultiplier();
-  
+
   // Calculate raw floor
-  const rawFloor = DYNAMIC_FLOOR_FORMULA.BASE_FLOOR + 
+  const rawFloor = DYNAMIC_FLOOR_FORMULA.BASE_FLOOR +
     (atrPct * DYNAMIC_FLOOR_FORMULA.VOLATILITY_COEFFICIENT);
-  
+
   // Apply regime multiplier
   const adjustedFloor = rawFloor * regimeMultiplier;
-  
+
   // Clamp to absolute bounds
   const finalFloor = Math.max(
     DYNAMIC_FLOOR_FORMULA.ABSOLUTE_MIN,
     Math.min(adjustedFloor, DYNAMIC_FLOOR_FORMULA.ABSOLUTE_MAX)
   );
-  
+
   feedLogger.debug({
     symbol,
     atrPct: atrPct.toFixed(2),
@@ -697,7 +697,7 @@ export function getDynamicFloor(symbol: string): number {
     regimeMultiplier,
     finalFloor: finalFloor.toFixed(2),
   }, 'Dynamic floor calculated');
-  
+
   return finalFloor;
 }
 
@@ -707,15 +707,15 @@ export function getDynamicFloor(symbol: string): number {
 export function getMarketRegimeInfo(): { regime: string; multiplier: number; medianATR: number } {
   const multiplier = getMarketRegimeMultiplier();
   const regime = cachedRegimeMultiplier?.regime ?? 'unknown';
-  
+
   const volatilities = Array.from(volatilityCache.values())
     .map(v => v.atrPct)
     .filter(v => v > 0 && v < 20);
-  
+
   volatilities.sort((a, b) => a - b);
-  const medianATR = volatilities.length > 0 
-    ? volatilities[Math.floor(volatilities.length / 2)] 
+  const medianATR = volatilities.length > 0
+    ? volatilities[Math.floor(volatilities.length / 2)]
     : 0;
-  
+
   return { regime, multiplier, medianATR };
 }

@@ -26,7 +26,7 @@ interface TradeNotification {
  */
 async function sendDiscordMessage(content: string, channel: 'trades' | 'alerts' = 'alerts'): Promise<void> {
   const webhookUrl = channel === 'trades' ? TRADES_WEBHOOK_URL : ALERTS_WEBHOOK_URL;
-  
+
   if (!webhookUrl) {
     logger.debug({ channel }, 'Discord webhook not configured, skipping notification');
     return;
@@ -51,10 +51,10 @@ async function sendDiscordMessage(content: string, channel: 'trades' | 'alerts' 
  * Notify on trade entry
  */
 export async function notifyEntry(trade: TradeNotification): Promise<void> {
-  const solscanLink = trade.txSignature 
+  const solscanLink = trade.txSignature
     ? `[tx](https://solscan.io/tx/${trade.txSignature})`
     : '';
-  
+
   const message = [
     `📈 **ENTRY** | ${trade.ticker}`,
     `Token: \`${trade.token}\``,
@@ -71,11 +71,11 @@ export async function notifyEntry(trade: TradeNotification): Promise<void> {
  */
 export async function notifyExit(trade: TradeNotification): Promise<void> {
   const pnlEmoji = (trade.pnlUsd ?? 0) >= 0 ? '🟢' : '🔴';
-  const pnlStr = trade.pnlUsd !== undefined 
+  const pnlStr = trade.pnlUsd !== undefined
     ? `${trade.pnlUsd >= 0 ? '+' : ''}$${trade.pnlUsd.toFixed(3)}`
     : 'n/a';
-  
-  const solscanLink = trade.txSignature 
+
+  const solscanLink = trade.txSignature
     ? `[tx](https://solscan.io/tx/${trade.txSignature})`
     : '';
 
@@ -131,10 +131,10 @@ interface ShortNotification {
  * Notify on short entry
  */
 export async function notifyShortEntry(trade: ShortNotification): Promise<void> {
-  const solscanLink = trade.txSignature 
+  const solscanLink = trade.txSignature
     ? `[tx](https://solscan.io/tx/${trade.txSignature})`
     : '';
-  
+
   const message = [
     `📉 **SHORT ENTRY** | ${trade.ticker}`,
     `Premium: ${trade.premiumPct.toFixed(2)}%`,
@@ -151,11 +151,11 @@ export async function notifyShortEntry(trade: ShortNotification): Promise<void> 
  */
 export async function notifyShortExit(trade: ShortNotification): Promise<void> {
   const pnlEmoji = (trade.pnlUsd ?? 0) >= 0 ? '🟢' : '🔴';
-  const pnlStr = trade.pnlUsd !== undefined 
+  const pnlStr = trade.pnlUsd !== undefined
     ? `${trade.pnlUsd >= 0 ? '+' : ''}$${trade.pnlUsd.toFixed(3)}`
     : 'n/a';
-  
-  const solscanLink = trade.txSignature 
+
+  const solscanLink = trade.txSignature
     ? `[tx](https://solscan.io/tx/${trade.txSignature})`
     : '';
 

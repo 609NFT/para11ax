@@ -207,7 +207,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
 export async function initializeFlashClient(): Promise<boolean> {
   // Mark as pending at start
   flashInitState = 'pending';
-  
+
   // Check if shorting is enabled
   if (!isShortingEnabled()) {
     logger.info('Flash Trade shorting is disabled (ENABLE_SHORTING != true)');
@@ -217,7 +217,7 @@ export async function initializeFlashClient(): Promise<boolean> {
 
   try {
     logger.info('[FLASH] Starting Flash Trade initialization...');
-    
+
     const config = getConfigSync();
     logger.info('[FLASH] Step 1/6: Config loaded, RPC:', config.rpcEndpoint?.slice(0, 50));
 
@@ -299,7 +299,7 @@ export async function initializeFlashClient(): Promise<boolean> {
       wallet: wallet.publicKey.toBase58(),
       availableRStockMarkets: Array.from(availableShortSymbols),
     }, 'Flash Trade client initialized');
-    
+
     logger.info('[FLASH] ✅ Initialization complete!');
     flashInitState = 'success';
     return true;
@@ -913,7 +913,7 @@ export async function getTimeUntilMarketOpen(): Promise<string> {
       }
     } catch (error) {
       // If holiday check fails, assume it's a trading day
-      logger.warn('Holiday check failed, assuming trading day', { 
+      logger.warn('Holiday check failed, assuming trading day', {
         error: error instanceof Error ? error.message : String(error),
         date: candidateDate.toISOString().split('T')[0]
       });

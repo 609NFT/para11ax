@@ -1,6 +1,6 @@
 /**
  * Enhanced Quote Optimization
- * 
+ *
  * Improves on existing Raydium vs Jupiter comparison by:
  * 1. Better tip estimation based on network congestion
  * 2. Route scoring that factors in execution probability
@@ -37,7 +37,7 @@ const PRICE_IMPACT_SCORES = {
 // Tip scaling constants
 const TIP_SCALING = {
   MAX_MULTIPLIER: 2.0,      // Maximum tip multiplier for large trades
-  MIN_MULTIPLIER: 0.5,      // Minimum tip multiplier for small trades  
+  MIN_MULTIPLIER: 0.5,      // Minimum tip multiplier for small trades
   REFERENCE_TRADE_USD: 50,  // Reference trade size for tip scaling ($50)
 } as const;
 
@@ -66,7 +66,7 @@ export interface QuoteRequest {
  */
 enum CongestionLevel {
   LOW = 'low',
-  MEDIUM = 'medium', 
+  MEDIUM = 'medium',
   HIGH = 'high'
 }
 
@@ -75,31 +75,31 @@ enum CongestionLevel {
  */
 function estimateTip(tradeUsd: number, congestion: CongestionLevel): number {
   const baseTip = {
-    [CongestionLevel.LOW]: 0.0001,    // $0.0001 
+    [CongestionLevel.LOW]: 0.0001,    // $0.0001
     [CongestionLevel.MEDIUM]: 0.0005, // $0.0005
     [CongestionLevel.HIGH]: 0.002,    // $0.002
   }[congestion];
 
   // Scale tip with trade size (larger trades worth higher tips)
   const sizeFactor = Math.min(
-    TIP_SCALING.MAX_MULTIPLIER, 
+    TIP_SCALING.MAX_MULTIPLIER,
     Math.max(TIP_SCALING.MIN_MULTIPLIER, tradeUsd / TIP_SCALING.REFERENCE_TRADE_USD)
   );
-  
+
   return baseTip * sizeFactor;
 }
 
 /**
  * Get current network congestion level based on UTC time heuristics
- * 
+ *
  * Uses simple time-based rules since most Solana activity follows Western trading hours.
  * TODO: Could integrate with Solana RPC for real congestion metrics
- * 
+ *
  * @returns {CongestionLevel} Current estimated congestion level
  */
 function getNetworkCongestion(): CongestionLevel {
   const hour = new Date().getUTCHours();
-  
+
   // Simple heuristic based on time of day
   if (hour >= CONGESTION_HOURS.PEAK_START && hour <= CONGESTION_HOURS.PEAK_END) {
     return CongestionLevel.HIGH;
@@ -124,7 +124,7 @@ function calculateExecutionScore(
   if (source === 'raydium' && hasDirectPool) {
     score += 20;
   }
-  
+
   // Jupiter has better aggregation but more complex routing
   if (source === 'jupiter') {
     score += 10; // Aggregation benefit
@@ -160,7 +160,7 @@ export async function getOptimizedQuotes(request: QuoteRequest): Promise<Optimiz
       if (raydiumClient.isReady()) {
         try {
           let raydiumQuote;
-          
+
           if (isExit && tokenAmount && tokenDecimals) {
             // Exit quote (sell tokens for USDC)
             raydiumQuote = await raydiumClient.getQuote(
@@ -182,7 +182,7 @@ export async function getOptimizedQuotes(request: QuoteRequest): Promise<Optimiz
           if (raydiumQuote && raydiumQuote.amountOut > 0) {
             const estimatedTip = estimateTip(inputAmountUsd, congestion);
             const executionScore = calculateExecutionScore('raydium', raydiumQuote.priceImpact, true);
-            
+
             quotes.push({
               source: 'raydium',
               outputAmount: raydiumQuote.amountOut,
@@ -206,18 +206,18 @@ export async function getOptimizedQuotes(request: QuoteRequest): Promise<Optimiz
     const jupiterClient = getJupiterClient();
     try {
       let jupiterQuote;
-      
+
       if (isExit && tokenAmount && tokenDecimals) {
         // Exit quote (sell tokens for USDC)
         const rawAmount = tokenAmount * Math.pow(10, tokenDecimals);
         jupiterQuote = await jupiterClient.getSellQuoteRaw(tokenMint, rawAmount);
-        
+
         if (jupiterQuote) {
           // Convert from USDC lamports to USDC
           const usdcOut = jupiterQuote.outputAmount / 1e6;
           const estimatedTip = estimateTip(inputAmountUsd, congestion);
           const executionScore = calculateExecutionScore('jupiter', jupiterQuote.priceImpactPct, false);
-          
+
           quotes.push({
             source: 'jupiter',
             outputAmount: usdcOut,
@@ -231,12 +231,12 @@ export async function getOptimizedQuotes(request: QuoteRequest): Promise<Optimiz
       } else {
         // Entry quote (buy tokens with USDC)
         jupiterQuote = await jupiterClient.getBuyQuote(tokenMint, inputAmountUsd);
-        
+
         if (jupiterQuote && jupiterQuote.outputAmount > 0) {
           const tokenOut = jupiterQuote.outputAmount / Math.pow(10, tokenDecimals || 9);
           const estimatedTip = estimateTip(inputAmountUsd, congestion);
           const executionScore = calculateExecutionScore('jupiter', jupiterQuote.priceImpactPct, false);
-          
+
           quotes.push({
             source: 'jupiter',
             outputAmount: tokenOut,
@@ -289,19 +289,19 @@ export function selectBestQuote(quotes: OptimizedQuote[], isExit = false): Optim
 
   // Score quotes: 80% net output, 20% execution probability
   const scoredQuotes = quotes.map(quote => {
-    const outputScore = isExit 
+    const outputScore = isExit
       ? quote.netOutput / Math.max(...quotes.map(q => q.netOutput)) // Higher USDC better for exit
       : quote.outputAmount / Math.max(...quotes.map(q => q.outputAmount)); // More tokens better for entry
-    
+
     const executionScore = quote.executionScore / 100;
     const totalScore = outputScore * 0.8 + executionScore * 0.2;
-    
+
     return { ...quote, totalScore };
   });
 
   // Sort by total score, return best
   scoredQuotes.sort((a, b) => b.totalScore - a.totalScore);
-  
+
   const winner = scoredQuotes[0];
   signalLogger.debug({
     winner: winner.source,

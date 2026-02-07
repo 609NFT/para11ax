@@ -698,7 +698,7 @@ export async function fetchAllPercentileThresholds(
   try {
     const cutoffTime = Date.now() - windowMs;
     const percentileFraction = percentile / 100; // PostgreSQL uses 0-1 scale
-    
+
     const result = await pool.query(`
       SELECT
         token_a_symbol,
@@ -716,13 +716,13 @@ export async function fetchAllPercentileThresholds(
         sampleCount: parseInt(row.sample_count) || 0,
       });
     }
-    
-    logger.info({ 
-      tokens: map.size, 
-      percentile, 
-      windowHours: windowMs / (60 * 60 * 1000) 
+
+    logger.info({
+      tokens: map.size,
+      percentile,
+      windowHours: windowMs / (60 * 60 * 1000)
     }, 'Fetched percentile thresholds from PostgreSQL');
-    
+
     return map;
   } catch (error) {
     logger.error({ error, windowMs, percentile }, 'Failed to fetch percentile thresholds from Supabase');
@@ -1200,7 +1200,7 @@ function getEmptyStats(): TradeStats {
 
 /**
  * Convert token symbol to stock ticker (e.g., TSLAx -> TSLA, rNVDA -> NVDA)
- * 
+ *
  * Strategy: explicit overrides first, then vendor suffix/prefix stripping.
  * Validated against real stock tickers to avoid garbage like "INTCo".
  */

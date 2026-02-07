@@ -316,7 +316,7 @@ export class JupiterClient {
 
     // Get decimals from response or use known values
     // Jupiter API includes inputMint/outputMint decimals in some responses
-    const inputDecimals = inputMint === USDC_MINT ? USDC_DECIMALS : 
+    const inputDecimals = inputMint === USDC_MINT ? USDC_DECIMALS :
                           (result.inputDecimals ?? 9);  // Default to 9 for most Solana tokens
     const outputDecimals = outputMint === USDC_MINT ? USDC_DECIMALS :
                            (result.outputDecimals ?? 9);

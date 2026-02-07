@@ -77,7 +77,7 @@ export class Orchestrator {
   private executingExits: Set<string> = new Set();
   private executingShortEntries: Set<string> = new Set();
   private executingShortExits: Set<string> = new Set();
-  
+
   // Track recently closed short positions to prevent double-close race condition
   // (Supabase write queue can lag behind, causing getOpenShortPositions to return stale data)
   private recentlyClosedShorts: Map<string, number> = new Map(); // positionId -> closeTime
@@ -475,7 +475,7 @@ export class Orchestrator {
   private async rotateLogsIfNeeded(): Promise<void> {
     const { execSync } = require('child_process');
     const scriptPath = `${process.env.HOME}/parallax/scripts/rotate-logs.sh`;
-    
+
     try {
       const result = execSync(`bash ${scriptPath}`, { encoding: 'utf8' });
       if (result.includes('Rotated')) {
@@ -768,7 +768,7 @@ export class Orchestrator {
 
     // Pre-warm volatility from Supabase price history (works for ALL tokens including GOLD)
     await prewarmInternalVolatility();
-    
+
     // NOTE: API volatility refresh is now initialized AFTER liquidity refresh completes
     // This ensures we only fetch for stocks with TVL-enabled tokens (~14 vs 36 stocks)
     // See liquidityChecker.ts refreshLiquidity() for the initialization call
@@ -902,10 +902,10 @@ export class Orchestrator {
         mint: spread.tokenA.mint,
         symbol: spread.tokenA.symbol
       }));
-      
+
       // Scan for cross-DEX opportunities (non-blocking)
       const opportunities = await scanCrossDexOpportunities(tokens);
-      
+
       // Log summary if opportunities found
       if (opportunities.length > 0) {
         logger.info({
@@ -1088,14 +1088,14 @@ export class Orchestrator {
       executionLogger.debug({ positionId: position.id }, 'Short exit already executing, skipping');
       return;
     }
-    
+
     // Check if this position was recently closed (prevents double-close race condition)
     const recentCloseTime = this.recentlyClosedShorts.get(position.id);
     if (recentCloseTime && Date.now() - recentCloseTime < 60000) {
       executionLogger.debug({ positionId: position.id }, 'Short position was recently closed, skipping');
       return;
     }
-    
+
     this.executingShortExits.add(position.id);
 
     const config = getConfigSync();
@@ -1126,7 +1126,7 @@ export class Orchestrator {
           }, 'Flash Trade still initializing - skipping short exit check to prevent false position_missing');
           return; // Skip this exit check entirely, will retry next loop
         }
-        
+
         // First, verify the position still exists on-chain
         // This handles cases where the position was liquidated, manually closed, or never opened
         const onChainPositions = await getOpenPerpPositions();
@@ -1143,7 +1143,7 @@ export class Orchestrator {
             }, 'Flash Trade not available - skipping position check to prevent false position_missing');
             return; // Skip, will retry when Flash Trade is available
           }
-          
+
           executionLogger.warn({
             positionId: position.id,
             ticker: position.ticker,
@@ -1197,11 +1197,11 @@ export class Orchestrator {
         // DON'T assume 100% loss — could have been closed at breakeven or profit
         // Use current spread to estimate, or fallback to 30% loss (conservative but not catastrophic)
         const ESTIMATED_MISSING_LOSS_PCT = 30; // Conservative estimate, not 100%
-        
+
         // Try to estimate based on current premium vs entry
         const premiumChange = currentPremiumPct - position.entryPremiumPct;
         const estimatedPnlFromPremium = premiumChange * position.leverage;
-        
+
         // Use premium-based estimate if it's a loss, otherwise use conservative estimate
         // (If premium shows profit, the position was likely closed profitably externally)
         if (estimatedPnlFromPremium < 0) {
@@ -1213,7 +1213,7 @@ export class Orchestrator {
           pnlPct = -ESTIMATED_MISSING_LOSS_PCT;
         }
         pnlUsd = position.collateralUsd * (pnlPct / 100);
-        
+
         executionLogger.warn({
           positionId: position.id,
           ticker: position.ticker,
@@ -1281,7 +1281,7 @@ export class Orchestrator {
       };
 
       saveShortPosition(closedPosition);
-      
+
       // Track this position as recently closed (prevents double-close race condition)
       this.recentlyClosedShorts.set(position.id, Date.now());
       // Clean up old entries (keep map size bounded)

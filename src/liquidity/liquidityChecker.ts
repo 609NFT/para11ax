@@ -942,7 +942,7 @@ async function refreshPercentileThresholds(): Promise<void> {
   try {
     const db = getDatabase();
     const windowMs = PERCENTILE_THRESHOLD_FORMULA.ROLLING_WINDOW_HOURS * 60 * 60 * 1000;
-    
+
     // Calculate percentiles in PostgreSQL (memory efficient)
     const percentileData = await db.getAllPercentileThresholds(
       windowMs,
@@ -1046,7 +1046,7 @@ export function getEntryThreshold(symbol: string): number {
   // Get stock ticker from token symbol (e.g., 'xSPY' -> 'SPY', 'TSLAx' -> 'TSLA')
   // Note: this is a rough mapping for liquidity lookup only; authoritative mapping is in supabaseClient.ts
   const stockTicker = symbol.replace(/^[a-z]/, '').replace(/[a-z]+$/, ''); // Strip lowercase prefix/suffix
-  
+
   // Check for historically profitable spread (algorithmic, data-driven)
   const historicalData = profitableSpreadCache.get(stockTicker);
   if (historicalData && (historicalData.confidence === 'high' || historicalData.confidence === 'medium')) {
@@ -1097,7 +1097,7 @@ export function getEntryThresholdDetails(symbol: string): {
     percentileThreshold > tvlBasedThreshold;
 
   let baseThreshold = usingPercentile ? percentileThreshold! : tvlBasedThreshold;
-  
+
   // Include performance adjustment
   const performanceAdjustment = getPerformanceAdjustmentSync(symbol);
   const effectiveThreshold = baseThreshold + performanceAdjustment;
@@ -1120,15 +1120,15 @@ export function getEntryThresholdDetails(symbol: string): {
 export function getExitThreshold(symbol: string): number {
   const config = getConfigSync();
   const cached = thresholdCache.get(symbol);
-  
+
   // Start with base threshold from cached calculation or config fallback
   let baseThreshold = cached ? cached.exitThresholdPct : (config.meanReversionExitSpreadPct ?? 0.8);
   const originalThreshold = baseThreshold;
-  
+
   // Apply Liquidity-Informed Dynamic Exit Strategy (2026-02-07)
   if (LIQUIDITY_INFORMED_EXIT.ENABLED && cached && cached.tvl > 0) {
     const tvlMillions = cached.tvl / 1_000_000;
-    
+
     if (tvlMillions >= LIQUIDITY_INFORMED_EXIT.HIGH_TVL_THRESHOLD_MILLIONS) {
       // High TVL (>$1M): Fast reversion expected, exit early
       baseThreshold = Math.min(baseThreshold, LIQUIDITY_INFORMED_EXIT.HIGH_TVL_EXIT_PCT);
@@ -1139,7 +1139,7 @@ export function getExitThreshold(symbol: string): number {
       // Low TVL (<$200K): Slow reversion, need bigger moves
       baseThreshold = Math.max(baseThreshold, LIQUIDITY_INFORMED_EXIT.LOW_TVL_EXIT_PCT);
     }
-    
+
     // Log liquidity-informed adjustment
     if (Math.abs(baseThreshold - originalThreshold) > 0.01) {
       logger.debug({
@@ -1151,7 +1151,7 @@ export function getExitThreshold(symbol: string): number {
       }, 'Liquidity-informed exit threshold adjustment');
     }
   }
-  
+
   // Apply volatility adjustment to exit timing
   // Import dynamically to avoid circular dependency issues
   try {
@@ -1187,7 +1187,7 @@ export function getPositionSize(symbol: string): number {
 /**
  * Adaptive position sizing - scales with spread and liquidity
  * Formula: base_position * spread_multiplier * liquidity_factor
- * 
+ *
  * @param symbol Token symbol
  * @param spreadPct Current spread percentage (e.g., 6.0 for 6%)
  * @returns Position size in USD
@@ -1207,7 +1207,7 @@ export function getAdaptivePositionSize(symbol: string, spreadPct: number): numb
   if (PORTFOLIO_SIZING.ENABLED) {
     const { getPortfolioPositionSizeSync } = require('../signals/portfolioSizer');
     const portfolioSize = getPortfolioPositionSizeSync(symbol, spreadPct, tvl, config.maxUsdPerTrade);
-    
+
     if (portfolioSize > 0) {
       logger.debug({
         symbol,
@@ -1283,7 +1283,7 @@ export function isTokenEnabledByLiquidity(symbol: string): boolean {
 /**
  * Check if token should be enabled for a specific spread value
  * Uses tiered liquidity requirements: high spreads get relaxed TVL requirements
- * 
+ *
  * @param symbol Token symbol
  * @param spreadPct Current discount/spread percentage (positive = discount)
  * @returns true if token should be tradeable given this spread
@@ -1294,12 +1294,12 @@ export function isTokenEnabledForSpread(symbol: string, spreadPct: number): bool
     // If not in cache, token hasn't been evaluated yet - disable until refresh
     return false;
   }
-  
+
   const tvl = cached.tvl;
-  
+
   // Tiered liquidity requirements based on spread size
   let minTvlRequired: number;
-  
+
   if (spreadPct >= 6.0) {
     // High spread (6%+): Very relaxed requirements
     // Large spreads can absorb higher slippage and still be profitable
@@ -1312,7 +1312,7 @@ export function isTokenEnabledForSpread(symbol: string, spreadPct: number): bool
     // Marginal trades need perfect execution to be profitable
     minTvlRequired = MIN_TVL_FOR_TRADING * 1.5; // 75K for low spreads
   }
-  
+
   return tvl >= minTvlRequired;
 }
 
@@ -1347,7 +1347,7 @@ export function getAllThresholds(): TokenThreshold[] {
 export function getEnabledStockTickers(): string[] {
   const config = getConfigSync();
   const enabledTokens = getAllThresholds().filter(t => t.enabled);
-  
+
   // Map enabled token symbols to their stock tickers
   const stockTickers = new Set<string>();
   for (const token of enabledTokens) {
@@ -1356,7 +1356,7 @@ export function getEnabledStockTickers(): string[] {
       stockTickers.add(tokenConfig.stockTicker);
     }
   }
-  
+
   return Array.from(stockTickers);
 }
 

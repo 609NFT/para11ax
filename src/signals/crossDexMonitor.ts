@@ -1,9 +1,9 @@
 /**
  * Cross-DEX Spread Monitor
- * 
+ *
  * Monitors price differences for the same token across different DEXes.
  * Logs arbitrage opportunities without executing trades (monitoring phase).
- * 
+ *
  * Strategy: Buy token on cheap DEX, sell on expensive DEX for instant profit.
  * Risk-free if executed atomically (flash loans or multi-instruction transaction).
  */
@@ -48,26 +48,26 @@ const SCAN_INTERVAL_MS = 30000; // Scan every 30 seconds
  */
 export async function scanCrossDexOpportunities(tokens: Array<{ mint: string; symbol: string }>): Promise<CrossDexOpportunity[]> {
   if (!MONITORING_ENABLED) return [];
-  
+
   const now = Date.now();
   if (now - lastScan < SCAN_INTERVAL_MS) return [];
   lastScan = now;
-  
+
   const opportunities: CrossDexOpportunity[] = [];
-  
+
   try {
     crossDexLogger.debug({ tokens: tokens.length }, 'Scanning cross-DEX opportunities');
-    
+
     // Use batch API to get all token data at once
     const dexScreenerData = await fetchBatchDexScreenerPrices(tokens);
-    
+
     for (const token of tokens) {
       const tokenData = dexScreenerData.get(token.mint);
       if (!tokenData?.allPairs || tokenData.allPairs.length < 2) continue;
-      
+
       const dexPairs = tokenData.allPairs
-        .filter((pair: { liquidityUsd: number; dexId: string }) => 
-          pair.liquidityUsd > MIN_LIQUIDITY_USD && 
+        .filter((pair: { liquidityUsd: number; dexId: string }) =>
+          pair.liquidityUsd > MIN_LIQUIDITY_USD &&
           ['raydium', 'orca', 'meteora'].includes(pair.dexId)
         )
         .map((pair: { dexId: string; liquidityUsd: number }): DexPair => ({
@@ -77,14 +77,14 @@ export async function scanCrossDexOpportunities(tokens: Array<{ mint: string; sy
           volume24h: 0, // Not available in allPairs structure
         }))
         .sort((a: DexPair, b: DexPair) => b.liquidity - a.liquidity);
-      
+
       if (dexPairs.length < 2) continue;
-      
+
       // Find best spread opportunities
       const opportunity = findBestSpread(token.symbol, dexPairs);
       if (opportunity) {
         opportunities.push(opportunity);
-        
+
         crossDexLogger.info({
           symbol: opportunity.symbol,
           spread: `${opportunity.spreadPct.toFixed(2)}%`,
@@ -94,13 +94,13 @@ export async function scanCrossDexOpportunities(tokens: Array<{ mint: string; sy
         }, 'Cross-DEX arbitrage opportunity detected');
       }
     }
-    
+
     if (opportunities.length === 0) {
       crossDexLogger.debug('No cross-DEX opportunities found this scan');
     }
-    
+
     return opportunities;
-    
+
   } catch (error) {
     crossDexLogger.error({ error }, 'Error scanning cross-DEX opportunities');
     return [];
@@ -114,24 +114,24 @@ export async function scanCrossDexOpportunities(tokens: Array<{ mint: string; sy
  */
 function findBestSpread(symbol: string, dexPairs: DexPair[]): CrossDexOpportunity | null {
   if (dexPairs.length < 2) return null;
-  
+
   let bestSpread = 0;
   let bestOpportunity: CrossDexOpportunity | null = null;
-  
+
   // Compare all pairs
   for (let i = 0; i < dexPairs.length; i++) {
     for (let j = i + 1; j < dexPairs.length; j++) {
       const cheap = dexPairs[i].price < dexPairs[j].price ? dexPairs[i] : dexPairs[j];
       const expensive = dexPairs[i].price < dexPairs[j].price ? dexPairs[j] : dexPairs[i];
-      
+
       const spreadPct = ((expensive.price - cheap.price) / cheap.price) * 100;
-      
+
       // Check if this spread is profitable after fees
       if (spreadPct > MIN_SPREAD_PCT && spreadPct > ESTIMATED_FEES_PCT) {
         // Estimate position size based on minimum liquidity
         const maxPositionSize = Math.min(cheap.liquidity * 0.05, expensive.liquidity * 0.05); // 5% of pool
         const estimatedProfit = maxPositionSize * (spreadPct - ESTIMATED_FEES_PCT) / 100;
-        
+
         if (spreadPct > bestSpread) {
           bestSpread = spreadPct;
           bestOpportunity = {
@@ -150,7 +150,7 @@ function findBestSpread(symbol: string, dexPairs: DexPair[]): CrossDexOpportunit
       }
     }
   }
-  
+
   return bestOpportunity;
 }
 

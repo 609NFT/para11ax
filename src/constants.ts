@@ -54,15 +54,15 @@ export const ENTRY_THRESHOLD_FORMULA = {
 
 /**
  * Dynamic floor formula - replaces static MIN_FLOOR
- * 
+ *
  * Core insight: A 3.5% discount on low-vol SPY is better than 3.5% on high-vol TSLA
  * because NAV can move 3% against you while holding the volatile one.
- * 
+ *
  * Formula: floor = BASE_FLOOR + (ATR% × VOLATILITY_COEFFICIENT) × regime_multiplier
- * 
+ *
  * Examples (normal regime):
  *   SPY (1.2% ATR): 2.0 + 1.2×0.6 = 2.72% floor
- *   AAPL (2.5% ATR): 2.0 + 2.5×0.6 = 3.50% floor  
+ *   AAPL (2.5% ATR): 2.0 + 2.5×0.6 = 3.50% floor
  *   TSLA (4.5% ATR): 2.0 + 4.5×0.6 = 4.70% floor
  *   MSTR (6.0% ATR): 2.0 + 6.0×0.6 = 5.60% → capped at 5.5%
  */
@@ -77,7 +77,7 @@ export const DYNAMIC_FLOOR_FORMULA = {
 
 /**
  * Market regime detection - adjusts all floors based on overall market volatility
- * 
+ *
  * Calm market (median ATR <2%): floors × 0.85 (more opportunities)
  * Normal market: floors × 1.0
  * Volatile market (median ATR >3.5%): floors × 1.20 (more selective)
@@ -146,7 +146,7 @@ export const LIQUIDITY_INFORMED_EXIT = {
   HIGH_TVL_THRESHOLD_MILLIONS: 1.0, // $1M+ = high liquidity
   MEDIUM_TVL_THRESHOLD_MILLIONS: 0.2, // $200K+ = medium liquidity
   HIGH_TVL_EXIT_PCT: 2.0,          // Fast exits for high liquidity
-  MEDIUM_TVL_EXIT_PCT: 2.5,        // Standard exits for medium liquidity  
+  MEDIUM_TVL_EXIT_PCT: 2.5,        // Standard exits for medium liquidity
   LOW_TVL_EXIT_PCT: 3.5,           // Patient exits for low liquidity
 } as const;
 
@@ -176,10 +176,10 @@ export const ADAPTIVE_POSITION_SIZING = {
 
 /**
  * Portfolio-Based Position Sizing
- * 
+ *
  * Automatically scales position size with wallet balance.
  * Compounds gains (larger positions as you win) and limits losses (smaller as you lose).
- * 
+ *
  * Formula: wallet_balance × BASE_RISK_PCT × symbol_modifiers
  */
 export const PORTFOLIO_SIZING = {

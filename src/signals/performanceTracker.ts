@@ -1,9 +1,9 @@
 /**
  * Rolling Performance Tracker
- * 
+ *
  * Tracks per-symbol win rate from recent trades and provides dynamic
  * threshold adjustments for underperformers.
- * 
+ *
  * Strategy:
  * - Track trailing 20-trade win rate per symbol
  * - If WR < 30%, add +1% to entry threshold
@@ -53,7 +53,7 @@ const performanceCache = new Map<string, CacheEntry>();
 /**
  * Get performance adjustment for a symbol.
  * Returns additional percentage points to add to entry threshold.
- * 
+ *
  * @param symbol - Token symbol (e.g., 'xSPY', 'TSLAx')
  * @returns Additional threshold percentage (0 if performing well, 1.0 if poor)
  */
@@ -79,7 +79,7 @@ export function getPerformanceAdjustmentSync(symbol: string): number {
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data.thresholdAdjustment;
   }
-  
+
   // Trigger async refresh but return safe default
   getSymbolPerformance(symbol).catch(error => {
     logger.debug({ symbol, error }, 'Failed to refresh symbol performance (background)');
@@ -128,7 +128,7 @@ async function fetchSymbolPerformance(symbol: string): Promise<SymbolPerformance
   try {
     // Query recent closed trades for this symbol
     const result = await pool.query(`
-      SELECT 
+      SELECT
         buy_symbol,
         pnl_usd,
         exit_timestamp
@@ -208,7 +208,7 @@ export async function getAllSymbolPerformance(): Promise<SymbolPerformance[]> {
     `, [Date.now() - 7 * 24 * 60 * 60 * 1000]); // Last 7 days
 
     const symbols = symbolsResult.rows.map((r: { buy_symbol: string }) => r.buy_symbol);
-    
+
     // Fetch performance for each (uses cache)
     const performances = await Promise.all(
       symbols.map((s: string) => getSymbolPerformance(s))

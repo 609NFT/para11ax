@@ -1,9 +1,9 @@
 /**
  * Portfolio-Based Position Sizer
- * 
+ *
  * Dynamically sizes positions based on wallet balance, scaling with wins/losses.
  * Integrates with performance tracker for symbol-specific adjustments.
- * 
+ *
  * Formula: wallet_balance × BASE_RISK_PCT × tvl_factor × spread_factor × performance_factor
  */
 
@@ -172,7 +172,7 @@ export async function getPerformanceMultiplier(symbol: string): Promise<number> 
   }
 
   const perf = await getSymbolPerformance(symbol);
-  
+
   if (!perf || perf.totalTrades < 5) {
     // Not enough data - use neutral multiplier
     return 1.0;
@@ -180,7 +180,7 @@ export async function getPerformanceMultiplier(symbol: string): Promise<number> 
 
   // Scale: symbolWR / avgWR, clamped to [MIN, MAX]
   const ratio = avgWinRate > 0 ? perf.winRate / avgWinRate : 1.0;
-  
+
   return Math.max(
     PORTFOLIO_SIZING.PERFORMANCE_SCALING.MIN_MULTIPLIER,
     Math.min(PORTFOLIO_SIZING.PERFORMANCE_SCALING.MAX_MULTIPLIER, ratio)
@@ -203,13 +203,13 @@ export function getPerformanceMultiplierSync(symbol: string): number {
   // Use sync performance data
   const { getPerformanceAdjustmentSync } = require('./performanceTracker');
   const adjustment = getPerformanceAdjustmentSync(symbol);
-  
+
   // If symbol has penalty (low WR), reduce position size
   // adjustment > 0 means WR < 30%, so multiply by 0.5-0.7
   if (adjustment > 0) {
     return PORTFOLIO_SIZING.PERFORMANCE_SCALING.MIN_MULTIPLIER;
   }
-  
+
   return 1.0; // Neutral if no penalty
 }
 
@@ -219,7 +219,7 @@ export function getPerformanceMultiplierSync(symbol: string): number {
 async function updateAverageWinRate(): Promise<void> {
   try {
     const allPerf = await getAllSymbolPerformance();
-    
+
     if (allPerf.length === 0) {
       return;
     }
@@ -227,7 +227,7 @@ async function updateAverageWinRate(): Promise<void> {
     // Weight by trade count
     const totalTrades = allPerf.reduce((s, p) => s + p.totalTrades, 0);
     const weightedWR = allPerf.reduce((s, p) => s + p.winRate * p.totalTrades, 0);
-    
+
     avgWinRate = totalTrades > 0 ? weightedWR / totalTrades : 0.5;
     avgWinRateLastUpdate = Date.now();
 
@@ -244,7 +244,7 @@ async function updateAverageWinRate(): Promise<void> {
 
 /**
  * Calculate dynamic position size based on portfolio.
- * 
+ *
  * @param symbol Token symbol
  * @param spreadPct Current spread percentage
  * @param tvl Pool TVL
@@ -256,13 +256,13 @@ export async function calculatePortfolioPositionSize(
   tvl: number
 ): Promise<PositionSizeResult> {
   const balance = await getWalletBalance();
-  
+
   // Fallback to config if balance unavailable
   const walletBalance = balance?.totalUsd ?? 100; // Default $100 if unknown
-  
+
   // Base size from portfolio percentage
   const baseSize = walletBalance * PORTFOLIO_SIZING.BASE_RISK_PCT;
-  
+
   // TVL multiplier (same as existing logic)
   const tvlInMillions = tvl / 1_000_000;
   const tvlMultiplier = Math.max(
@@ -272,7 +272,7 @@ export async function calculatePortfolioPositionSize(
       Math.sqrt(tvlInMillions) * POSITION_SIZE_FORMULA.COEFFICIENT
     )
   );
-  
+
   // Spread multiplier (higher spread = larger position)
   const spreadMultiplier = Math.max(
     ADAPTIVE_POSITION_SIZING.MIN_SPREAD_MULTIPLIER,
@@ -281,21 +281,21 @@ export async function calculatePortfolioPositionSize(
       (spreadPct * ADAPTIVE_POSITION_SIZING.SPREAD_COEFFICIENT) / 100
     )
   );
-  
+
   // Performance multiplier (symbol WR vs average)
   const performanceMultiplier = await getPerformanceMultiplier(symbol);
-  
+
   // Market hours multiplier (higher when NAV is stable)
   const marketHoursMultiplier = getMarketHoursMultiplier();
-  
+
   // Final calculation
   let sizeUsd = baseSize * tvlMultiplier * spreadMultiplier * performanceMultiplier * marketHoursMultiplier;
-  
+
   // Apply min/max caps (max scales with market hours too)
   const effectiveMax = PORTFOLIO_SIZING.MAX_POSITION_USD * marketHoursMultiplier;
   sizeUsd = Math.max(PORTFOLIO_SIZING.MIN_POSITION_USD, sizeUsd);
   sizeUsd = Math.min(effectiveMax, sizeUsd);
-  
+
   logger.debug({
     symbol,
     walletBalance: walletBalance.toFixed(2),
@@ -306,7 +306,7 @@ export async function calculatePortfolioPositionSize(
     marketHoursMultiplier: marketHoursMultiplier.toFixed(2),
     finalSize: sizeUsd.toFixed(2),
   }, 'Portfolio position size calculated');
-  
+
   return {
     sizeUsd,
     baseSize,
@@ -332,15 +332,15 @@ export function getPortfolioPositionSizeSync(
   }
 
   const balance = getWalletBalanceSync();
-  
+
   // Use fallback if balance not available
   if (!balance) {
     return fallbackMaxUsd;
   }
-  
+
   // Base size from portfolio percentage
   const baseSize = balance.totalUsd * PORTFOLIO_SIZING.BASE_RISK_PCT;
-  
+
   // TVL multiplier
   const tvlInMillions = tvl / 1_000_000;
   const tvlMultiplier = Math.max(
@@ -350,7 +350,7 @@ export function getPortfolioPositionSizeSync(
       Math.sqrt(tvlInMillions) * POSITION_SIZE_FORMULA.COEFFICIENT
     )
   );
-  
+
   // Spread multiplier
   const spreadMultiplier = Math.max(
     ADAPTIVE_POSITION_SIZING.MIN_SPREAD_MULTIPLIER,
@@ -359,19 +359,19 @@ export function getPortfolioPositionSizeSync(
       (spreadPct * ADAPTIVE_POSITION_SIZING.SPREAD_COEFFICIENT) / 100
     )
   );
-  
+
   // Performance multiplier (sync version)
   const performanceMultiplier = getPerformanceMultiplierSync(symbol);
-  
+
   // Market hours multiplier (higher when NAV is stable)
   const marketHoursMultiplier = getMarketHoursMultiplier();
-  
+
   // Final calculation with caps
   const effectiveMax = PORTFOLIO_SIZING.MAX_POSITION_USD * marketHoursMultiplier;
   let sizeUsd = baseSize * tvlMultiplier * spreadMultiplier * performanceMultiplier * marketHoursMultiplier;
   sizeUsd = Math.max(PORTFOLIO_SIZING.MIN_POSITION_USD, sizeUsd);
   sizeUsd = Math.min(effectiveMax, sizeUsd);
-  
+
   return sizeUsd;
 }
 
