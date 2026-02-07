@@ -108,7 +108,7 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
     }, 'Calculated profitable spreads from historical data');
 
     return map;
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error({ error }, 'Failed to calculate profitable spreads');
     return new Map();
   }
