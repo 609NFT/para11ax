@@ -66,17 +66,17 @@ export async function scanCrossDexOpportunities(tokens: Array<{ mint: string; sy
       if (!tokenData?.allPairs || tokenData.allPairs.length < 2) continue;
       
       const dexPairs = tokenData.allPairs
-        .filter((pair: any) => 
+        .filter((pair: { liquidityUsd: number; dexId: string }) => 
           pair.liquidityUsd > MIN_LIQUIDITY_USD && 
           ['raydium', 'orca', 'meteora'].includes(pair.dexId)
         )
-        .map((pair: any) => ({
+        .map((pair: { dexId: string; liquidityUsd: number }): DexPair => ({
           dexId: pair.dexId,
           price: tokenData.priceUsd, // All pairs use the same price from DexScreener
           liquidity: pair.liquidityUsd,
           volume24h: 0, // Not available in allPairs structure
         }))
-        .sort((a: any, b: any) => b.liquidity - a.liquidity);
+        .sort((a: DexPair, b: DexPair) => b.liquidity - a.liquidity);
       
       if (dexPairs.length < 2) continue;
       
