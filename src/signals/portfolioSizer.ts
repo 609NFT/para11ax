@@ -153,7 +153,9 @@ export function getWalletBalanceSync(): WalletBalance | null {
     return cachedBalance;
   }
   // Trigger async refresh
-  getWalletBalance().catch(() => {});
+  getWalletBalance().catch((error) => {
+    loggerInstance.warn({ error }, 'Failed to refresh wallet balance in background');
+  });
   return cachedBalance;
 }
 
@@ -197,7 +199,9 @@ export function getPerformanceMultiplierSync(symbol: string): number {
 
   // Trigger async update if stale
   if (Date.now() - avgWinRateLastUpdate > AVG_WR_UPDATE_INTERVAL_MS) {
-    updateAverageWinRate().catch(() => {});
+    updateAverageWinRate().catch((error) => {
+      loggerInstance.warn({ error }, 'Failed to update average win rate in background');
+    });
   }
 
   // Use sync performance data
