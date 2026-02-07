@@ -1,152 +1,101 @@
-const { Client } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 
-// Force IPv4 for Supabase connection (required)
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
-
-async function analyzeRecentTrades() {
-    const credentials = JSON.parse(fs.readFileSync('/home/ec2-user/.parallax-secrets/supabase-db.json', 'utf8'));
-    
-    const client = new Client(credentials);
-    await client.connect();
-    
-    console.log('=== RECENT TRADE ANALYSIS (Last 7 Days) ===\n');
-    
-    // 1. Most profitable tokens
-    const profitableTokens = await client.query(`
-        SELECT 
-            buy_symbol,
-            COUNT(*) as trades,
-            AVG(entry_spread_pct) as avg_entry_spread,
-            AVG(exit_spread_pct) as avg_exit_spread,
-            AVG(pnl_usd) as avg_pnl,
-            SUM(pnl_usd) as total_pnl,
-            COUNT(*) FILTER (WHERE pnl_usd > 0) as wins,
-            ROUND(COUNT(*) FILTER (WHERE pnl_usd > 0) * 100.0 / COUNT(*), 1) as win_rate_pct
-        FROM trades 
-        WHERE entry_timestamp > NOW() - INTERVAL '7 days'
-        AND exit_timestamp IS NOT NULL
-        GROUP BY buy_symbol
-        HAVING COUNT(*) >= 3
-        ORDER BY total_pnl DESC
-        LIMIT 10;
-    `);
-
-    console.log('📊 TOKEN PERFORMANCE (3+ trades):');
-    profitableTokens.rows.forEach(row => {
-        console.log(`${row.buy_symbol.padEnd(8)} ${row.trades.toString().padStart(2)} trades | ${row.win_rate_pct.toString().padStart(4)}% WR | $${row.total_pnl.toFixed(2).padStart(6)} total | Avg: ${row.avg_entry_spread.toFixed(1)}%→${row.avg_exit_spread ? row.avg_exit_spread.toFixed(1) : 'N/A'}%`);
-    });
-    
-    // 2. Time pattern analysis
-    const timePatterns = await client.query(`
-        SELECT 
-            EXTRACT(hour FROM entry_timestamp AT TIME ZONE 'UTC') as hour_utc,
-            COUNT(*) as trades,
-            AVG(pnl_usd) as avg_pnl,
-            COUNT(*) FILTER (WHERE pnl_usd > 0) as wins,
-            ROUND(COUNT(*) FILTER (WHERE pnl_usd > 0) * 100.0 / COUNT(*), 1) as win_rate_pct
-        FROM trades 
-        WHERE entry_timestamp > NOW() - INTERVAL '7 days'
-        AND exit_timestamp IS NOT NULL
-        GROUP BY EXTRACT(hour FROM entry_timestamp AT TIME ZONE 'UTC')
-        HAVING COUNT(*) >= 2
-        ORDER BY hour_utc;
-    `);
-
-    console.log('\n🕐 HOURLY PATTERNS (UTC, 2+ trades):');
-    timePatterns.rows.forEach(row => {
-        const hour = row.hour_utc.toString().padStart(2, '0');
-        console.log(`${hour}:00 | ${row.trades.toString().padStart(2)} trades | ${row.win_rate_pct.toString().padStart(4)}% WR | Avg PnL: $${row.avg_pnl.toFixed(2).padStart(5)}`);
-    });
-    
-    // 3. Spread size vs success correlation
-    const spreadAnalysis = await client.query(`
-        SELECT 
-            CASE 
-                WHEN entry_spread_pct < 3.0 THEN '0-3%'
-                WHEN entry_spread_pct < 4.0 THEN '3-4%'
-                WHEN entry_spread_pct < 5.0 THEN '4-5%'
-                WHEN entry_spread_pct < 6.0 THEN '5-6%'
-                ELSE '6%+'
-            END as spread_range,
-            COUNT(*) as trades,
-            AVG(entry_spread_pct) as avg_entry,
-            AVG(pnl_usd) as avg_pnl,
-            COUNT(*) FILTER (WHERE pnl_usd > 0) as wins,
-            ROUND(COUNT(*) FILTER (WHERE pnl_usd > 0) * 100.0 / COUNT(*), 1) as win_rate_pct,
-            SUM(pnl_usd) as total_pnl
-        FROM trades 
-        WHERE entry_timestamp > NOW() - INTERVAL '7 days'
-        AND exit_timestamp IS NOT NULL
-        GROUP BY 
-            CASE 
-                WHEN entry_spread_pct < 3.0 THEN '0-3%'
-                WHEN entry_spread_pct < 4.0 THEN '3-4%'
-                WHEN entry_spread_pct < 5.0 THEN '4-5%'
-                WHEN entry_spread_pct < 6.0 THEN '5-6%'
-                ELSE '6%+'
-            END
-        ORDER BY avg_entry;
-    `);
-
-    console.log('\n📈 ENTRY SPREAD vs SUCCESS:');
-    spreadAnalysis.rows.forEach(row => {
-        console.log(`${row.spread_range.padEnd(6)} | ${row.trades.toString().padStart(2)} trades | ${row.win_rate_pct.toString().padStart(4)}% WR | $${row.total_pnl.toFixed(2).padStart(6)} total | Avg: ${row.avg_entry.toFixed(1)}%`);
-    });
-    
-    // 4. Symbols we should consider excluding
-    const underperformers = await client.query(`
-        SELECT 
-            buy_symbol,
-            COUNT(*) as trades,
-            AVG(pnl_usd) as avg_pnl,
-            SUM(pnl_usd) as total_pnl,
-            COUNT(*) FILTER (WHERE pnl_usd > 0) as wins,
-            ROUND(COUNT(*) FILTER (WHERE pnl_usd > 0) * 100.0 / COUNT(*), 1) as win_rate_pct,
-            AVG(entry_spread_pct) as avg_entry_spread
-        FROM trades 
-        WHERE entry_timestamp > NOW() - INTERVAL '7 days'
-        AND exit_timestamp IS NOT NULL
-        GROUP BY buy_symbol
-        HAVING COUNT(*) >= 3 AND SUM(pnl_usd) < -0.50
-        ORDER BY total_pnl ASC;
-    `);
-
-    if (underperformers.rows.length > 0) {
-        console.log('\n❌ UNDERPERFORMING TOKENS (3+ trades, <-$0.50 total):');
-        underperformers.rows.forEach(row => {
-            console.log(`${row.buy_symbol.padEnd(8)} ${row.trades.toString().padStart(2)} trades | ${row.win_rate_pct.toString().padStart(4)}% WR | $${row.total_pnl.toFixed(2).padStart(6)} loss | Avg entry: ${row.avg_entry_spread.toFixed(1)}%`);
-        });
-    } else {
-        console.log('\n✅ No significantly underperforming tokens in last 7 days');
-    }
-    
-    // 5. Overall stats
-    const overallStats = await client.query(`
-        SELECT 
-            COUNT(*) as total_trades,
-            AVG(pnl_usd) as avg_pnl_per_trade,
-            SUM(pnl_usd) as total_pnl,
-            COUNT(*) FILTER (WHERE pnl_usd > 0) as total_wins,
-            ROUND(COUNT(*) FILTER (WHERE pnl_usd > 0) * 100.0 / COUNT(*), 1) as overall_win_rate,
-            AVG(entry_spread_pct) as avg_entry_spread,
-            AVG(EXTRACT(epoch FROM (exit_timestamp - entry_timestamp)) / 60) as avg_hold_minutes
-        FROM trades 
-        WHERE entry_timestamp > NOW() - INTERVAL '7 days'
-        AND exit_timestamp IS NOT NULL;
-    `);
-
-    console.log('\n📊 OVERALL 7-DAY STATS:');
-    const stats = overallStats.rows[0];
-    console.log(`Total Trades: ${stats.total_trades}`);
-    console.log(`Win Rate: ${stats.overall_win_rate}%`);
-    console.log(`Total PnL: $${stats.total_pnl.toFixed(2)}`);
-    console.log(`Avg PnL/Trade: $${stats.avg_pnl_per_trade.toFixed(2)}`);
-    console.log(`Avg Entry Spread: ${stats.avg_entry_spread.toFixed(1)}%`);
-    console.log(`Avg Hold Time: ${stats.avg_hold_minutes.toFixed(1)} minutes`);
-    
-    await client.end();
+const secretsPath = process.env.HOME + '/.parallax-secrets/supabase-db.json';
+if (!fs.existsSync(secretsPath)) {
+  console.log('❌ Database secrets not found');
+  process.exit(1);
 }
 
-analyzeRecentTrades().catch(console.error);
+const secrets = JSON.parse(fs.readFileSync(secretsPath, 'utf8'));
+const url = 'https://tixpkokukqccehbnpkpf.supabase.co';
+const client = createClient(url, secrets.service_role_key, {
+  db: { schema: 'public' }
+});
+
+async function analyzeLast6Hours() {
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  
+  console.log('📊 LAST 6 HOURS ANALYSIS (since', sixHoursAgo, ')');
+  console.log('');
+  
+  // Check trades
+  const { data: trades, error } = await client
+    .from('mean_reversion_positions')
+    .select('*')
+    .gte('created_at', sixHoursAgo)
+    .order('created_at', { ascending: false });
+    
+  if (error) {
+    console.log('❌ Error fetching trades:', error.message);
+    return;
+  }
+  
+  console.log('🔹 Trades in last 6 hours:', trades.length);
+  
+  if (trades.length > 0) {
+    trades.forEach(trade => {
+      const entrySpread = (trade.entry_spread_pct * 100).toFixed(2);
+      const pnl = trade.pnl_usd ? trade.pnl_usd.toFixed(2) : 'pending';
+      const status = trade.status;
+      console.log(`  ${trade.token_symbol}: ${entrySpread}% entry, ${status}, $${pnl} PnL`);
+    });
+  } else {
+    console.log('  No trades executed (expected with 4.0% threshold)');
+  }
+  
+  console.log('');
+  
+  // Check current spreads
+  const { data: spreads } = await client
+    .from('discount_history')
+    .select('token_symbol, spread_pct, updated_at')
+    .gte('updated_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()) // Last 30 min
+    .order('updated_at', { ascending: false })
+    .limit(50);
+    
+  if (spreads && spreads.length > 0) {
+    console.log('📈 Current spreads (last 30 min):');
+    const latest = {};
+    spreads.forEach(s => {
+      if (!latest[s.token_symbol]) {
+        latest[s.token_symbol] = s.spread_pct * 100;
+      }
+    });
+    
+    Object.entries(latest)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10)
+      .forEach(([symbol, spread]) => {
+        const indicator = spread >= 4.0 ? '🟢' : spread >= 3.0 ? '🟡' : '🔴';
+        console.log(`  ${indicator} ${symbol}: ${spread.toFixed(2)}%`);
+      });
+  }
+  
+  console.log('');
+  
+  // Check entry threshold effectiveness
+  const { data: recentTrades } = await client
+    .from('mean_reversion_positions')
+    .select('token_symbol, entry_spread_pct, pnl_usd, status, created_at')
+    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24h
+    .order('created_at', { ascending: false });
+    
+  if (recentTrades && recentTrades.length > 0) {
+    console.log('📊 Last 24h entry analysis:');
+    const above4 = recentTrades.filter(t => t.entry_spread_pct >= 0.04);
+    const below4 = recentTrades.filter(t => t.entry_spread_pct < 0.04);
+    
+    console.log(`  Entries ≥4.0%: ${above4.length} trades`);
+    console.log(`  Entries <4.0%: ${below4.length} trades`);
+    
+    if (above4.length > 0) {
+      const avgEntry = (above4.reduce((sum, t) => sum + t.entry_spread_pct, 0) / above4.length * 100).toFixed(2);
+      const closed = above4.filter(t => t.status === 'closed');
+      const avgPnL = closed.length > 0 ? (closed.reduce((sum, t) => sum + (t.pnl_usd || 0), 0) / closed.length).toFixed(2) : 'N/A';
+      console.log(`    Avg entry: ${avgEntry}%, Avg PnL: $${avgPnL}`);
+    }
+  }
+}
+
+analyzeLast6Hours().catch(console.error);
