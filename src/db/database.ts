@@ -594,25 +594,7 @@ export class DatabaseManager {
     };
   }
 
-  /**
-   * Get discount history time series for correlation analysis
-   * Returns discount data aligned by timestamp for each token
-   * TODO: Implement Supabase equivalent of this SQLite-based analytical query
-   */
-  async getDiscountCorrelationData(_sinceTimestamp?: number): Promise<{
-    symbols: string[];
-    matrix: number[][];
-    scatterData: Map<string, { x: number; y: number }[]>;
-    sampleCount: number;
-  }> {
-    // Stub implementation - returns empty data until Supabase equivalent is implemented
-    return {
-      symbols: [],
-      matrix: [],
-      scatterData: new Map(),
-      sampleCount: 0,
-    };
-  }
+  // REMOVED: getDiscountCorrelationData - was unused stub method
 
   /**
    * Get discount heatmap data - discounts over time for all tokens
