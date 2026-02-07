@@ -6,6 +6,12 @@
 // Trading modes - paper is default, live requires explicit enable
 export type TradingMode = 'paper' | 'live';
 
+// Trading mode constants to avoid magic strings
+export const TRADING_MODE = {
+  PAPER: 'paper' as const,
+  LIVE: 'live' as const,
+} as const;
+
 // Price source types for custom feeds
 export type PriceSource = 'stock' | 'swissquote';
 
