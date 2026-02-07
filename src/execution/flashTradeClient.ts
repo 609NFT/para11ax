@@ -135,6 +135,9 @@ function discoverShortMarkets(): void {
 /**
  * Get all available symbols that support shorting
  * Includes equities, crypto, metals, FX, etc.
+ * 
+ * @returns Array of Flash Trade symbol names that have short markets available
+ * @example ['TSLAr', 'NVDAr', 'SPYr', 'BTCr', 'ETHr']
  */
 export function getAvailableShortSymbols(): string[] {
   return Array.from(availableShortSymbols);
