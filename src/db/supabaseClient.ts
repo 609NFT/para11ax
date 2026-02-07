@@ -22,7 +22,7 @@ function getTokenPool(): Pool {
   if (!tokenPool) {
     const connectionString = process.env.DIRECT_URL;
     if (!connectionString) {
-      throw new Error('DIRECT_URL environment variable not set');
+      throw new Error('DIRECT_URL environment variable not set - required for Supabase token repository connection');
     }
     tokenPool = new Pool({
       connectionString,
@@ -44,7 +44,7 @@ export function getTradesPool(): Pool {
   if (!tradesPool) {
     const connectionString = process.env.TRADES_DB_URL;
     if (!connectionString) {
-      throw new Error('TRADES_DB_URL environment variable not set');
+      throw new Error('TRADES_DB_URL environment variable not set - required for trading data connection');
     }
     tradesPool = new Pool({
       connectionString,
