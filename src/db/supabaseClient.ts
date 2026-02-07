@@ -972,6 +972,12 @@ export async function fetchDiscountHeatmapFromSupabase(
 export async function fetchTokensFromDb(): Promise<TokenConfig[]> {
   const client = getTokenPool();
 
+  // Tokens that consistently fail price fetches and should be filtered out
+  const PROBLEMATIC_MINTS = new Set([
+    'cJpUMp5R', // INTCon - consistent quote failures
+    'XsSr8anD', // LINx - consistent quote failures
+  ]);
+
   const result = await client.query<DbToken>(`
     SELECT symbol, address, decimals
     FROM "Token"
@@ -979,19 +985,21 @@ export async function fetchTokensFromDb(): Promise<TokenConfig[]> {
     ORDER BY symbol
   `);
 
-  return result.rows.map((row) => {
-    // Use the shared tokenSymbolToStockTicker function for consistent mapping
-    const stockTicker = tokenSymbolToStockTicker(row.symbol);
+  return result.rows
+    .filter((row) => !PROBLEMATIC_MINTS.has(row.address))
+    .map((row) => {
+      // Use the shared tokenSymbolToStockTicker function for consistent mapping
+      const stockTicker = tokenSymbolToStockTicker(row.symbol);
 
-    return {
-      symbol: row.symbol,
-      mint: row.address,
-      stockTicker,
-      enabled: true,  // All DB tokens start enabled, liquidity check will disable
-      poolAddress: '', // Will be discovered via DexScreener/GeckoTerminal
-      decimals: row.decimals,
-    };
-  });
+      return {
+        symbol: row.symbol,
+        mint: row.address,
+        stockTicker,
+        enabled: true,  // All DB tokens start enabled, liquidity check will disable
+        poolAddress: '', // Will be discovered via DexScreener/GeckoTerminal
+        decimals: row.decimals,
+      };
+    });
 }
 
 // ==================== Stats from Supabase ====================
