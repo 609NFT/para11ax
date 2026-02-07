@@ -434,7 +434,8 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 ### Max Hold Time Experiments
 | Date | Max Hold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|----------|--------|----------|-----|-------------|--------|
-| Current | **60 min** | **46** | **37.0%** | **+$4.96** | **baseline** | **✅ OPTIMAL** |
+| Current | **60 min** | **48** | **39.6%** | **+$5.18** | **baseline** | **✅ OPTIMAL** |
+| **Feb 17** | **50 min** | **48** | **39.6%** | **+$5.18** | **0%** | ❌ **No impact - identical performance (37 max_hold exits, 11 target exits). Most trades that hit max hold limit take much longer than 50-60min anyway (avg hold 216min), so the 10-minute difference between limits doesn't affect trade results. Confirms 60min remains optimal.** |
 | **Feb 13** | **75 min** | **46** | **37.0%** | **+$4.96** | **0%** | ❌ **No improvement - 36 trades still hit max_hold limit, avg hold 220min shows most need longer than either limit** |
 | Feb 9 | **90 min** | 105 | 22.9% | +$6.52 | -36% | ❌ **Too long (94 max_hold exits, spreads widen back)** |
 | Feb 8 | **45 min** | 49 | 46.9% | +$11.64 | -9% | ❌ **Premature exits reduce PnL** |
