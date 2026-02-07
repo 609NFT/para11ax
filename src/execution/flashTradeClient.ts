@@ -911,8 +911,12 @@ export async function getTimeUntilMarketOpen(): Promise<string> {
         daysChecked++;
         continue;
       }
-    } catch {
+    } catch (error) {
       // If holiday check fails, assume it's a trading day
+      logger.warn('Holiday check failed, assuming trading day', { 
+        error: error instanceof Error ? error.message : String(error),
+        date: candidateDate.toISOString().split('T')[0]
+      });
     }
 
     // Found a trading day!
