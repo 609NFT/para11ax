@@ -31,6 +31,7 @@ import {
   getComputedThreshold,
   getAllComputedThresholds,
   isShortThresholdsInitialized,
+  ComputedThreshold,
 } from './shortThresholdCalc';
 
 // ============================================================================
@@ -321,6 +322,15 @@ export interface ShortPosition {
   exitTxSignature?: string;
   pnlUsd?: number;
   pnlPct?: number;
+}
+
+export interface PremiumThresholds {
+  entryPct: number;
+  exitPct: number;
+  stopLossPct: number;
+  defaultLeverage: number;
+  maxLeverage: number;
+  computed: ComputedThreshold | null;
 }
 
 // Short positions are now stored in the database (not in-memory)
@@ -631,7 +641,7 @@ export function saveShortPosition(position: ShortPosition): void {
  * Get premium thresholds for a specific ticker (for dashboard display).
  * Uses data-driven computed thresholds when available, fallbacks otherwise.
  */
-export function getPremiumThresholds(ticker?: string) {
+export function getPremiumThresholds(ticker?: string): PremiumThresholds {
   const entryPct = ticker ? getShortEntryThreshold(ticker) : -FALLBACK_ENTRY_PCT;
   const exitPct = ticker ? getShortExitThreshold(ticker) : entryPct * FALLBACK_EXIT_RATIO;
   const stopLossPct = ticker ? getShortStopLossThreshold(ticker) : entryPct * FALLBACK_STOP_LOSS_FACTOR;
