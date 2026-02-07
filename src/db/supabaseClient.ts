@@ -6,6 +6,12 @@ import { Pool } from 'pg';
 import { TokenConfig } from '../types';
 import logger from '../logger';
 
+// Database connection timeout constants
+const TOKEN_POOL_IDLE_TIMEOUT_MS = 30000; // 30 seconds
+const TOKEN_POOL_CONNECTION_TIMEOUT_MS = 10000; // 10 seconds
+const TRADES_POOL_IDLE_TIMEOUT_MS = 10000; // 10 seconds - close idle connections faster
+const TRADES_POOL_CONNECTION_TIMEOUT_MS = 10000; // 10 seconds
+
 // Pool for token data (DIRECT_URL - existing database)
 let tokenPool: Pool | null = null;
 
@@ -22,8 +28,8 @@ function getTokenPool(): Pool {
       connectionString,
       ssl: { rejectUnauthorized: false },
       max: 5,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: TOKEN_POOL_IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis: TOKEN_POOL_CONNECTION_TIMEOUT_MS,
     });
 
     // Add error handler
@@ -45,8 +51,8 @@ export function getTradesPool(): Pool {
       ssl: { rejectUnauthorized: false },
       max: 5,  // Reduced from 20 - Supabase free tier limit
       min: 1,  // Reduced from 5 - save connections
-      idleTimeoutMillis: 10000,  // Close idle faster
-      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: TRADES_POOL_IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis: TRADES_POOL_CONNECTION_TIMEOUT_MS,
     });
 
     // Add error handler
