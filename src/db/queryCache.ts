@@ -103,4 +103,4 @@ const cacheInstance = new QueryCache();
 // Cleanup expired entries every minute
 setInterval(() => cacheInstance.cleanup(), 60000);
 
-export const getQueryCache = () => cacheInstance;
+export const getQueryCache = (): QueryCache => cacheInstance;

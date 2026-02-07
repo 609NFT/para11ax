@@ -131,4 +131,4 @@ export class WriteQueue {
 // Singleton instance
 const queueInstance = new WriteQueue();
 
-export const getWriteQueue = () => queueInstance;
+export const getWriteQueue = (): WriteQueue => queueInstance;
