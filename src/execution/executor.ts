@@ -407,8 +407,9 @@ export class Executor {
       try {
         const accountInfo = await getAccount(this.connection, outputTokenAccount);
         preSimBalance = Number(accountInfo.amount);
-      } catch {
+      } catch (error) {
         // Account may not exist yet (first buy of this token)
+        executionLogger.debug({ outputTokenAccount, error }, 'Output token account not found (likely first purchase)');
         preSimBalance = 0;
       }
 
