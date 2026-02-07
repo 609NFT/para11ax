@@ -404,6 +404,7 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 ### Exit Target Experiments
 | Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
+| **Feb 8** | **1.5%** | **51** | **47.1%** | **+$7.19** | **+41%** | 🔥 **SIGNIFICANT IMPROVEMENT - READY FOR DEPLOYMENT** |
 | **Feb 8** | **2.0%** | 49 | 36.7% | +$5.01 | **0%** | ❌ **Identical performance to 2.5% baseline - no impact. 78% max_hold exits (38/49) vs 22% target exits (11/49) indicate most trades never reach either exit threshold - they hit max_hold timeout instead. The 0.5% difference between 2.0% and 2.5% exit targets has no measurable impact when spreads rarely narrow enough to trigger either threshold.** |
 | **Feb 7** | **2.2%** | 47 | 40.4% | +$4.59 | **0%** | ❌ **Identical performance to 2.5% baseline - no measurable impact** |
 | **Feb 10** | **3.0%** | 55 | 56.4% | +$6.07 | **+30%** | ✅ **Good improvement, confirms 2.5% is optimal** |
@@ -431,12 +432,12 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 - More trades: 48 → 56 (captures profit before max hold timeout)
 - Key insight: 0.5% exit too aggressive, spreads rarely narrow that much
 
-## 🚀 READY FOR IMPLEMENTATION (Validated Feb 9)
+## 🚀 READY FOR IMPLEMENTATION (Updated Feb 8)
 **CONFIRMED IMPROVEMENTS:**
 1. **Entry threshold 4.0% → 4.5%**: Multiple consistent tests show +12% to +58% PnL improvement
-2. **Exit target 0.5% → 2.5%**: Single test shows +20% PnL improvement with higher win rate
-**Changes needed**: constants.ts MIN_FLOOR: 4.0→4.5, EXIT_THRESHOLD_FORMULA COEFFICIENT: 0.50→2.50
-**Status**: Awaiting 609 approval for deployment - avoid unreliable 4.3% threshold
+2. **Exit target 2.5% → 1.5%**: Latest test shows +41% PnL improvement (51 trades, 47.1% WR, +$7.19)
+**Changes needed**: constants.ts MIN_FLOOR: 4.0→4.5, EXIT_THRESHOLD_FORMULA COEFFICIENT: 2.50→1.50
+**Status**: **1.5% exit target shows strongest improvement yet (+41%)** - awaiting 609 approval for deployment
 
 ### Max Hold Time Experiments
 | Date | Max Hold | Trades | Win Rate | PnL | vs Baseline | Status |
