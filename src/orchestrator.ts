@@ -447,6 +447,13 @@ export class Orchestrator {
       });
     }, 6 * 60 * 60 * 1000);
 
+    // EC2 health monitoring every 15 minutes
+    setInterval(() => {
+      this.runEc2HealthCheck().catch(err => {
+        logger.warn({ error: err }, 'EC2 health check failed');
+      });
+    }, 15 * 60 * 1000);
+
     // Sync hourly heatmap summary to Supabase for fast 7d queries
     // Run once on startup, then every hour
     logger.info('Syncing heatmap summary to Supabase...');
@@ -488,6 +495,20 @@ export class Orchestrator {
     } catch (error) {
       // Script might not exist or fail - not critical
       logger.debug({ error }, 'Log rotation skipped');
+    }
+  }
+
+  /**
+   * Run EC2 health check - alerts to Discord if thresholds breached
+   */
+  private async runEc2HealthCheck(): Promise<void> {
+    const { execSync } = require('child_process');
+    const scriptPath = `${process.env.HOME}/parallax/scripts/health-check.js`;
+
+    try {
+      execSync(`node ${scriptPath}`, { encoding: 'utf8', timeout: 30000 });
+    } catch (error) {
+      logger.warn({ error }, 'EC2 health check script failed');
     }
   }
 
