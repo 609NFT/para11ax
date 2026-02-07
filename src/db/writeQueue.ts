@@ -14,6 +14,9 @@
 import { dbLogger } from '../logger';
 import { notifyError } from '../notifications/discord';
 
+// Queue processing constants
+const QUEUE_POLL_INTERVAL_MS = 100;
+
 export interface WriteOperation {
   id: string;
   operation: () => Promise<void>;
@@ -120,7 +123,7 @@ export class WriteQueue {
    */
   async drain(): Promise<void> {
     while (this.queue.length > 0 || this.processing) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, QUEUE_POLL_INTERVAL_MS));
     }
   }
 }
