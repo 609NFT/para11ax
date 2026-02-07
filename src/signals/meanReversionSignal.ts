@@ -48,12 +48,12 @@ import {
   SPREAD_WIDENING_STOP_PCT,
   AVOID_TRADING_HOURS_UTC,
   TIME_OF_DAY_OPTIMIZATION,
+  QUOTE_TIMEOUT_MS,
 } from '../constants';
 import { getDynamicStopLossPct, getVolatilityPositionMultiplier, getVolatilityEntryMultiplier } from '../feeds/volatilityFeed';
 import { isOptimalTradingTime } from './timeOfDayOptimizer';
 
 // Timeout helper for quote fetching
-const QUOTE_TIMEOUT_MS = 10000; // 10 second timeout for quotes
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
   return Promise.race([
     promise,

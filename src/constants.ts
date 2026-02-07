@@ -701,3 +701,10 @@ export function calculateNetworkFeeUsd(solPriceUsd: number): { lamports: number;
 
   return { lamports, usd };
 }
+
+// ============================================================================
+// TIMEOUT CONSTANTS
+// ============================================================================
+
+/** Timeout for quote fetching operations (10 seconds) */
+export const QUOTE_TIMEOUT_MS = 10000;
