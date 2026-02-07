@@ -6,7 +6,7 @@
 
 import axios from 'axios';
 import logger from '../logger';
-import { STOCK_STOP_LOSS_DEFAULT_PCT } from '../constants';
+import { STOCK_STOP_LOSS_DEFAULT_PCT, DYNAMIC_FLOOR_FORMULA, MARKET_REGIME } from '../constants';
 import { getDatabase } from '../db/database';
 import { fetchAllHistoricalVolatilityFromSupabase } from '../db/supabaseClient';
 import { isTokenEnabledByLiquidity } from '../liquidity/liquidityChecker';
@@ -588,4 +588,134 @@ export function getVolatilityCacheSnapshot(): Map<string, VolatilityCache> {
  */
 export function clearVolatilityCache(): void {
   volatilityCache.clear();
+}
+
+// ============================================================================
+// DYNAMIC FLOOR & MARKET REGIME
+// ============================================================================
+
+// Cache for market regime multiplier
+let cachedRegimeMultiplier: { value: number; timestamp: number; regime: string } | null = null;
+
+/**
+ * Calculate market regime multiplier based on median volatility across all tokens
+ * 
+ * Calm market (median ATR <2%): 0.85 (lower floors, more opportunities)
+ * Normal market: 1.0
+ * Volatile market (median ATR >3.5%): 1.20 (higher floors, more selective)
+ */
+export function getMarketRegimeMultiplier(): number {
+  if (!MARKET_REGIME.ENABLED) return 1.0;
+  
+  const now = Date.now();
+  if (cachedRegimeMultiplier && 
+      now - cachedRegimeMultiplier.timestamp < MARKET_REGIME.REFRESH_INTERVAL_MS) {
+    return cachedRegimeMultiplier.value;
+  }
+  
+  // Get all cached volatilities
+  const volatilities = Array.from(volatilityCache.values())
+    .map(v => v.atrPct)
+    .filter(v => v > 0 && v < 20); // Filter outliers
+    
+  if (volatilities.length < 5) {
+    // Not enough data, use normal regime
+    cachedRegimeMultiplier = { value: 1.0, timestamp: now, regime: 'normal' };
+    return 1.0;
+  }
+  
+  // Use median (robust to outliers like MSTR at 6%+)
+  volatilities.sort((a, b) => a - b);
+  const median = volatilities[Math.floor(volatilities.length / 2)];
+  
+  let multiplier = 1.0;
+  let regime = 'normal';
+  
+  if (median < MARKET_REGIME.CALM_THRESHOLD) {
+    multiplier = MARKET_REGIME.CALM_MULTIPLIER;
+    regime = 'calm';
+  } else if (median > MARKET_REGIME.VOLATILE_THRESHOLD) {
+    multiplier = MARKET_REGIME.VOLATILE_MULTIPLIER;
+    regime = 'volatile';
+  }
+  
+  cachedRegimeMultiplier = { value: multiplier, timestamp: now, regime };
+  
+  feedLogger.info({ 
+    medianATR: median.toFixed(2), 
+    multiplier, 
+    regime,
+    samples: volatilities.length
+  }, 'Market regime calculated');
+  
+  return multiplier;
+}
+
+/**
+ * Get dynamic entry floor for a specific token based on its volatility
+ * 
+ * Formula: floor = BASE_FLOOR + (ATR% × VOLATILITY_COEFFICIENT) × regime_multiplier
+ * 
+ * Examples (normal regime):
+ *   SPY (1.2% ATR): 2.0 + 1.2×0.6 = 2.72%
+ *   AAPL (2.5% ATR): 2.0 + 2.5×0.6 = 3.50%
+ *   TSLA (4.5% ATR): 2.0 + 4.5×0.6 = 4.70%
+ *   MSTR (6.0% ATR): capped at 5.5%
+ * 
+ * @param symbol Stock ticker (e.g., 'TSLA', 'SPY')
+ * @returns Dynamic floor percentage
+ */
+export function getDynamicFloor(symbol: string): number {
+  if (!DYNAMIC_FLOOR_FORMULA.ENABLED) {
+    return 3.5; // Fallback to old static floor
+  }
+  
+  // Get volatility for this symbol
+  const cached = volatilityCache.get(symbol);
+  const atrPct = cached?.atrPct ?? DYNAMIC_FLOOR_FORMULA.FALLBACK_ATR;
+  
+  // Get market regime multiplier
+  const regimeMultiplier = getMarketRegimeMultiplier();
+  
+  // Calculate raw floor
+  const rawFloor = DYNAMIC_FLOOR_FORMULA.BASE_FLOOR + 
+    (atrPct * DYNAMIC_FLOOR_FORMULA.VOLATILITY_COEFFICIENT);
+  
+  // Apply regime multiplier
+  const adjustedFloor = rawFloor * regimeMultiplier;
+  
+  // Clamp to absolute bounds
+  const finalFloor = Math.max(
+    DYNAMIC_FLOOR_FORMULA.ABSOLUTE_MIN,
+    Math.min(adjustedFloor, DYNAMIC_FLOOR_FORMULA.ABSOLUTE_MAX)
+  );
+  
+  feedLogger.debug({
+    symbol,
+    atrPct: atrPct.toFixed(2),
+    rawFloor: rawFloor.toFixed(2),
+    regimeMultiplier,
+    finalFloor: finalFloor.toFixed(2),
+  }, 'Dynamic floor calculated');
+  
+  return finalFloor;
+}
+
+/**
+ * Get current market regime info (for dashboard/debugging)
+ */
+export function getMarketRegimeInfo(): { regime: string; multiplier: number; medianATR: number } {
+  const multiplier = getMarketRegimeMultiplier();
+  const regime = cachedRegimeMultiplier?.regime ?? 'unknown';
+  
+  const volatilities = Array.from(volatilityCache.values())
+    .map(v => v.atrPct)
+    .filter(v => v > 0 && v < 20);
+  
+  volatilities.sort((a, b) => a - b);
+  const medianATR = volatilities.length > 0 
+    ? volatilities[Math.floor(volatilities.length / 2)] 
+    : 0;
+  
+  return { regime, multiplier, medianATR };
 }

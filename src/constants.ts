@@ -49,8 +49,46 @@ export const SOL_DECIMALS = 9;
  */
 export const ENTRY_THRESHOLD_FORMULA = {
   COEFFICIENT: 0.50,   // Slippage buffer: 0.50 / sqrt(tvl_in_millions) - raised for observed 0.5%+ slippage
-  MIN_FLOOR: 3.5,      // Lowered for opportunity capture - 4.0% was too restrictive in current market
   MAX_CAP: 12.0,       // Allow even higher thresholds - selectivity is key
+} as const;
+
+/**
+ * Dynamic floor formula - replaces static MIN_FLOOR
+ * 
+ * Core insight: A 3.5% discount on low-vol SPY is better than 3.5% on high-vol TSLA
+ * because NAV can move 3% against you while holding the volatile one.
+ * 
+ * Formula: floor = BASE_FLOOR + (ATR% × VOLATILITY_COEFFICIENT) × regime_multiplier
+ * 
+ * Examples (normal regime):
+ *   SPY (1.2% ATR): 2.0 + 1.2×0.6 = 2.72% floor
+ *   AAPL (2.5% ATR): 2.0 + 2.5×0.6 = 3.50% floor  
+ *   TSLA (4.5% ATR): 2.0 + 4.5×0.6 = 4.70% floor
+ *   MSTR (6.0% ATR): 2.0 + 6.0×0.6 = 5.60% → capped at 5.5%
+ */
+export const DYNAMIC_FLOOR_FORMULA = {
+  ENABLED: true,
+  BASE_FLOOR: 2.0,              // Base floor in calm conditions
+  VOLATILITY_COEFFICIENT: 0.6,  // Floor += ATR% × 0.6
+  ABSOLUTE_MIN: 1.5,            // Never below 1.5% (covers execution costs)
+  ABSOLUTE_MAX: 5.5,            // Never above 5.5% (allows some entries)
+  FALLBACK_ATR: 2.7,            // Default ATR if no data available
+} as const;
+
+/**
+ * Market regime detection - adjusts all floors based on overall market volatility
+ * 
+ * Calm market (median ATR <2%): floors × 0.85 (more opportunities)
+ * Normal market: floors × 1.0
+ * Volatile market (median ATR >3.5%): floors × 1.20 (more selective)
+ */
+export const MARKET_REGIME = {
+  ENABLED: true,
+  CALM_THRESHOLD: 2.0,          // Median ATR below this = calm
+  VOLATILE_THRESHOLD: 3.5,      // Median ATR above this = volatile
+  CALM_MULTIPLIER: 0.85,        // Reduce floors 15% in calm markets
+  VOLATILE_MULTIPLIER: 1.20,    // Increase floors 20% in volatile markets
+  REFRESH_INTERVAL_MS: 15 * 60 * 1000, // Recalculate every 15 min
 } as const;
 
 /**

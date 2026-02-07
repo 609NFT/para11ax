@@ -39,6 +39,7 @@ import { fetchBatchDexScreenerPrices, DexScreenerPrice } from '../feeds/dexScree
 import { fetchBatchGeckoTerminalPrices, GeckoTerminalPrice } from '../feeds/geckoTerminalFeed';
 import { recordApiCall } from '../feeds/endpointTracker';
 import { calculateAllProfitableSpreads, TokenProfitableSpread } from '../db/profitableSpreadCalc';
+import { getDynamicFloor } from '../feeds/volatilityFeed';
 
 interface PoolLiquidity {
   poolAddress: string;
@@ -354,7 +355,16 @@ async function getBestFeeRate(symbol: string, mint: string, raydiumFeeRate: numb
  *
  * This ensures break-even without juicing. Any trailing stop juice is pure profit.
  */
-function calculateEntryThreshold(tvl: number, feeRate?: number): number {
+/**
+ * Convert token symbol to stock ticker for volatility lookup
+ * e.g., TSLAx -> TSLA, SPYr -> SPY, INTCon -> INTC
+ */
+function tokenToStockTicker(tokenSymbol: string): string {
+  // Strip lowercase prefix and suffix
+  return tokenSymbol.replace(/^[a-z]/, '').replace(/[a-z]+$/, '');
+}
+
+function calculateEntryThreshold(tvl: number, feeRate?: number, tokenSymbol?: string): number {
   if (tvl < MIN_TVL_FOR_TRADING) {
     return 999; // Disabled
   }
@@ -371,9 +381,13 @@ function calculateEntryThreshold(tvl: number, feeRate?: number): number {
   const tvlInMillions = tvl / 1_000_000;
   const slippageBuffer = ENTRY_THRESHOLD_FORMULA.COEFFICIENT / Math.sqrt(tvlInMillions);
 
-  // Take the higher of: fee-based floor, slippage-based threshold, or absolute minimum
-  const minFloor = ENTRY_THRESHOLD_FORMULA.MIN_FLOOR ?? 0;
-  const threshold = Math.max(roundTripFeesPct, slippageBuffer, minFloor);
+  // Dynamic floor based on volatility + market regime
+  // If tokenSymbol provided, use volatility-adjusted floor; otherwise fallback to 3.5%
+  const stockTicker = tokenSymbol ? tokenToStockTicker(tokenSymbol) : null;
+  const dynamicFloor = stockTicker ? getDynamicFloor(stockTicker) : 3.5;
+
+  // Take the higher of: fee-based floor, slippage-based threshold, or dynamic minimum
+  const threshold = Math.max(roundTripFeesPct, slippageBuffer, dynamicFloor);
 
   return Math.min(threshold, ENTRY_THRESHOLD_FORMULA.MAX_CAP);
 }
@@ -406,13 +420,14 @@ function calculatePositionMultiplier(tvl: number): number {
 /**
  * Calculate entry and exit thresholds based on TVL and fee rate
  * Entry threshold dynamically accounts for actual pool fees to ensure break-even
+ * Now also uses dynamic floor based on token volatility + market regime
  */
-function calculateThresholds(tvl: number, feeRate?: number): { entryThreshold: number; exitThreshold: number; enabled: boolean } {
+function calculateThresholds(tvl: number, feeRate?: number, tokenSymbol?: string): { entryThreshold: number; exitThreshold: number; enabled: boolean } {
   if (tvl < MIN_TVL_FOR_TRADING) {
     return { entryThreshold: TVL_ENTRY_THRESHOLDS.DISABLED.entryPct, exitThreshold: 999, enabled: false };
   }
 
-  const entryThreshold = calculateEntryThreshold(tvl, feeRate);
+  const entryThreshold = calculateEntryThreshold(tvl, feeRate, tokenSymbol);
   const exitThreshold = calculateExitThreshold(tvl);
 
   return {
@@ -749,7 +764,7 @@ export async function refreshLiquidity(): Promise<void> {
     const raydiumFeeRate = raydiumInfo?.feeRate ?? 0.0025;
     const feeRate = await getBestFeeRate(symbol, mint, raydiumFeeRate);
 
-    let { entryThreshold, exitThreshold, enabled } = calculateThresholds(tvl, feeRate);
+    let { entryThreshold, exitThreshold, enabled } = calculateThresholds(tvl, feeRate, symbol);
 
     // Track which source won
     if (best.source === 'raydium') raydiumBest++;
