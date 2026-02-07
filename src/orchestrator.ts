@@ -37,7 +37,7 @@ import { initializeShortThresholds } from './signals/shortThresholdCalc';
 import { initPortfolioSizer } from './signals/portfolioSizer';
 import { pruneOldDiscountHistory, upsertHeatmapSummary, getHourlySummaryFromSupabase } from './db/supabaseClient';
 import { Dashboard } from './dashboard';
-import logger, { executionLogger } from './logger';
+import logger, { executionLogger, dbLogger } from './logger';
 import { MeanReversionPosition, MeanReversionSignal, PairSpread, TradeResult } from './types';
 import { refreshLiquidity, maybeRefreshLiquidity, getAllThresholds, getSwapRouting } from './liquidity/liquidityChecker';
 import {
@@ -437,7 +437,9 @@ export class Orchestrator {
     // Schedule daily pruning (runs every 24 hours)
     setInterval(() => {
       this.database.pruneOldDiscountHistory();
-      pruneOldDiscountHistory().catch(() => {});
+      pruneOldDiscountHistory().catch((err) => {
+        dbLogger.error({ error: err }, 'Daily pruning failed');
+      });
     }, 24 * 60 * 60 * 1000);
 
     // Schedule log rotation every 6 hours (keeps parallax.log under 50MB)
@@ -1083,7 +1085,9 @@ export class Orchestrator {
         collateralUsd: signal.suggestedCollateralUsd,
         leverage: signal.leverage,
         txSignature,
-      }).catch(() => {});
+      }).catch((err) => {
+        executionLogger.warn({ error: err }, 'Discord notification failed for short entry');
+      });
 
       executionLogger.info({
         positionId: position.id,
@@ -1325,7 +1329,9 @@ export class Orchestrator {
         pnlUsd,
         exitReason: finalExitReason,
         txSignature,
-      }).catch(() => {});
+      }).catch((err) => {
+        executionLogger.warn({ error: err }, 'Discord notification failed for short exit');
+      });
 
       executionLogger.info({
         positionId: position.id,
@@ -1702,7 +1708,9 @@ export class Orchestrator {
         spreadPct: entryDiscount,
         sizeUsd: signal.suggestedSizeUsd,
         txSignature: entryTxSignature,
-      }).catch(() => {}); // Fire and forget
+      }).catch((err) => {
+        executionLogger.warn({ error: err }, 'Discord notification failed for entry');
+      });
     } catch (error) {
       executionLogger.error({ ticker: signal.pair.stockTicker, token: signal.buyToken.symbol, error }, 'Entry failed');
     } finally {
@@ -2286,7 +2294,9 @@ export class Orchestrator {
         pnlUsd,
         exitReason: reason,
         txSignature: sellResult?.txSignature,
-      }).catch(() => {}); // Fire and forget
+      }).catch((err) => {
+        executionLogger.warn({ error: err }, 'Discord notification failed for exit');
+      });
     } catch (error) {
       executionLogger.error({ positionId: position.id, error }, 'Exit failed');
     } finally {
