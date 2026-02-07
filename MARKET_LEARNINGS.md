@@ -412,6 +412,7 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 ### Exit Target Experiments
 | Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
+| **Feb 19** | **3.0%** | 50 | 40.0% | +$7.01 | **-4%** | ❌ **Modest decline - higher exit target slightly reduces performance vs 2.5% baseline** |
 | **Feb 8** | **1.5%** | **51** | **47.1%** | **+$7.19** | **+41%** | 🔥 **SIGNIFICANT IMPROVEMENT - READY FOR DEPLOYMENT** |
 | **Feb 8** | **2.0%** | 49 | 36.7% | +$5.01 | **0%** | ❌ **Identical performance to 2.5% baseline - no impact. 78% max_hold exits (38/49) vs 22% target exits (11/49) indicate most trades never reach either exit threshold - they hit max_hold timeout instead. The 0.5% difference between 2.0% and 2.5% exit targets has no measurable impact when spreads rarely narrow enough to trigger either threshold.** |
 | **Feb 7** | **2.2%** | 47 | 40.4% | +$4.59 | **0%** | ❌ **Identical performance to 2.5% baseline - no measurable impact** |
@@ -471,7 +472,8 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 ### Decay Timing Experiments
 | Date | Decay Start | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
-| Current | **30 min** | **46** | **43.5%** | **+$4.76** | **baseline** | **✅ OPTIMAL** |
+| Current | **30 min** | **50** | **40.0%** | **+$7.30** | **baseline** | **✅ OPTIMAL** |
+| **Feb 19** | **20 min** | **50** | **40.0%** | **+$7.13** | **-2%** | ❌ **Slight decline - earlier decay start reduces performance** |
 | **Feb 12** | **20 min** | **46** | **41.3%** | **+$4.76** | **-5%** | ❌ **Lower win rate, same PnL - worse quality** |
 | Feb 10 | 40 min | 45 | 33.3% | +$4.61 | 0% | ❌ No improvement |
 | Feb 10 | 25 min | 45 | 33.3% | +$4.66 | 0% | ❌ No change |

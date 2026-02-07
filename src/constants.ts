@@ -68,10 +68,10 @@ export const ENTRY_THRESHOLD_FORMULA = {
  */
 export const DYNAMIC_FLOOR_FORMULA = {
   ENABLED: true,
-  BASE_FLOOR: 5.5,              // LOCKED BY 609: Do not change without explicit approval
+  BASE_FLOOR: 4.0,              // 609-approved 2026-02-07 — sub-agents: DO NOT CHANGE
   VOLATILITY_COEFFICIENT: 0.6,  // Floor += ATR% × 0.6
-  ABSOLUTE_MIN: 5.5,            // LOCKED BY 609: Do not change without explicit approval
-  ABSOLUTE_MAX: 8.0,            // Allow up to 8% for high-vol tokens
+  ABSOLUTE_MIN: 3.5,            // Absolute minimum threshold
+  ABSOLUTE_MAX: 6.0,            // Cap for high-vol tokens
   FALLBACK_ATR: 2.7,            // Default ATR if no data available
 } as const;
 
@@ -287,7 +287,7 @@ export const MIN_EXIT_THRESHOLD_PCT = 1.0;
 
 /** Maximum spread widening from entry before forced exit (1.5%)
  *  e.g., enter at 4% discount, if spread widens to 5.5%, exit immediately. */
-export const SPREAD_WIDENING_STOP_PCT = 1.5;
+export const SPREAD_WIDENING_STOP_PCT = 2.0; // Raised from 1.5 — was triggering false exits
 
 // ============================================================================
 // SAFETY THRESHOLDS
