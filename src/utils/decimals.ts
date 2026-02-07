@@ -6,6 +6,7 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getMint } from '@solana/spl-token';
 import { USDC_DECIMALS, SOL_DECIMALS, USDC_MINT, SOL_MINT } from '../constants';
+import logger from '../logger';
 
 // Cache for token decimals to avoid repeated RPC calls
 const decimalCache: Map<string, number> = new Map();
@@ -53,7 +54,7 @@ export async function getTokenDecimals(
     return decimals;
   } catch (error) {
     // Default to 9 (most Solana tokens) if lookup fails
-    console.warn(`Failed to get decimals for ${mintAddress}, defaulting to 9`);
+    logger.warn({ error, mintAddress }, 'Failed to get decimals, defaulting to 9');
     return 9;
   }
 }
