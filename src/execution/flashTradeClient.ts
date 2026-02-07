@@ -358,7 +358,7 @@ async function sendFlashTransaction(
   additionalSigners: Signer[]
 ): Promise<string> {
   if (!flashClient) {
-    throw new Error('Flash Trade client not initialized');
+    throw new Error('Flash Trade client not initialized. Call initializeFlashTradeClient() first or check SOLANA_RPC_URL/WALLET_PRIVATE_KEY environment variables.');
   }
 
   const txid = await flashClient.sendTransaction(instructions, {
