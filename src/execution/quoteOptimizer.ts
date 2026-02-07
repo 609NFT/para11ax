@@ -34,6 +34,13 @@ const PRICE_IMPACT_SCORES = {
   HIGH_PENALTY: -20,
 } as const;
 
+// Tip scaling constants
+const TIP_SCALING = {
+  MAX_MULTIPLIER: 2.0,      // Maximum tip multiplier for large trades
+  MIN_MULTIPLIER: 0.5,      // Minimum tip multiplier for small trades  
+  REFERENCE_TRADE_USD: 50,  // Reference trade size for tip scaling ($50)
+} as const;
+
 export interface OptimizedQuote {
   source: 'raydium' | 'jupiter';
   outputAmount: number;
@@ -74,7 +81,10 @@ function estimateTip(tradeUsd: number, congestion: CongestionLevel): number {
   }[congestion];
 
   // Scale tip with trade size (larger trades worth higher tips)
-  const sizeFactor = Math.min(2.0, Math.max(0.5, tradeUsd / 50));
+  const sizeFactor = Math.min(
+    TIP_SCALING.MAX_MULTIPLIER, 
+    Math.max(TIP_SCALING.MIN_MULTIPLIER, tradeUsd / TIP_SCALING.REFERENCE_TRADE_USD)
+  );
   
   return baseTip * sizeFactor;
 }
