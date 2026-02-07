@@ -322,11 +322,16 @@ export function getSessionAdjustments(): {
 // HOLD TIME CONSTANTS
 // ============================================================================
 
-/** Max hold time - 60 minutes
- *  Data (7d, 494 trades): 4%+ entries held >2hr = 0% win rate, -$1.79 total.
- *  Sweet spot is 15-30min (64% WR). After 60min, losses accelerate.
- *  Changed 2026-02-05 from 4h based on real trade data. */
-export const MAX_HOLD_TIME_MS = 60 * 60 * 1000;
+/** Max hold time - 240 minutes (4 hours)
+ *  BACKTEST 2026-02-07 with volatility-adjusted entry thresholds (7d data):
+ *    60min:  20.2% WR, $0.79 PnL
+ *    90min:  23.4% WR, $5.08 PnL
+ *    120min: 30.0% WR, $12.92 PnL
+ *    180min: 37.7% WR, $13.02 PnL
+ *    240min: 43.9% WR, $17.63 PnL  <-- best
+ *  With proper entry filtering, spreads need time to fully revert.
+ *  Previous 60min was exiting mid-reversion, leaving profits on table. */
+export const MAX_HOLD_TIME_MS = 240 * 60 * 1000;
 
 /** Minimum time to hold before allowing exit (prevents quick flips) */
 export const MIN_HOLD_TIME_MS = 5 * 60 * 1000; // 5 minutes — data shows <5min exits have 10% WR vs 33% for 5-15min
@@ -335,14 +340,14 @@ export const MIN_HOLD_TIME_MS = 5 * 60 * 1000; // 5 minutes — data shows <5min
 // TIME-DECAYING EXIT THRESHOLD
 // ============================================================================
 // After DECAY_START, exit threshold linearly decays from full value to MIN_EXIT
-// With 60min max hold, decay starts at 30min and ends at 50min.
-// Changed 2026-02-05: shortened proportionally with max hold (was 2h/3.5h for 4h hold).
+// With 240min max hold, decay starts at 120min (50%) and ends at 200min (83%).
+// Proportionally scaled from original 30/50 for 60min hold.
 
-/** Time before exit threshold starts decaying (30 minutes) */
-export const EXIT_THRESHOLD_DECAY_START_MS = 30 * 60 * 1000;
+/** Time before exit threshold starts decaying (120 minutes = 50% of max hold) */
+export const EXIT_THRESHOLD_DECAY_START_MS = 120 * 60 * 1000;
 
-/** Time when exit threshold reaches minimum (50 minutes) */
-export const EXIT_THRESHOLD_DECAY_END_MS = 50 * 60 * 1000;
+/** Time when exit threshold reaches minimum (200 minutes = 83% of max hold) */
+export const EXIT_THRESHOLD_DECAY_END_MS = 200 * 60 * 1000;
 
 /** Minimum exit threshold after time decay (1.0%)
  *  Even at max decay, don't exit unless we capture at least 1% spread.
