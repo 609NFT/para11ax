@@ -384,7 +384,8 @@ The complete absence of trades demonstrates **disciplined execution**:
 ### Max Hold Time Experiments
 | Date | Max Hold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|----------|--------|----------|-----|-------------|--------|
-| Current | **60 min** | **49** | **44.9%** | **+$10.25** | **baseline** | **✅ OPTIMAL** |
+| Current | **60 min** | **46** | **37.0%** | **+$4.96** | **baseline** | **✅ OPTIMAL** |
+| **Feb 13** | **75 min** | **46** | **37.0%** | **+$4.96** | **0%** | ❌ **No improvement - 36 trades still hit max_hold limit, avg hold 220min shows most need longer than either limit** |
 | Feb 9 | **90 min** | 105 | 22.9% | +$6.52 | -36% | ❌ **Too long (94 max_hold exits, spreads widen back)** |
 | Feb 8 | **45 min** | 49 | 46.9% | +$11.64 | -9% | ❌ **Premature exits reduce PnL** |
 | Feb 7 | 75 min | 133 | 23.3% | +$5.88 | -31% | ❌ Too long (110 max_hold exits) |
@@ -394,7 +395,7 @@ The complete absence of trades demonstrates **disciplined execution**:
 
 **Key Finding**: **60-minute max hold is definitively optimal**. Comprehensive testing shows clear degradation in both directions:
 - **Shorter**: Even 45min (-9% PnL) forces premature exits on profitable trades. 30min catastrophic (-175%).
-- **Longer**: 90min (-36% PnL, 89% max_hold exits), spreads widen back during extended holds. 75min also poor.
+- **Longer**: 90min (-36% PnL, 89% max_hold exits), spreads widen back during extended holds. 75min shows no improvement (0% change).
 - **60min sweet spot**: Best balance of allowing mean reversion while preventing extended losers
 
 ### Decay Timing Experiments
