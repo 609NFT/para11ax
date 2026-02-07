@@ -373,6 +373,7 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 ### Entry Threshold Experiments
 | Date | Threshold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-----------|--------|----------|-----|-------------|--------|
+| **Feb 15** | **4.5% (4th test)** | 43 | 41.9% | +$4.98 | **-2%** | ❌ **CHANGED CONDITIONS: Latest 4.5% test shows -2% vs earlier +12% to +58%. Market conditions shifted - 4.5% advantage disappeared under current data** |
 | **Feb 15** | **4.9%** | 42 | 38.1% | +$5.21 | **+5%** | ❌ **Modest improvement below significance threshold - pattern: 4.8%(-1%) → 4.9%(+5%) → 5.0%(-14%) shows inconsistency above 4.7%** |
 | **Feb 13** | **4.8%** | 42 | 33.3% | +$5.05 | **-1%** | ❌ **Slight decline - continues degradation pattern above 4.7%, confirms 4.5% optimal** |
 | **Feb 13** | **4.7%** | 43 | 34.9% | +$5.44 | **+17%** | ❌ **Modest improvement - pattern shows degradation beyond 4.6%, confirms 4.5% optimal** |
