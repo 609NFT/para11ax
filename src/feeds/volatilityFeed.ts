@@ -6,7 +6,7 @@
 
 import axios from 'axios';
 import logger from '../logger';
-import { STOCK_STOP_LOSS_DEFAULT_PCT, DYNAMIC_FLOOR_FORMULA, MARKET_REGIME } from '../constants';
+import { STOCK_STOP_LOSS_DEFAULT_PCT, DYNAMIC_FLOOR_FORMULA, MARKET_REGIME, getSessionAdjustments } from '../constants';
 import { getDatabase } from '../db/database';
 import { fetchAllHistoricalVolatilityFromSupabase } from '../db/supabaseClient';
 import { isTokenEnabledByLiquidity } from '../liquidity/liquidityChecker';
@@ -677,12 +677,15 @@ export function getDynamicFloor(symbol: string): number {
   // Get market regime multiplier
   const regimeMultiplier = getMarketRegimeMultiplier();
 
+  // Get session-based adjustments (time of day)
+  const session = getSessionAdjustments();
+
   // Calculate raw floor
   const rawFloor = DYNAMIC_FLOOR_FORMULA.BASE_FLOOR +
     (atrPct * DYNAMIC_FLOOR_FORMULA.VOLATILITY_COEFFICIENT);
 
-  // Apply regime multiplier
-  const adjustedFloor = rawFloor * regimeMultiplier;
+  // Apply regime multiplier AND session floor multiplier
+  const adjustedFloor = rawFloor * regimeMultiplier * session.floorMultiplier;
 
   // Clamp to absolute bounds
   const finalFloor = Math.max(
@@ -695,6 +698,8 @@ export function getDynamicFloor(symbol: string): number {
     atrPct: atrPct.toFixed(2),
     rawFloor: rawFloor.toFixed(2),
     regimeMultiplier,
+    session: session.session,
+    sessionMultiplier: session.floorMultiplier,
     finalFloor: finalFloor.toFixed(2),
   }, 'Dynamic floor calculated');
 

@@ -246,6 +246,78 @@ export const AVOID_TRADING_HOURS_UTC = [12, 13, 14]; // 7-10 AM EST market open 
  *  Require additional 1.0% spread buffer during these periods */
 export const HIGH_THRESHOLD_HOURS_UTC = [10, 11, 15, 16]; // Pre-market, lunch hour chaos
 
+/**
+ * Trading Session Parameters
+ * Different strategies for different market conditions:
+ * - OVERNIGHT: Asian/early European, less arbitrage competition, steadier spreads
+ * - PREMARKET: 4-9:30 AM EST, volatile, unpredictable
+ * - MARKET: 9:30 AM - 4 PM EST, most activity, tightest spreads
+ * - AFTERHOURS: 4-8 PM EST, lower liquidity
+ */
+export const TRADING_SESSIONS = {
+  OVERNIGHT: {
+    hours: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], // 00:00-10:00 UTC (7 PM - 5 AM EST)
+    floorMultiplier: 0.90,    // 10% lower thresholds - steadier markets
+    maxHoldMultiplier: 1.5,   // Can hold 50% longer - slower mean reversion
+    positionMultiplier: 0.8,  // Slightly smaller positions - lower liquidity
+  },
+  MARKET_OPEN: {
+    hours: [14, 15], // 14:00-16:00 UTC (9:30-11 AM EST)
+    floorMultiplier: 1.25,    // 25% higher thresholds - chaotic opens
+    maxHoldMultiplier: 0.75,  // Exit faster - rapid moves
+    positionMultiplier: 0.6,  // Smaller positions - high volatility
+  },
+  MARKET_HOURS: {
+    hours: [16, 17, 18, 19, 20], // 16:00-21:00 UTC (11 AM - 4 PM EST)
+    floorMultiplier: 1.0,     // Normal thresholds
+    maxHoldMultiplier: 1.0,   // Normal hold
+    positionMultiplier: 1.0,  // Normal position size
+  },
+  AFTERHOURS: {
+    hours: [21, 22, 23], // 21:00-00:00 UTC (4-7 PM EST)
+    floorMultiplier: 0.95,    // Slightly lower - reduced activity
+    maxHoldMultiplier: 1.25,  // Longer holds OK
+    positionMultiplier: 0.7,  // Smaller - lower liquidity
+  },
+} as const;
+
+/** Enable/disable session-based parameter adjustments */
+export const SESSION_ADJUSTMENTS_ENABLED = true;
+
+/**
+ * Get trading session adjustments for current hour
+ * Returns multipliers for floor, max hold time, and position size
+ */
+export function getSessionAdjustments(): {
+  session: string;
+  floorMultiplier: number;
+  maxHoldMultiplier: number;
+  positionMultiplier: number;
+} {
+  if (!SESSION_ADJUSTMENTS_ENABLED) {
+    return { session: 'disabled', floorMultiplier: 1.0, maxHoldMultiplier: 1.0, positionMultiplier: 1.0 };
+  }
+
+  const hour = new Date().getUTCHours();
+
+  // Check each session's hour range
+  if ((TRADING_SESSIONS.OVERNIGHT.hours as readonly number[]).includes(hour)) {
+    return { session: 'overnight', ...TRADING_SESSIONS.OVERNIGHT };
+  }
+  if ((TRADING_SESSIONS.MARKET_OPEN.hours as readonly number[]).includes(hour)) {
+    return { session: 'market_open', ...TRADING_SESSIONS.MARKET_OPEN };
+  }
+  if ((TRADING_SESSIONS.MARKET_HOURS.hours as readonly number[]).includes(hour)) {
+    return { session: 'market_hours', ...TRADING_SESSIONS.MARKET_HOURS };
+  }
+  if ((TRADING_SESSIONS.AFTERHOURS.hours as readonly number[]).includes(hour)) {
+    return { session: 'afterhours', ...TRADING_SESSIONS.AFTERHOURS };
+  }
+
+  // Default (shouldn't happen but just in case)
+  return { session: 'default', floorMultiplier: 1.0, maxHoldMultiplier: 1.0, positionMultiplier: 1.0 };
+}
+
 // ============================================================================
 // HOLD TIME CONSTANTS
 // ============================================================================

@@ -32,6 +32,7 @@ import {
   STOP_LOSS_GRACE_PERIOD_MS,
   MAX_HOLD_TIME_MS,
   MAX_REASONABLE_DEVIATION_PCT,
+  getSessionAdjustments,
   MAX_REASONABLE_DISCOUNT,
   MIN_LIQUIDITY_USD,
   MIN_EXPECTED_PROFIT_USD,
@@ -814,12 +815,14 @@ export class MeanReversionSignalGenerator {
       reasons.push(`✓ Liquidity: $${(checkerTvl / 1000).toFixed(0)}K`);
     }
 
-    // Calculate position size based on TVL tier, spread, and volatility
+    // Calculate position size based on TVL tier, spread, volatility, and trading session
     // Higher volatility stocks get smaller positions (risk parity)
     // Higher spreads get larger positions (better risk-adjusted return)
+    // Different sessions have different liquidity/risk profiles
     const tvlBasedSize = getAdaptivePositionSize(token.symbol, Math.abs(discount));
     const volatilityMultiplier = getVolatilityPositionMultiplier(pair.stockTicker);
-    const volatilityAdjustedSize = tvlBasedSize * volatilityMultiplier;
+    const sessionAdjustments = getSessionAdjustments();
+    const volatilityAdjustedSize = tvlBasedSize * volatilityMultiplier * sessionAdjustments.positionMultiplier;
     const liquidityBasedSize = checkerTvl * config.liquidityFraction;
     const suggestedSizeUsd = Math.min(volatilityAdjustedSize, liquidityBasedSize);
 
@@ -1668,7 +1671,9 @@ export class MeanReversionSignalGenerator {
     //          But if stock dropped 0.8%, we actually lost money (NAV degradation)
     // Only apply this guard if we've captured > 0.3% spread (meaningful narrowing)
     // EXCEPTION: Never block forced exits (max_hold_time, spread_widening_stop, stop_loss)
-    const isPastMaxHold = holdTimeMs > MAX_HOLD_TIME_MS;
+    const session = getSessionAdjustments();
+    const adjustedMaxHold = MAX_HOLD_TIME_MS * session.maxHoldMultiplier;
+    const isPastMaxHold = holdTimeMs > adjustedMaxHold;
     const isSpreadWidening = position.entrySpreadPct !== undefined &&
       currentDiscount > position.entrySpreadPct + SPREAD_WIDENING_STOP_PCT;
     const isStopLoss = currentDiscount <= stopLossDiscountPct && holdTimeMs >= STOP_LOSS_GRACE_PERIOD_MS;
@@ -1952,8 +1957,10 @@ export class MeanReversionSignalGenerator {
       };
     }
 
-    // 5b. Max hold time - 60 minutes
-    if (holdTimeMs > MAX_HOLD_TIME_MS) {
+    // 5b. Max hold time - adjusted by trading session
+    const sessionForHold = getSessionAdjustments();
+    const effectiveMaxHold = MAX_HOLD_TIME_MS * sessionForHold.maxHoldMultiplier;
+    if (holdTimeMs > effectiveMaxHold) {
       signalLogger.info({
         ticker: position.stockTicker,
         token: position.buySymbol,
@@ -1961,7 +1968,8 @@ export class MeanReversionSignalGenerator {
         currentTokenPrice: currentTokenPrice.toFixed(2),
         tokenAppreciationPct: tokenAppreciationPct.toFixed(2),
         holdTimeMin: (holdTimeMs / 60000).toFixed(1),
-        maxHoldMin: (MAX_HOLD_TIME_MS / 60000).toFixed(0),
+        maxHoldMin: (effectiveMaxHold / 60000).toFixed(0),
+        session: sessionForHold.session,
       }, 'Max hold time reached - exiting at current price');
       this.trailingStops.delete(position.id); // Clean up trailing state
       return {
