@@ -373,6 +373,7 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 ### Entry Threshold Experiments
 | Date | Threshold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-----------|--------|----------|-----|-------------|--------|
+| **Feb 8** | **3.9%** | 49 | 42.9% | +$4.93 | **-3%** | ❌ **Second test of 3.9% threshold confirms degradation below 4.0%. Trade volume increases (+4%) but win rate drops 44.7%→42.9% (-4% relative) with PnL decline. 76% max_hold exits (37/49) validate that lower thresholds force unprofitable extended holds. Consistent with previous 3.9% test (-4%), confirming 4.0% as optimal minimum** |
 | **Feb 17** | **3.9%** | 48 | 43.8% | +$4.87 | **-4%** | ❌ **Fills gap between 3.8% (-57%) and 4.0% (baseline). Trade volume increases slightly (47→48) but win rate drops (44.7%→43.8%) and PnL degrades (-4%). 79% max_hold exits demonstrate lower thresholds force unprofitable extended holds. Validates 4.0% as critical minimum threshold** |
 | **Feb 17** | **4.1%** | 48 | 43.8% | +$4.86 | **-4%** | ❌ **Modest decline - fills gap between 4.0% baseline and 4.2% (-1%). Small volume increase (47→48) but lower win rate (44.7%→43.8%) and PnL degradation. Pattern confirms 4.0% remains optimal with performance plateau/decline in 4.0-4.2% range** |
 | **Feb 17** | **4.2%** | 46 | 43.5% | +$4.46 | **-1%** | ❌ **No improvement: 2 fewer trades (48→46) and lower win rate (45.8%→43.5% = -5% relative) with marginally lower PnL. Confirms performance plateau around 4.0-4.2% range** |
