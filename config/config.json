@@ -266,7 +266,7 @@
       "symbol": "xGLD",
       "mint": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
       "stockTicker": "GLD",
-      "enabled": true,
+      "enabled": false,
       "poolAddress": "9742CEMLXgRdWPZRGzd9CwBgVjkKVVAn4yZUfzHCHJgs",
       "decimals": 8
     },
