@@ -37,6 +37,7 @@ type DiscountSnapshot = PairSpread;
 // Cache TTL constants
 const CACHE_TTL_SHORT = 30000;   // 30 seconds for frequently changing data
 const CACHE_TTL_MEDIUM = 300000; // 5 minutes for stable data
+const CACHE_TTL_PRICE = 10000;   // 10 seconds for price data that needs to be fresh
 
 export class DatabaseManager {
   private initialized: boolean = false;
@@ -266,7 +267,7 @@ export class DatabaseManager {
     if (cached) return cached;
 
     const result = await fetchLatestDiscount(stockTicker, tokenSymbol);
-    if (result) this.cache.set(cacheKey, result, 10000); // 10s TTL - price data needs to be fresh
+    if (result) this.cache.set(cacheKey, result, CACHE_TTL_PRICE); // 10s TTL - price data needs to be fresh
     return result;
   }
 
