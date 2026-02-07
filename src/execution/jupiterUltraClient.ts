@@ -12,7 +12,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { VersionedTransaction, Keypair } from '@solana/web3.js';
 import { executionLogger } from '../logger';
-import { USDC_MINT, getSolPriceUsd } from '../constants';
+import { USDC_MINT, USDC_DECIMALS, getSolPriceUsd } from '../constants';
 import { TradeResult, FeeBreakdown } from '../types';
 import { recordApiCall } from '../feeds/endpointTracker';
 
@@ -236,7 +236,7 @@ export class JupiterUltraClient {
     if (!order) {
       return {
         success: false,
-        inputAmount: side === 'buy' ? amount / 1e6 : amount, // Convert back to human readable for buys
+        inputAmount: side === 'buy' ? amount / Math.pow(10, USDC_DECIMALS) : amount, // Convert back to human readable for buys
         outputAmount: 0,
         expectedOutput: 0,
         slippageActual: 0,
@@ -257,7 +257,7 @@ export class JupiterUltraClient {
       executionLogger.error({ error: errMsg }, 'Failed to sign Ultra transaction');
       return {
         success: false,
-        inputAmount: side === 'buy' ? amount / 1e6 : amount,
+        inputAmount: side === 'buy' ? amount / Math.pow(10, USDC_DECIMALS) : amount,
         outputAmount: 0,
         expectedOutput: parseInt(order.outAmount),
         slippageActual: 0,
@@ -272,7 +272,7 @@ export class JupiterUltraClient {
     if (!result) {
       return {
         success: false,
-        inputAmount: side === 'buy' ? amount / 1e6 : amount,
+        inputAmount: side === 'buy' ? amount / Math.pow(10, USDC_DECIMALS) : amount,
         outputAmount: 0,
         expectedOutput: parseInt(order.outAmount),
         slippageActual: 0,
@@ -284,7 +284,7 @@ export class JupiterUltraClient {
     if (result.status !== 'Success') {
       return {
         success: false,
-        inputAmount: side === 'buy' ? amount / 1e6 : amount,
+        inputAmount: side === 'buy' ? amount / Math.pow(10, USDC_DECIMALS) : amount,
         outputAmount: 0,
         expectedOutput: parseInt(order.outAmount),
         slippageActual: 0,
@@ -300,7 +300,7 @@ export class JupiterUltraClient {
 
     // Calculate fees from Ultra response
     const solPriceUsd = await getSolPriceUsd();
-    const inputAmountUsd = side === 'buy' ? inAmount / 1e6 : 0; // For buys, input is USDC
+    const inputAmountUsd = side === 'buy' ? inAmount / Math.pow(10, USDC_DECIMALS) : 0; // For buys, input is USDC
     const priceImpactPct = order.priceImpactPct ? parseFloat(order.priceImpactPct) : 0;
     const priceImpactUsd = inputAmountUsd * (priceImpactPct / 100);
 
@@ -309,7 +309,7 @@ export class JupiterUltraClient {
     if (order.platformFee) {
       // Platform fee is in input token units
       const platformFeeRaw = parseInt(order.platformFee.amount);
-      platformFeeUsd = side === 'buy' ? platformFeeRaw / 1e6 : 0; // USDC decimals
+      platformFeeUsd = side === 'buy' ? platformFeeRaw / Math.pow(10, USDC_DECIMALS) : 0; // USDC decimals
     }
 
     // Build fee breakdown
@@ -344,7 +344,7 @@ export class JupiterUltraClient {
     return {
       success: true,
       txSignature: result.signature,
-      inputAmount: side === 'buy' ? inAmount / 1e6 : inAmount, // USDC decimals for buys
+      inputAmount: side === 'buy' ? inAmount / Math.pow(10, USDC_DECIMALS) : inAmount, // USDC decimals for buys
       outputAmount: outAmount,
       expectedOutput,
       slippageActual: 0, // Ultra handles slippage internally with predictive execution
@@ -365,7 +365,7 @@ export class JupiterUltraClient {
     wallet: Keypair
   ): Promise<TradeResult> {
     // Convert USDC to raw amount (6 decimals)
-    const rawAmount = Math.floor(usdcAmount * 1e6);
+    const rawAmount = Math.floor(usdcAmount * Math.pow(10, USDC_DECIMALS));
 
     executionLogger.info({
       tokenMint: tokenMint.slice(0, 8),
