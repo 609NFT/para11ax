@@ -367,6 +367,10 @@ export class Orchestrator {
       logger.warn('Feed health check failed - some feeds may not be available');
     }
 
+    // Pre-warm volatility BEFORE liquidity refresh so dynamic floors use real ATR values
+    logger.info('Pre-warming volatility cache from Supabase...');
+    await prewarmInternalVolatility();
+
     // Initialize liquidity-based thresholds with timeout protection
     logger.info('Fetching pool liquidity (with 2 minute timeout)...');
     logger.info('Fetching pool liquidity for dynamic thresholds...');
@@ -766,10 +770,8 @@ export class Orchestrator {
 
     logger.info('Starting trading loop...');
 
-    // Pre-warm volatility from Supabase price history (works for ALL tokens including GOLD)
-    await prewarmInternalVolatility();
-
-    // NOTE: API volatility refresh is now initialized AFTER liquidity refresh completes
+    // NOTE: Volatility is pre-warmed during init() BEFORE liquidity refresh
+    // This ensures dynamic floors use real ATR values instead of fallback
     // This ensures we only fetch for stocks with TVL-enabled tokens (~14 vs 36 stocks)
     // See liquidityChecker.ts refreshLiquidity() for the initialization call
 
