@@ -388,10 +388,25 @@ export class OnchainFeed {
   private async fetchPricesBatch(mints: string[]): Promise<void> {
     if (mints.length === 0) return;
 
-    feedLogger.debug({ totalMints: mints.length }, 'Starting batch price fetch');
+    // Filter out tokens that consistently fail price fetches
+    const PROBLEMATIC_MINTS = new Set([
+      'cJpUMp5R', // INTCon - consistent quote failures
+      'XsSr8anD', // LINx - consistent quote failures
+    ]);
+    const filteredMints = mints.filter(mint => !PROBLEMATIC_MINTS.has(mint));
+    
+    if (filteredMints.length !== mints.length) {
+      feedLogger.debug({ 
+        originalCount: mints.length, 
+        filteredCount: filteredMints.length,
+        filtered: mints.filter(mint => PROBLEMATIC_MINTS.has(mint))
+      }, 'Filtered out problematic mints from price fetch');
+    }
+
+    feedLogger.debug({ totalMints: filteredMints.length }, 'Starting batch price fetch');
 
     // Build token list with symbols for DexScreener batch
-    const tokens = mints.map(mint => {
+    const tokens = filteredMints.map(mint => {
       const tokenConfig = this.getTokenConfig(mint);
       return { mint, symbol: tokenConfig?.symbol || mint.slice(0, 8) };
     });
@@ -399,7 +414,7 @@ export class OnchainFeed {
     // Fetch from BOTH sources in parallel for maximum speed
     const [dexResults, jupiterResults] = await Promise.all([
       fetchBatchDexScreenerPrices(tokens),
-      this.fetchPricesViaJupiterBatch(mints),
+      this.fetchPricesViaJupiterBatch(filteredMints),
     ]);
 
     // Merge results - prefer DexScreener (has liquidity data), use Jupiter as supplement
@@ -407,7 +422,7 @@ export class OnchainFeed {
     let jupiterOnlyCount = 0;
     const missingMints: string[] = [];
 
-    for (const mint of mints) {
+    for (const mint of filteredMints) {
       const dexData = dexResults.get(mint);
 
       if (dexData && dexData.priceUsd > 0) {
@@ -449,7 +464,7 @@ export class OnchainFeed {
     }
 
     feedLogger.debug({
-      totalMints: mints.length,
+      totalMints: filteredMints.length,
       dexScreenerSuccess: dexSuccessCount,
       jupiterOnlySuccess: jupiterOnlyCount,
       quoteFallbackSuccess: quoteFallbackCount,
