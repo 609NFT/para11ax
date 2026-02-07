@@ -1,5 +1,18 @@
 # Code Improvements Log
 
+## 2026-02-07 — Stock Feed Error Logging (commit ccf5490)
+
+**Fixed:** Replaced bare catch blocks in stock feed connectivity test with proper error logging:
+- Polygon API connectivity test failure now logs warning with error message
+- Finnhub API connectivity test failure now logs warning with error message
+- Added TypeScript-safe error handling (`error instanceof Error ? error.message : String(error)`)
+
+**Impact:** Better visibility into stock feed connectivity issues during troubleshooting
+
+**Files Changed:** `src/feeds/stockFeed.ts`
+
+**Build:** ✅ Clean compile after TypeScript error fix
+
 ## 2026-02-07 — Discord Notification Error Handling (commit ae8a26f)
 
 **Fixed:** Added error logging to critical Discord notifications that were using fire-and-forget pattern:
