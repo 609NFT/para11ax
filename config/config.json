@@ -138,7 +138,7 @@
       "symbol": "xAZN",
       "mint": "Xs3ZFkPYT2BN7qBMqf1j1bfTeTm1rFzEFSsQ1z3wAKU",
       "stockTicker": "AZN",
-      "enabled": true,
+      "enabled": false,
       "poolAddress": "BpqSiDKD3PKhg65M35wGML84r2kkV4MFEhikGbLNM5sc",
       "decimals": 8
     },
@@ -154,7 +154,7 @@
       "symbol": "xJNJ",
       "mint": "XsGVi5eo1Dh2zUpic4qACcjuWGjNv8GCt3dm5XcX6Dn",
       "stockTicker": "JNJ",
-      "enabled": true,
+      "enabled": false,
       "poolAddress": "HesBHBAuMEz7m4iFvqpGWf3amSR68RcX7r9onUmEV5jJ",
       "decimals": 8
     },
