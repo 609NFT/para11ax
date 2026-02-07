@@ -679,7 +679,8 @@ export class StockFeed {
       try {
         const result = await this.fetchFromAlphaVantage(testSymbol);
         if (result) return true;
-      } catch {
+      } catch (error) {
+        feedLogger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Alpha Vantage connectivity test failed');
         // Continue to next source
       }
     }
