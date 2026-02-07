@@ -241,8 +241,8 @@ export async function initializeFlashClient(): Promise<boolean> {
         const secretKey = bs58.default.decode(privateKeyString);
         keypair = Keypair.fromSecretKey(secretKey);
       }
-    } catch (e) {
-      logger.error({ error: e }, 'Failed to parse SOLANA_PRIVATE_KEY');
+    } catch (error) {
+      logger.error({ error }, 'Failed to parse SOLANA_PRIVATE_KEY');
       flashInitState = 'failed';
       return false;
     }
