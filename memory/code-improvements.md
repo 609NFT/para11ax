@@ -56,3 +56,22 @@
 - Change committed to git: `6050799`
 
 **Impact:** Small improvement to code readability and maintainability.
+
+## 2026-02-07 - Extract time constants to reduce magic numbers (12:09 PM)
+
+**What was fixed:**
+- Created `src/utils/timeConstants.ts` with standardized time constants (MS_PER_DAY, MS_PER_WEEK, etc.)
+- Replaced magic numbers `24 * 60 * 60 * 1000` and `7 * 24 * 60 * 60 * 1000` in `src/db/database.ts`
+- Updated 4 function signatures and 1 variable assignment to use named constants
+
+**Technical details:**
+- Added constants: MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY, MS_PER_WEEK, MS_PER_30_DAYS, MS_PER_YEAR
+- Modified functions: `getRollingDiscountHistory()`, `getAllRollingDiscountHistory()`, `getAllPercentileThresholds()`
+- Pattern found in 25+ files across codebase - started with database.ts as highest impact
+
+**Verification:**
+- TypeScript build successful (`npm run build`)
+- PM2 reload completed successfully
+- Change committed to git: `a5799f9`
+
+**Impact:** Meaningful improvement to maintainability - eliminates error-prone time calculations and provides foundation for future cleanup of similar magic numbers across codebase.
