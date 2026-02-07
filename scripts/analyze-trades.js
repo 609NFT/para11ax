@@ -1,68 +1,135 @@
-const { connectSupabase } = require('../dist/db/supabaseClient');
+const fs = require('fs');
+const { getTradesPool } = require('../dist/db/supabaseClient.js');
 
-(async () => {
-  const supabase = await connectSupabase();
-  const { data: trades } = await supabase
-    .from('trades')
-    .select('*')
-    .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-    .order('created_at', { ascending: false });
+async function analyzeTrades() {
+  const pool = getTradesPool();
+  
+  const result = await pool.query(
+    'SELECT * FROM mean_reversion_positions ORDER BY entry_timestamp DESC LIMIT 50'
+  );
+  
+  const trades = result.rows;
+  
+  console.log(`\n=== LAST 50 TRADES ANALYSIS ===`);
+  console.log(`Total trades: ${trades.length}`);
+  
+  if (trades.length === 0) {
+    console.log('No recent trades found');
+    return;
+  }
+  
+  // Filter only closed trades
+  const closedTrades = trades.filter(t => t.status === 'closed');
+  console.log(`Closed trades: ${closedTrades.length}`);
+  
+  if (closedTrades.length === 0) {
+    console.log('No closed trades found');
+    return;
+  }
+  
+  // Calculate basic stats
+  const profitable = closedTrades.filter(t => t.pnl_usd > 0);
+  const winRate = (profitable.length / closedTrades.length * 100).toFixed(1);
+  const totalPnl = closedTrades.reduce((sum, t) => sum + t.pnl_usd, 0);
+  const avgPnl = (totalPnl / closedTrades.length).toFixed(2);
+  
+  console.log(`Win rate: ${winRate}% (${profitable.length}/${closedTrades.length})`);
+  console.log(`Total PnL: $${totalPnl.toFixed(2)}`);
+  console.log(`Avg PnL: $${avgPnl}`);
+  
+  // Analyze by symbol
+  const bySymbol = {};
+  closedTrades.forEach(t => {
+    if (!bySymbol[t.stock_ticker]) {
+      bySymbol[t.stock_ticker] = { trades: [], pnl: 0, wins: 0 };
+    }
+    bySymbol[t.stock_ticker].trades.push(t);
+    bySymbol[t.stock_ticker].pnl += t.pnl_usd;
+    if (t.pnl_usd > 0) bySymbol[t.stock_ticker].wins++;
+  });
+  
+  console.log('\n=== BY SYMBOL ===');
+  Object.entries(bySymbol).forEach(([symbol, data]) => {
+    const winRate = (data.wins / data.trades.length * 100).toFixed(1);
+    console.log(`${symbol}: ${data.trades.length} trades, ${winRate}% WR, $${data.pnl.toFixed(2)} PnL`);
+  });
+  
+  // Analyze exit reasons
+  const exitReasons = {};
+  closedTrades.forEach(t => {
+    const reason = t.exit_reason || 'unknown';
+    if (!exitReasons[reason]) exitReasons[reason] = { count: 0, pnl: 0 };
+    exitReasons[reason].count++;
+    exitReasons[reason].pnl += t.pnl_usd;
+  });
+  
+  console.log('\n=== EXIT REASONS ===');
+  Object.entries(exitReasons).forEach(([reason, data]) => {
+    const avgPnl = (data.pnl / data.count).toFixed(2);
+    console.log(`${reason}: ${data.count} trades, avg $${avgPnl}`);
+  });
+  
+  // Check for concerning patterns
+  console.log('\n=== PATTERN ANALYSIS ===');
+  
+  // Recent performance (last 10 closed trades)
+  const recent10 = closedTrades.slice(0, 10);
+  const recent10Wins = recent10.filter(t => t.pnl_usd > 0).length;
+  const recent10Pnl = recent10.reduce((sum, t) => sum + t.pnl_usd, 0);
+  console.log(`Last 10 trades: ${recent10Wins}/10 wins, $${recent10Pnl.toFixed(2)} PnL`);
+  
+  // Check for entry discount effectiveness
+  const avgEntryDiscount = closedTrades.reduce((sum, t) => sum + Math.abs(t.entry_spread_pct), 0) / closedTrades.length;
+  console.log(`Avg entry discount: ${avgEntryDiscount.toFixed(2)}%`);
+  
+  // Check hold times - handle bigint timestamps
+  const avgHoldTime = closedTrades.reduce((sum, t) => {
+    const entryMs = typeof t.entry_timestamp === 'string' ? parseInt(t.entry_timestamp) : t.entry_timestamp;
+    const exitMs = typeof t.exit_timestamp === 'string' ? parseInt(t.exit_timestamp) : t.exit_timestamp;
+    const hold = exitMs - entryMs;
+    return sum + hold;
+  }, 0) / closedTrades.length;
+  console.log(`Avg hold time: ${(avgHoldTime / 1000 / 60).toFixed(1)} minutes`);
+  
+  // Look for losses with profit_target exit (indicates bugs)
+  const profitTargetLosses = closedTrades.filter(t => t.exit_reason === 'profit_target' && t.pnl_usd < 0);
+  if (profitTargetLosses.length > 0) {
+    console.log(`\n🚨 PROFIT TARGET LOSSES: ${profitTargetLosses.length} trades`);
+    profitTargetLosses.slice(0, 3).forEach(t => {
+      console.log(`  ${t.stock_ticker}: entry ${t.entry_spread_pct.toFixed(2)}%, exit ${(t.exit_spread_pct || 0).toFixed(2)}%, PnL $${t.pnl_usd.toFixed(2)}`);
+    });
+  }
+  
+  // Check for patterns in losses
+  const losses = closedTrades.filter(t => t.pnl_usd < 0);
+  if (losses.length > 0) {
+    console.log(`\n=== LOSS ANALYSIS ===`);
+    console.log(`Total losses: ${losses.length}`);
     
-  console.log('=== LAST 7 DAYS ANALYSIS ===');
-  console.log('Total trades:', trades.length);
+    // Group losses by exit reason
+    const lossReasons = {};
+    losses.forEach(t => {
+      const reason = t.exit_reason || 'unknown';
+      if (!lossReasons[reason]) lossReasons[reason] = 0;
+      lossReasons[reason]++;
+    });
+    
+    Object.entries(lossReasons).forEach(([reason, count]) => {
+      console.log(`  ${reason}: ${count} losses`);
+    });
+  }
   
-  // Token performance
-  const byToken = {};
-  trades.forEach(t => {
-    if (!byToken[t.token_symbol]) byToken[t.token_symbol] = { count: 0, pnl: 0, wins: 0 };
-    byToken[t.token_symbol].count++;
-    byToken[t.token_symbol].pnl += parseFloat(t.net_pnl || 0);
-    if (parseFloat(t.net_pnl || 0) > 0) byToken[t.token_symbol].wins++;
-  });
-  
-  console.log('\n=== TOKEN PERFORMANCE ===');
-  Object.entries(byToken).sort((a,b) => b[1].pnl - a[1].pnl).forEach(([token, stats]) => {
-    const wr = (stats.wins / stats.count * 100).toFixed(1);
-    console.log(`${token}: ${stats.count} trades, ${wr}% WR, $${stats.pnl.toFixed(2)} PnL`);
-  });
-  
-  // Time pattern analysis
-  const hourly = {};
-  trades.forEach(t => {
-    const hour = new Date(t.created_at).getUTCHours();
-    if (!hourly[hour]) hourly[hour] = { count: 0, pnl: 0, wins: 0 };
-    hourly[hour].count++;
-    hourly[hour].pnl += parseFloat(t.net_pnl || 0);
-    if (parseFloat(t.net_pnl || 0) > 0) hourly[hour].wins++;
-  });
-  
-  console.log('\n=== TIME PATTERNS (UTC) ===');
-  Object.entries(hourly).sort((a,b) => a[0] - b[0]).forEach(([hour, stats]) => {
-    if (stats.count > 2) {
-      const wr = (stats.wins / stats.count * 100).toFixed(1);
-      console.log(`${hour.padStart(2,'0')}:00: ${stats.count} trades, ${wr}% WR, $${stats.pnl.toFixed(2)}`);
-    }
-  });
-  
-  // Entry spread analysis
-  const spreadBuckets = { '0-2%': [], '2-4%': [], '4-6%': [], '6%+': [] };
-  trades.forEach(t => {
-    const spread = Math.abs(parseFloat(t.entry_spread_pct || 0));
-    if (spread < 2) spreadBuckets['0-2%'].push(t);
-    else if (spread < 4) spreadBuckets['2-4%'].push(t);
-    else if (spread < 6) spreadBuckets['4-6%'].push(t);
-    else spreadBuckets['6%+'].push(t);
-  });
-  
-  console.log('\n=== ENTRY SPREAD ANALYSIS ===');
-  Object.entries(spreadBuckets).forEach(([range, trades]) => {
-    if (trades.length > 0) {
-      const wins = trades.filter(t => parseFloat(t.net_pnl || 0) > 0).length;
-      const totalPnl = trades.reduce((sum, t) => sum + parseFloat(t.net_pnl || 0), 0);
-      const wr = (wins / trades.length * 100).toFixed(1);
-      console.log(`${range}: ${trades.length} trades, ${wr}% WR, $${totalPnl.toFixed(2)} PnL`);
-    }
-  });
-  
-  process.exit(0);
-})();
+  // Check for open positions
+  const openTrades = trades.filter(t => t.status === 'open');
+  if (openTrades.length > 0) {
+    console.log(`\n=== OPEN POSITIONS ===`);
+    console.log(`Open positions: ${openTrades.length}`);
+    openTrades.forEach(t => {
+      const ageMs = Date.now() - (typeof t.entry_timestamp === 'string' ? parseInt(t.entry_timestamp) : t.entry_timestamp);
+      const ageMin = (ageMs / 1000 / 60).toFixed(1);
+      console.log(`  ${t.stock_ticker}: ${t.entry_spread_pct.toFixed(2)}% spread, ${ageMin}min old, $${t.size_usd.toFixed(0)}`);
+    });
+  }
+}
+
+analyzeTrades().catch(console.error);
