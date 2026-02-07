@@ -90,6 +90,7 @@ async function main(): Promise<void> {
 }
 
 // Run
-main().catch(() => {
+main().catch((error) => {
+  logger.error({ error }, 'Failed to start bot - uncaught error');
   process.exit(1);
 });
