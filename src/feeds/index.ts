@@ -34,19 +34,7 @@ export class FeedAggregator {
 
     // Subscribe to all configured tokens
     const config = getConfigSync();
-    
-    // Only subscribe to tokens from config.json, not DB tokens
-    // DB tokens can cause Jupiter API failures for unknown/illiquid tokens
-    const configFile = JSON.parse(require('fs').readFileSync(require('path').resolve('config/config.json'), 'utf8'));
-    const configTokenMints = new Set(configFile.tokens?.map((t: any) => t.mint) || []);
-    
     for (const token of config.tokens) {
-      // Skip tokens not in original config.json (likely from Supabase)
-      if (!configTokenMints.has(token.mint)) {
-        feedLogger.debug({ symbol: token.symbol, mint: token.mint.slice(0, 8) }, 'Skipping DB token (not in config.json)');
-        continue;
-      }
-      
       if (token.enabled) {
         await this.subscribeToToken(token);
       }
