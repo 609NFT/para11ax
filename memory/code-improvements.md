@@ -1,5 +1,14 @@
 # Code Improvements Log
 
+## 2026-02-07 — 9:54 PM UTC
+
+### Fixed: Enhanced Error Message Context
+- **Issue**: Flash Trade client initialization error message was generic: "Flash Trade client not initialized"
+- **Fix**: Added troubleshooting context explaining potential causes and solutions
+- **New message**: "Flash Trade client not initialized. Call initializeFlashTradeClient() first or check SOLANA_RPC_URL/WALLET_PRIVATE_KEY environment variables."
+- **Impact**: Improves debugging experience when Flash Trade integration fails
+- **Commit**: `22c4f88` — "chore: improve Flash Trade client error message with troubleshooting context"
+
 ## 2026-02-07 — 9:21 PM UTC
 
 ### Fixed: Missing JSDoc for Public Function
