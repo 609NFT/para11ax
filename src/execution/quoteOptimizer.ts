@@ -94,6 +94,9 @@ function estimateTip(tradeUsd: number, congestion: CongestionLevel): number {
  *
  * Uses simple time-based rules since most Solana activity follows Western trading hours.
  * TODO: Could integrate with Solana RPC for real congestion metrics
+ *       - Monitor recent slot processing times via getRecentPriorityFeeStatistics
+ *       - Track transaction confirmation latency
+ *       - Use prioritization fee percentiles as congestion proxy
  *
  * @returns {CongestionLevel} Current estimated congestion level
  */
