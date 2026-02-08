@@ -40,6 +40,12 @@ function getTokenPool(): Pool {
   return tokenPool;
 }
 
+/**
+ * Get the singleton connection pool for the trades database
+ * 
+ * @returns Postgres connection pool for trades data
+ * @throws Error if TRADES_DB_URL environment variable is not set
+ */
 export function getTradesPool(): Pool {
   if (!tradesPool) {
     const connectionString = process.env.TRADES_DB_URL;
