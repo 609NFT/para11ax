@@ -372,6 +372,11 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 
 ## Backtest Experiments
 
+### Exit Target Experiments (Feb 8, 2026)
+| Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|-------------|--------|----------|-----|-------------|--------|
+| **Feb 8** | **2.4%** | **48** | **33.3%** | **+$8.42** | **+2%** | ❌ **MINIMAL IMPROVEMENT: 2.4% exit target vs current 2.5% baseline shows +2% improvement (+$0.18 gain). Same trade volume and similar performance with negligible impact. 75% max_hold exits (36/48) vs 25% target exits (12/48) indicate most trades timeout rather than hitting either exit target. The 0.1% difference between 2.4% and 2.5% exit targets has minimal measurable impact when spreads rarely narrow enough to trigger either threshold. Below 10% significance threshold for deployment.** |
+
 ### Entry Threshold Experiments
 | Date | Threshold | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-----------|--------|----------|-----|-------------|--------|

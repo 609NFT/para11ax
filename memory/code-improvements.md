@@ -1,5 +1,13 @@
 # Code Improvements Log
 
+## 2026-02-08 11:37 AM UTC
+- **Fixed**: Improved type safety in `rowToShortPosition` method
+- **Type**: Type safety improvement
+- **Files**: `src/db/database.ts` - Changed method to accept `ShortPositionRow` directly instead of `Record<string, unknown>`
+- **Impact**: Eliminated unsafe type casting, improved type safety and code clarity
+- **Issue**: Method was accepting generic object type requiring multiple `as` casts, while proper typed interface was available
+- **Commit**: `a75af42`
+
 ## 2026-02-08 10:25 AM UTC
 - **Fixed**: Extracted duplicate avgResponseMs calculation into reusable helper method
 - **Type**: Code quality improvement (DRY principle)
