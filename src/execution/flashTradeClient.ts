@@ -13,6 +13,7 @@
 import { AnchorProvider, BN, Wallet } from '@coral-xyz/anchor';
 import { Connection, Keypair, PublicKey, TransactionInstruction, Signer } from '@solana/web3.js';
 import { PerpetualsClient, PoolConfig, Side, OraclePrice, CustodyAccount, Privilege, BN_ZERO, uiDecimalsToNative } from 'flash-sdk';
+import { MS_PER_HOUR, MS_PER_MINUTE } from '../utils/timeConstants';
 
 // Extended interfaces for Flash SDK types with missing properties
 interface ExtendedToken {
@@ -954,8 +955,8 @@ export async function getTimeUntilMarketOpen(): Promise<string> {
   candidateOpen.setUTCHours(9, 0, 0, 0); // 4 AM ET = 9 AM UTC (simplified, ignores DST)
 
   const msUntilOpen = candidateOpen.getTime() - nowMs;
-  const hoursUntilOpen = Math.floor(msUntilOpen / (1000 * 60 * 60));
-  const minutesUntilOpen = Math.floor((msUntilOpen % (1000 * 60 * 60)) / (1000 * 60));
+  const hoursUntilOpen = Math.floor(msUntilOpen / MS_PER_HOUR);
+  const minutesUntilOpen = Math.floor((msUntilOpen % MS_PER_HOUR) / MS_PER_MINUTE);
 
   // Format the output
   if (hoursUntilOpen < 12 && hoursUntilOpen >= 0) {
