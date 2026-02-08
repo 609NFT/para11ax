@@ -15,7 +15,7 @@ import axios, { AxiosError } from 'axios';
 import { OnchainPrice, TokenConfig } from '../types';
 import { feedLogger } from '../logger';
 import { getConfigSync } from '../config';
-import { USDC_MINT, ONE_USDC } from '../constants';
+import { USDC_MINT, ONE_USDC, MS_PER_MINUTE, MS_PER_HOUR } from '../constants';
 import { fetchDexScreenerPrice, fetchBatchDexScreenerPrices } from './dexScreenerFeed';
 
 interface PriceCache {
@@ -32,10 +32,10 @@ interface LiquidityCache {
 }
 
 // Cache liquidity for 5 minutes (don't need to check every price update)
-const LIQUIDITY_CACHE_MS = 5 * 60 * 1000;
+const LIQUIDITY_CACHE_MS = 5 * MS_PER_MINUTE;
 
 // Cache price fetch failures for 1 hour (avoid hammering APIs for tokens with no data)
-const PRICE_FAILURE_CACHE_MS = 60 * 60 * 1000;
+const PRICE_FAILURE_CACHE_MS = MS_PER_HOUR;
 
 // Jupiter API endpoints
 const JUPITER_PRICE_API_URL = 'https://api.jup.ag/price/v3';

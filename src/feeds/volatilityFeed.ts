@@ -6,14 +6,14 @@
 
 import axios from 'axios';
 import logger from '../logger';
-import { STOCK_STOP_LOSS_DEFAULT_PCT, DYNAMIC_FLOOR_FORMULA, MARKET_REGIME, getSessionAdjustments } from '../constants';
+import { STOCK_STOP_LOSS_DEFAULT_PCT, DYNAMIC_FLOOR_FORMULA, MARKET_REGIME, getSessionAdjustments, MS_PER_HOUR } from '../constants';
 import { getDatabase } from '../db/database';
 import { fetchAllHistoricalVolatilityFromSupabase } from '../db/supabaseClient';
 import { isTokenEnabledByLiquidity } from '../liquidity/liquidityChecker';
 
 const TWELVE_DATA_BASE_URL = 'https://api.twelvedata.com';
 const ATR_PERIOD = 14; // 14-day ATR is standard
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours - volatility doesn't change that fast
+const CACHE_DURATION_MS = 24 * MS_PER_HOUR; // 24 hours - volatility doesn't change that fast
 
 // Blending weights for combining API and internal volatility
 // API is stronger indicator (14-day ATR) but internal captures on-chain spread behavior
@@ -379,7 +379,7 @@ export async function refreshNextVolatility(): Promise<string | null> {
   // Check if cache is still fresh - skip if so to save API credits
   const cached = volatilityCache.get(symbol);
   const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
-  const REFRESH_THRESHOLD_MS = 6 * 60 * 60 * 1000; // Refresh if older than 6 hours
+  const REFRESH_THRESHOLD_MS = 6 * MS_PER_HOUR; // Refresh if older than 6 hours
 
   if (cacheAge < REFRESH_THRESHOLD_MS) {
     feedLogger.debug({ symbol, cacheAgeMin: Math.round(cacheAge / 60000) },

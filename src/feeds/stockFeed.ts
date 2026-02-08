@@ -7,6 +7,7 @@ import axios from 'axios';
 import { StockPrice, TokenConfig } from '../types';
 import { feedLogger } from '../logger';
 import { getConfigSync } from '../config';
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../constants';
 import { fetchSwissquotePrice } from './swissquoteFeed';
 import { recordApiCall } from './endpointTracker';
 
@@ -68,11 +69,11 @@ export class StockFeed {
 
   // Market status cache (refresh every 15 minutes)
   private marketStatusCache: MarketStatus | null = null;
-  private readonly marketStatusCacheDurationMs: number = 15 * 60 * 1000;
+  private readonly marketStatusCacheDurationMs: number = 15 * MS_PER_MINUTE;
 
   // Holiday calendar cache (refresh daily - holidays don't change often)
   private holidayCache: HolidayCache | null = null;
-  private readonly holidayCacheDurationMs: number = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly holidayCacheDurationMs: number = 24 * MS_PER_HOUR; // 24 hours
 
   constructor() {
     // Load all Finnhub API keys
@@ -641,7 +642,7 @@ export class StockFeed {
   async getUpcomingHolidays(): Promise<MarketHoliday[]> {
     const holidays = await this.fetchMarketHolidays();
     const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * MS_PER_DAY);
 
     return holidays.filter(h => {
       const holidayDate = new Date(h.atDate + 'T00:00:00');
@@ -731,7 +732,7 @@ export class StockFeed {
     // Alpaca: single batch request handles ALL symbols at once (no matter how many)
     // Rate limit is 200 requests/min, each request gets all symbols
     const alpacaIntervalMs = (this.alpacaKeyId && this.alpacaSecretKey)
-      ? Math.ceil((60 * 1000) / ALPACA_RATE_LIMIT_PER_MIN) // 300ms
+      ? Math.ceil(MS_PER_MINUTE / ALPACA_RATE_LIMIT_PER_MIN) // 300ms
       : Infinity;
 
     // Use the faster available source's interval
