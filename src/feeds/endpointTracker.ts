@@ -3,6 +3,10 @@
  * Tracks API calls per endpoint for monitoring and rate limit awareness
  */
 
+// Time constants (in milliseconds)
+const MS_PER_MINUTE = 60 * 1000;
+const MS_PER_HOUR = 60 * 60 * 1000;
+
 interface EndpointStats {
   name: string;
   url: string;
@@ -53,7 +57,7 @@ class EndpointTracker {
     });
 
     // Keep only last hour of calls
-    const oneHourAgo = now - 60 * 60 * 1000;
+    const oneHourAgo = now - MS_PER_HOUR;
     endpoint.calls = endpoint.calls.filter(c => c.timestamp > oneHourAgo);
   }
 
@@ -73,8 +77,8 @@ class EndpointTracker {
    */
   getStats(): EndpointStats[] {
     const now = Date.now();
-    const oneMinuteAgo = now - 60 * 1000;
-    const oneHourAgo = now - 60 * 60 * 1000;
+    const oneMinuteAgo = now - MS_PER_MINUTE;
+    const oneHourAgo = now - MS_PER_HOUR;
 
     const stats: EndpointStats[] = [];
 
