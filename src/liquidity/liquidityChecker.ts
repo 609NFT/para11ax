@@ -182,8 +182,9 @@ async function checkJupiterTradability(mint: string): Promise<boolean> {
       // Tradable - remove from cache if present
       jupiterUntradableCache.delete(mint);
       return true;
-    } catch {
+    } catch (error) {
       // Network error - try next API
+      logger.debug({ mint: mint.slice(0, 8), error }, 'Jupiter tradability check failed, trying next API');
       continue;
     }
   }
