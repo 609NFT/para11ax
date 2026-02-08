@@ -8,6 +8,7 @@ import Table from 'cli-table3';
 import { getConfigSync, getModeDescription } from '../config';
 import { getRiskManager } from '../risk';
 import { getDatabase } from '../db';
+import logger from '../logger';
 
 export class Dashboard {
   private updateInterval: NodeJS.Timeout | null = null;
@@ -350,5 +351,8 @@ async function main(): Promise<void> {
 }
 
 if (require.main === module) {
-  main().catch(console.error);
+  main().catch((error) => {
+    logger.error({ error }, 'CLI dashboard failed');
+    process.exit(1);
+  });
 }
