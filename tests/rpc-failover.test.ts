@@ -1,4 +1,5 @@
 import { describe, test, expect, jest } from '@jest/globals';
+import logger from '../src/logger';
 
 describe('RPC Failover Bug - Balance Fetch Not Triggering Failover', () => {
   test('getTokenBalance should call reportFailure on 429 errors', () => {
@@ -28,7 +29,7 @@ describe('RPC Failover Bug - Balance Fetch Not Triggering Failover', () => {
         return 100;
       } catch (error) {
         // BUG: Only logs error, never calls connectionManager.reportFailure()
-        console.error('Error fetching balance:', error);
+        logger.error({ error }, 'Error fetching balance');
         return null;
       }
     }
@@ -74,7 +75,7 @@ describe('RPC Failover Bug - Balance Fetch Not Triggering Failover', () => {
           connection = connectionManager.getConnection();
         }
 
-        console.error('Error fetching balance:', error);
+        logger.error({ error }, 'Error fetching balance');
         return null;
       }
     }
