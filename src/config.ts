@@ -147,7 +147,14 @@ export async function loadConfig(): Promise<Config> {
       }
     } catch (error) {
       // Use defaults if config file parsing fails
-      logger.warn({ error, configPath }, 'Failed to parse config file, using defaults');
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('parse');
+      logger.warn({ 
+        error, 
+        configPath, 
+        isJsonError,
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      }, 'Failed to parse config file, using defaults');
     }
   }
 
