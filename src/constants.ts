@@ -709,6 +709,9 @@ export const MICRO_LAMPORTS_PER_LAMPORT = 1_000_000;
 let cachedSolPrice: { price: number; timestamp: number } | null = null;
 const SOL_PRICE_CACHE_MS = 60 * 1000; // 1 minute
 
+/** Fallback SOL price in USD when API fetch fails */
+const SOL_PRICE_FALLBACK = 180;
+
 /**
  * Fetch SOL price from Jupiter (cached)
  * Used for converting lamport fees to USD
@@ -744,7 +747,7 @@ export async function getSolPriceUsd(): Promise<number> {
   }
 
   // Return cached price if available, otherwise use fallback
-  return cachedSolPrice?.price || 180; // $180 fallback
+  return cachedSolPrice?.price || SOL_PRICE_FALLBACK;
 }
 
 // ============================================================================
