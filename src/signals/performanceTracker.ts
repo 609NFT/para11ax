@@ -25,7 +25,7 @@ export const PERFORMANCE_CONFIG = {
   THRESHOLD_PENALTY_PCT: 1.0,    // +1% to entry threshold for poor performers
   CACHE_TTL_MS: 5 * 60 * 1000,   // 5 minute cache
   ENABLED: true,                 // Feature flag
-};
+} as const;
 
 // ==================== Types ====================
 
