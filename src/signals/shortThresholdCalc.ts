@@ -368,7 +368,9 @@ async function readSpreadStatistics(
     logger.error({ error: String(error) }, 'Failed to read spread statistics from Supabase');
   } finally {
     if (client) {
-      try { await client.end(); } catch { /* ignore */ }
+      try { await client.end(); } catch (error) { 
+        logger.debug({ error: String(error) }, 'Failed to close Supabase client connection');
+      }
     }
   }
 
