@@ -153,7 +153,7 @@ export class DatabaseManager {
     if (cached) return cached;
 
     const rows = await fetchOpenPositions();
-    const positions = rows.map((row) => this.rowToPosition(row as unknown as Record<string, unknown>));
+    const positions = rows.map((row) => this.rowToPosition(row));
     this.cache.set(cacheKey, positions, CACHE_TTL_SHORT); // 30s TTL
     return positions;
   }
@@ -164,18 +164,18 @@ export class DatabaseManager {
   async getClosedPositions(limit: number = 100, maxAgeMs?: number): Promise<MeanReversionPosition[]> {
     const cacheKey = `positions:closed:${limit}:${maxAgeMs || 'all'}`;
     const cached = this.cache.get<MeanReversionPositionRow[]>(cacheKey);
-    if (cached) return cached.map(row => this.rowToPosition(row as unknown as Record<string, unknown>));
+    if (cached) return cached.map(row => this.rowToPosition(row));
 
     // Note: maxAgeMs not yet supported by fetchClosedPositions - always returns most recent
     const rows = await fetchClosedPositions(limit);
     this.cache.set(cacheKey, rows, CACHE_TTL_MEDIUM); // 5min TTL
-    return rows.map(row => this.rowToPosition(row as unknown as Record<string, unknown>));
+    return rows.map(row => this.rowToPosition(row));
   }
 
   /**
    * Convert row to Position
    */
-  private rowToPosition(row: Record<string, unknown>): MeanReversionPosition {
+  private rowToPosition(row: MeanReversionPositionRow): MeanReversionPosition {
     return {
       id: row.id as string,
       stockTicker: row.stock_ticker as string,
