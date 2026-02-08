@@ -155,7 +155,8 @@ export async function loadConfig(): Promise<Config> {
   if (!dbTokensCache) {
     try {
       dbTokensCache = await fetchTokensFromDb();
-    } catch {
+    } catch (error) {
+      logger.warn({ error }, 'Failed to fetch tokens from database, using empty array');
       dbTokensCache = [];
     }
   }
