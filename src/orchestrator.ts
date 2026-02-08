@@ -35,6 +35,7 @@ import {
 import { getDatabase } from './db';
 import { initializeShortThresholds } from './signals/shortThresholdCalc';
 import { initPortfolioSizer } from './signals/portfolioSizer';
+import { initializeEMRT, refreshEMRTCache } from './signals/emrt';
 import { pruneOldDiscountHistory, upsertHeatmapSummary, getHourlySummaryFromSupabase } from './db/supabaseClient';
 import { Dashboard } from './dashboard';
 import logger, { executionLogger, dbLogger } from './logger';
@@ -398,6 +399,11 @@ export class Orchestrator {
     );
     logger.info('Portfolio sizer initialized - positions scale with wallet balance and market hours');
 
+    // Initialize EMRT (Empirical Mean Reversion Time) for token-specific hold times
+    logger.info('Initializing EMRT (token-specific hold times)...');
+    await initializeEMRT();
+    logger.info('EMRT initialized - hold times optimized per token based on historical reversion patterns');
+
     // Clean up orphan tokens (tokens in wallet with no open position)
     if (config.mode === 'live') {
       await this.cleanupOrphanTokens();
@@ -467,6 +473,13 @@ export class Orchestrator {
         logger.warn({ error: err }, 'Failed hourly heatmap summary sync');
       });
     }, 60 * 60 * 1000); // Every hour
+
+    // Refresh EMRT cache every hour (uses latest trade data for hold time optimization)
+    setInterval(() => {
+      refreshEMRTCache().catch(err => {
+        logger.warn({ error: err }, 'Failed hourly EMRT cache refresh');
+      });
+    }, 60 * 60 * 1000);
 
     logger.info('Initialization complete. Bot is running.');
 

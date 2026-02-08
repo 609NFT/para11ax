@@ -30,7 +30,6 @@ import {
   SPREAD_HISTORY_SIZE,
   MIN_STABLE_READINGS,
   STOP_LOSS_GRACE_PERIOD_MS,
-  MAX_HOLD_TIME_MS,
   MAX_REASONABLE_DEVIATION_PCT,
   getSessionAdjustments,
   MAX_REASONABLE_DISCOUNT,
@@ -51,6 +50,7 @@ import {
   TIME_OF_DAY_OPTIMIZATION,
   QUOTE_TIMEOUT_MS,
 } from '../constants';
+import { getTokenMaxHoldTime } from './emrt';
 import { getDynamicStopLossPct, getVolatilityPositionMultiplier, getVolatilityEntryMultiplier } from '../feeds/volatilityFeed';
 import { isOptimalTradingTime } from './timeOfDayOptimizer';
 
@@ -1671,8 +1671,8 @@ export class MeanReversionSignalGenerator {
     //          But if stock dropped 0.8%, we actually lost money (NAV degradation)
     // Only apply this guard if we've captured > 0.3% spread (meaningful narrowing)
     // EXCEPTION: Never block forced exits (max_hold_time, spread_widening_stop, stop_loss)
-    const session = getSessionAdjustments();
-    const adjustedMaxHold = MAX_HOLD_TIME_MS * session.maxHoldMultiplier;
+    // Use EMRT (Empirical Mean Reversion Time) for token-specific hold times
+    const adjustedMaxHold = getTokenMaxHoldTime(position.buySymbol);
     const isPastMaxHold = holdTimeMs > adjustedMaxHold;
     const isSpreadWidening = position.entrySpreadPct !== undefined &&
       currentDiscount > position.entrySpreadPct + SPREAD_WIDENING_STOP_PCT;
@@ -1957,9 +1957,8 @@ export class MeanReversionSignalGenerator {
       };
     }
 
-    // 5b. Max hold time - adjusted by trading session
-    const sessionForHold = getSessionAdjustments();
-    const effectiveMaxHold = MAX_HOLD_TIME_MS * sessionForHold.maxHoldMultiplier;
+    // 5b. Max hold time - EMRT (Empirical Mean Reversion Time) per token
+    const effectiveMaxHold = getTokenMaxHoldTime(position.buySymbol);
     if (holdTimeMs > effectiveMaxHold) {
       signalLogger.info({
         ticker: position.stockTicker,
@@ -1969,8 +1968,8 @@ export class MeanReversionSignalGenerator {
         tokenAppreciationPct: tokenAppreciationPct.toFixed(2),
         holdTimeMin: (holdTimeMs / 60000).toFixed(1),
         maxHoldMin: (effectiveMaxHold / 60000).toFixed(0),
-        session: sessionForHold.session,
-      }, 'Max hold time reached - exiting at current price');
+        emrt: true,
+      }, 'Max hold time reached (EMRT) - exiting at current price');
       this.trailingStops.delete(position.id); // Clean up trailing state
       return {
         shouldExit: true,
