@@ -1,167 +1,187 @@
-require('dotenv').config();
-const { Pool } = require('pg');
+const { Client } = require('pg');
+const dns = require('dns');
+const fs = require('fs');
+const path = require('path');
 
-const pool = new Pool({
-  connectionString: process.env.TRADES_DB_URL,
-  ssl: { rejectUnauthorized: false }
-});
+// IPv4 first for Supabase
+dns.setDefaultResultOrder('ipv4first');
 
 async function analyzeRecentTrades() {
-  const QUERY_START = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days ago in ms
-  const client = await pool.connect();
-
-  try {
-    const result = await client.query(`
-      SELECT * FROM mean_reversion_positions 
-      WHERE status = 'closed' AND exit_timestamp > $1 
-      ORDER BY exit_timestamp DESC
-    `, [QUERY_START]);
-
-    const trades = result.rows;
-
-  console.log('=== RECENT 7-DAY TRADE ANALYSIS ===');
-  console.log(`Total trades: ${trades.length}`);
-
-  if (trades.length === 0) {
-    console.log('No trades found in the last 7 days');
-    return;
-  }
-
-  // Performance stats
-  const profitable = trades.filter(t => t.pnl_usd > 0).length;
-  const totalPnL = trades.reduce((sum, t) => sum + (t.pnl_usd || 0), 0);
-  const avgSize = trades.reduce((sum, t) => sum + (t.size_usd || 0), 0) / trades.length;
-
-  console.log(`Win rate: ${profitable}/${trades.length} = ${(profitable/trades.length*100).toFixed(1)}%`);
-  console.log(`Total PnL: $${totalPnL.toFixed(2)}`);
-  console.log(`Avg size: $${avgSize.toFixed(2)}`);
-
-  // By token analysis
-  const byToken = {};
-  trades.forEach(t => {
-    const token = t.buy_symbol || 'unknown';
-    if (!byToken[token]) {
-      byToken[token] = { count: 0, pnl: 0, wins: 0, totalVolume: 0 };
+    // Load database credentials from secrets file
+    const secretsPath = path.join(process.env.HOME, '.parallax-secrets', 'supabase-db.json');
+    let credentials;
+    
+    try {
+        credentials = JSON.parse(fs.readFileSync(secretsPath, 'utf8'));
+    } catch (error) {
+        console.error('❌ Could not load database credentials from:', secretsPath);
+        console.error('Error:', error.message);
+        return;
     }
-    byToken[token].count++;
-    byToken[token].pnl += t.pnl_usd || 0;
-    byToken[token].totalVolume += t.size_usd || 0;
-    if (t.pnl_usd > 0) byToken[token].wins++;
-  });
 
-  console.log('\n=== BY TOKEN (Top 10 by volume) ===');
-  Object.entries(byToken)
-    .sort(([,a], [,b]) => b.totalVolume - a.totalVolume)
-    .slice(0, 10)
-    .forEach(([token, stats]) => {
-      const wr = stats.count > 0 ? (stats.wins / stats.count * 100).toFixed(0) : '0';
-      console.log(`${token}: ${stats.count} trades, ${wr}% WR, $${stats.pnl.toFixed(2)} PnL, $${stats.totalVolume.toFixed(0)} vol`);
+    const client = new Client({
+        connectionString: credentials.connectionString
     });
 
-  // By exit reason
-  const byReason = {};
-  trades.forEach(t => {
-    const reason = t.exit_reason || 'unknown';
-    if (!byReason[reason]) {
-      byReason[reason] = { count: 0, pnl: 0, wins: 0 };
-    }
-    byReason[reason].count++;
-    byReason[reason].pnl += t.pnl_usd || 0;
-    if (t.pnl_usd > 0) byReason[reason].wins++;
-  });
+    try {
+        await client.connect();
+        console.log('📊 PARALLAX TRADE ANALYSIS - Last 48 Hours');
+        console.log('='.repeat(50));
 
-  console.log('\n=== BY EXIT REASON ===');
-  Object.entries(byReason)
-    .sort(([,a], [,b]) => b.count - a.count)
-    .forEach(([reason, stats]) => {
-      const wr = stats.count > 0 ? (stats.wins / stats.count * 100).toFixed(0) : '0';
-      console.log(`${reason}: ${stats.count} trades, ${wr}% WR, $${stats.pnl.toFixed(2)} PnL`);
-    });
+        // First check what tables exist
+        const tablesQuery = `
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            ORDER BY table_name;
+        `;
+        const tablesResult = await client.query(tablesQuery);
+        console.log('Available tables:', tablesResult.rows.map(r => r.table_name).join(', '));
 
-  // Entry spread analysis
-  const spreadBuckets = {
-    '0-3%': { min: 0, max: 3, trades: [] },
-    '3-4%': { min: 3, max: 4, trades: [] },
-    '4-5%': { min: 4, max: 5, trades: [] },
-    '5-7%': { min: 5, max: 7, trades: [] },
-    '7%+': { min: 7, max: 100, trades: [] }
-  };
+        // Check schema of mean_reversion_positions
+        const schemaQuery = `
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'mean_reversion_positions' 
+            ORDER BY ordinal_position;
+        `;
+        const schemaResult = await client.query(schemaQuery);
+        console.log('\nMean reversion positions columns:');
+        schemaResult.rows.forEach(r => console.log(`  ${r.column_name}: ${r.data_type}`));
 
-  trades.forEach(t => {
-    const entrySpread = Math.abs(t.entry_spread_pct || 0);
-    for (const [bucket, config] of Object.entries(spreadBuckets)) {
-      if (entrySpread >= config.min && entrySpread < config.max) {
-        config.trades.push(t);
-        break;
-      }
-    }
-  });
+        // Get recent trades from mean_reversion_positions (last 48 hours)
+        const tradesQuery = `
+            SELECT 
+                id, stock_ticker, buy_symbol, entry_spread_pct, exit_spread_pct,
+                pnl_usd, 
+                to_timestamp(entry_timestamp / 1000) as entry_time,
+                to_timestamp(exit_timestamp / 1000) as exit_time, 
+                exit_reason, size_usd, slippage_usd, status, pnl_pct,
+                (exit_timestamp - entry_timestamp) as hold_time_ms,
+                total_fees_usd, entry_fees_usd, exit_fees_usd
+            FROM mean_reversion_positions 
+            WHERE entry_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '48 hours') * 1000)
+              AND status IN ('closed', 'exited')
+            ORDER BY entry_timestamp DESC
+        `;
+        
+        const tradesResult = await client.query(tradesQuery);
+        const trades = tradesResult.rows;
 
-  console.log('\n=== BY ENTRY SPREAD ===');
-  Object.entries(spreadBuckets).forEach(([bucket, config]) => {
-    if (config.trades.length > 0) {
-      const wins = config.trades.filter(t => t.pnl_usd > 0).length;
-      const pnl = config.trades.reduce((sum, t) => sum + (t.pnl_usd || 0), 0);
-      const wr = (wins / config.trades.length * 100).toFixed(0);
-      console.log(`${bucket}: ${config.trades.length} trades, ${wr}% WR, $${pnl.toFixed(2)} PnL`);
-    }
-  });
+        console.log(`\n📈 RECENT TRADES: ${trades.length} trades in last 48h\n`);
 
-  // Time patterns
-  console.log('\n=== TRADING HOURS (UTC) ===');
-  const hourCounts = {};
-  const hourPnL = {};
-  trades.forEach(t => {
-    const hour = new Date(t.entry_timestamp).getUTCHours();
-    hourCounts[hour] = (hourCounts[hour] || 0) + 1;
-    hourPnL[hour] = (hourPnL[hour] || 0) + (t.pnl_usd || 0);
-  });
-
-  Object.entries(hourCounts)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, 8)
-    .forEach(([hour, count]) => {
-      const pnl = hourPnL[hour] || 0;
-      console.log(`${hour}:00 UTC: ${count} trades, $${pnl.toFixed(2)} PnL`);
-    });
-
-  // Hold time analysis
-  console.log('\n=== HOLD TIME ANALYSIS ===');
-  const holdTimeBuckets = {
-    '<5min': { max: 5, trades: [] },
-    '5-15min': { min: 5, max: 15, trades: [] },
-    '15-30min': { min: 15, max: 30, trades: [] },
-    '30-60min': { min: 30, max: 60, trades: [] },
-    '>60min': { min: 60, trades: [] }
-  };
-
-  trades.forEach(t => {
-    if (t.exit_timestamp && t.entry_timestamp) {
-      const holdMin = (t.exit_timestamp - t.entry_timestamp) / 60000;
-      for (const [bucket, config] of Object.entries(holdTimeBuckets)) {
-        const inRange = config.min ? holdMin >= config.min : true;
-        const belowMax = config.max ? holdMin < config.max : true;
-        if (inRange && belowMax) {
-          config.trades.push(t);
-          break;
+        if (trades.length === 0) {
+            console.log('❌ No trades in last 48 hours');
+            return;
         }
-      }
-    }
-  });
 
-  Object.entries(holdTimeBuckets).forEach(([bucket, config]) => {
-    if (config.trades.length > 0) {
-      const wins = config.trades.filter(t => t.pnl_usd > 0).length;
-      const pnl = config.trades.reduce((sum, t) => sum + (t.pnl_usd || 0), 0);
-      const wr = (wins / config.trades.length * 100).toFixed(0);
-      console.log(`${bucket}: ${config.trades.length} trades, ${wr}% WR, $${pnl.toFixed(2)} PnL`);
-    }
-  });
+        // Trade summary
+        const totalPnL = trades.reduce((sum, t) => sum + parseFloat(t.pnl_usd || 0), 0);
+        const avgPnL = totalPnL / trades.length;
+        const winners = trades.filter(t => parseFloat(t.pnl_usd || 0) > 0).length;
+        const losers = trades.filter(t => parseFloat(t.pnl_usd || 0) < 0).length;
+        const winRate = (winners / trades.length * 100).toFixed(1);
 
-  } finally {
-    client.release();
-    await pool.end();
-  }
+        console.log(`Total PnL: $${totalPnL.toFixed(2)}`);
+        console.log(`Avg PnL: $${avgPnL.toFixed(2)}`);
+        console.log(`Win Rate: ${winRate}% (${winners}W / ${losers}L)`);
+
+        // Symbol breakdown
+        console.log('\n📊 BY SYMBOL:');
+        const bySymbol = {};
+        trades.forEach(t => {
+            const symbol = t.buy_symbol || t.stock_ticker;
+            if (!bySymbol[symbol]) {
+                bySymbol[symbol] = { count: 0, pnl: 0, entries: [], exits: [] };
+            }
+            bySymbol[symbol].count++;
+            bySymbol[symbol].pnl += parseFloat(t.pnl_usd || 0);
+            if (t.entry_spread_pct) bySymbol[symbol].entries.push(parseFloat(t.entry_spread_pct));
+            if (t.exit_spread_pct) bySymbol[symbol].exits.push(parseFloat(t.exit_spread_pct));
+        });
+
+        Object.entries(bySymbol).forEach(([symbol, data]) => {
+            const avgEntry = data.entries.length > 0 ? 
+                (data.entries.reduce((a, b) => a + b, 0) / data.entries.length).toFixed(2) : 'N/A';
+            const avgExit = data.exits.length > 0 ? 
+                (data.exits.reduce((a, b) => a + b, 0) / data.exits.length).toFixed(2) : 'N/A';
+            console.log(`  ${symbol}: ${data.count} trades, $${data.pnl.toFixed(2)} PnL, ${avgEntry}% avg entry, ${avgExit}% avg exit`);
+        });
+
+        // Exit reasons analysis
+        console.log('\n🚪 EXIT REASONS:');
+        const exitReasons = {};
+        trades.forEach(t => {
+            const reason = t.exit_reason || 'unknown';
+            if (!exitReasons[reason]) exitReasons[reason] = { count: 0, pnl: 0 };
+            exitReasons[reason].count++;
+            exitReasons[reason].pnl += parseFloat(t.pnl_usd || 0);
+        });
+
+        Object.entries(exitReasons).forEach(([reason, data]) => {
+            const avgPnL = (data.pnl / data.count).toFixed(2);
+            console.log(`  ${reason}: ${data.count} trades, $${avgPnL} avg PnL`);
+        });
+
+        // Threshold effectiveness
+        console.log('\n🎯 THRESHOLD ANALYSIS:');
+        const entryThresholds = trades.map(t => parseFloat(t.entry_spread_pct || 0)).filter(x => x !== 0);
+        if (entryThresholds.length > 0) {
+            const minEntry = Math.min(...entryThresholds);
+            const maxEntry = Math.max(...entryThresholds);
+            const avgEntry = entryThresholds.reduce((a, b) => a + b, 0) / entryThresholds.length;
+            console.log(`Entry spreads: ${minEntry.toFixed(2)}% min, ${maxEntry.toFixed(2)}% max, ${avgEntry.toFixed(2)}% avg`);
+        }
+
+        // Hold time analysis
+        console.log('\n⏰ HOLD TIME ANALYSIS:');
+        const holdTimes = trades.map(t => parseInt(t.hold_time_ms || 0)).filter(x => x > 0);
+        if (holdTimes.length > 0) {
+            const avgHoldMin = holdTimes.reduce((a, b) => a + b, 0) / holdTimes.length / 60000;
+            const minHoldMin = Math.min(...holdTimes) / 60000;
+            const maxHoldMin = Math.max(...holdTimes) / 60000;
+            console.log(`Hold times: ${avgHoldMin.toFixed(1)} min avg, ${minHoldMin.toFixed(1)}-${maxHoldMin.toFixed(1)} min range`);
+        }
+
+        // Individual trade details
+        console.log('\n📋 INDIVIDUAL TRADES:');
+        trades.slice(0, 10).forEach(t => {
+            const holdMin = t.hold_time_ms ? (parseInt(t.hold_time_ms) / 60000).toFixed(1) : 'N/A';
+            const entryTime = new Date(t.entry_time).toISOString().slice(0, 16).replace('T', ' ');
+            const symbol = t.buy_symbol || t.stock_ticker;
+            console.log(`${symbol} LONG: ${(t.entry_spread_pct || 0).toFixed(2)}% → ${(t.exit_spread_pct || 0).toFixed(2)}% | $${(parseFloat(t.pnl_usd || 0)).toFixed(2)} | ${holdMin}min | ${t.exit_reason} | ${entryTime}`);
+        });
+
+        // Check for potential issues
+        console.log('\n🔍 POTENTIAL ISSUES:');
+        
+        // Check for negative PnL on profit_target exits
+        const badProfitTargets = trades.filter(t => 
+            t.exit_reason === 'profit_target' && parseFloat(t.pnl_usd || 0) < 0
+        );
+        if (badProfitTargets.length > 0) {
+            console.log(`❌ ${badProfitTargets.length} profit_target exits with negative PnL - strategy bug!`);
+        }
+
+        // Check for very quick exits
+        const quickExits = trades.filter(t => 
+            t.hold_time_ms && parseInt(t.hold_time_ms) < 300000 // < 5 min
+        );
+        if (quickExits.length > 0) {
+            console.log(`⚡ ${quickExits.length} exits under 5 minutes - potential churning`);
+        }
+
+        // Check for spread widening stops
+        const spreadStops = trades.filter(t => t.exit_reason === 'spread_widening_stop');
+        if (spreadStops.length > 0) {
+            console.log(`📈 ${spreadStops.length} spread_widening_stop exits - spread protection working`);
+        }
+
+    } catch (error) {
+        console.error('Database error:', error.message);
+    } finally {
+        await client.end();
+    }
 }
 
-analyzeRecentTrades().catch(console.error);
+analyzeRecentTrades();
