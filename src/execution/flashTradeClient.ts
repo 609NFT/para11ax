@@ -513,7 +513,7 @@ export async function getOraclePrice(symbol: FlashSymbol): Promise<number | null
   } catch (error) {
     logger.error({
       symbol,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     }, `Failed to fetch oracle price for ${symbol}`);
     return null;
   }
