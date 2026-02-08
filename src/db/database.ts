@@ -40,6 +40,9 @@ const CACHE_TTL_SHORT = 30000;   // 30 seconds for frequently changing data
 const CACHE_TTL_MEDIUM = 300000; // 5 minutes for stable data
 const CACHE_TTL_PRICE = 10000;   // 10 seconds for price data that needs to be fresh
 
+// Export constants
+const DEFAULT_EXPORT_LIMIT = 1000; // Default number of closed positions to export
+
 export class DatabaseManager {
   private initialized: boolean = false;
   private cache = getQueryCache();
@@ -410,7 +413,7 @@ export class DatabaseManager {
     try {
       // Get both open and closed positions
       const openPositions = await this.getOpenPositions();
-      const closedPositions = await this.getClosedPositions(1000); // Get last 1000 closed
+      const closedPositions = await this.getClosedPositions(DEFAULT_EXPORT_LIMIT); // Get last 1000 closed
       const allPositions = [...openPositions, ...closedPositions];
 
       if (allPositions.length === 0) {
