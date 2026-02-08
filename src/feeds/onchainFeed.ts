@@ -392,6 +392,7 @@ export class OnchainFeed {
     const PROBLEMATIC_MINTS = new Set([
       'cJpUMp5R', // INTCon - consistent quote failures
       'XsSr8anD', // LINx - consistent quote failures
+      'XsjQP3iM', // TQQQx - consistent quote failures
     ]);
     const filteredMints = mints.filter(mint => !PROBLEMATIC_MINTS.has(mint));
     
