@@ -1,5 +1,13 @@
 # Code Improvements Log
 
+## 2026-02-08 7:37 AM UTC
+- **Fixed**: Added JSDoc comment to `getTokenPool()` function  
+- **Type**: Documentation improvement
+- **Files**: `src/db/supabaseClient.ts` - Added JSDoc documentation to private getTokenPool() function
+- **Impact**: Better code maintainability and IDE support for internal function
+- **Issue**: Private helper function was missing documentation while public functions were well documented
+- **Commit**: `2012bf6`
+
 ## 2026-02-08 7:00 AM UTC
 - **Fixed**: Import style inconsistency for fs module
 - **Type**: Code consistency improvement  
