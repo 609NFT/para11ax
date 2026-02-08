@@ -5,6 +5,8 @@
  * For tunable parameters, see config/config.json
  */
 
+import { feedLogger } from './logger';
+
 // ============================================================================
 // BLOCKCHAIN CONSTANTS
 // ============================================================================
@@ -721,8 +723,8 @@ export async function getSolPriceUsd(): Promise<number> {
       cachedSolPrice = { price, timestamp: now };
       return price;
     }
-  } catch {
-    // Fall through to cached/default
+  } catch (error) {
+    feedLogger.debug({ error }, 'Failed to fetch SOL price from Jupiter - using cached/fallback');
   }
 
   // Return cached price if available, otherwise use fallback
