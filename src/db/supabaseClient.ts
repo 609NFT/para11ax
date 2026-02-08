@@ -791,7 +791,8 @@ export async function getHourlySummaryFromSupabase(sinceTimestamp?: number): Pro
   if (!pool) return [];
 
   // Default to last 25 hours (overlap for safety)
-  const since = sinceTimestamp || Date.now() - 25 * 60 * 60 * 1000;
+  const DEFAULT_LOOKBACK_HOURS = 25;
+  const since = sinceTimestamp || Date.now() - DEFAULT_LOOKBACK_HOURS * 60 * 60 * 1000;
   const HOUR_MS = 60 * 60 * 1000;
 
   try {
