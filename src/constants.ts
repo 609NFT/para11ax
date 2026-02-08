@@ -80,7 +80,7 @@ export const ENTRY_THRESHOLD_FORMULA = {
  */
 export const DYNAMIC_FLOOR_FORMULA = {
   ENABLED: true,
-  BASE_FLOOR: 4.0,              // 609-approved 2026-02-07 — sub-agents: DO NOT CHANGE
+  BASE_FLOOR: 3.5,              // 609-approved 2026-02-08 — lowered for activity + marginal profitability
   VOLATILITY_COEFFICIENT: 0.6,  // Floor += ATR% × 0.6
   ABSOLUTE_MIN: 3.5,            // Absolute minimum threshold
   ABSOLUTE_MAX: 6.0,            // Cap for high-vol tokens
