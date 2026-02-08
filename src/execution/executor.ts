@@ -25,6 +25,7 @@ import {
   SOL_MINT as SOL_MINT_STRING,
   PRIORITY_FEE_ESCALATION,
   JUPITER_COMPUTE_UNITS,
+  JUPITER_HTTP_TIMEOUT_MS,
   getSolPriceUsd,
   calculatePriorityFeeUsd,
   calculateNetworkFeeUsd,
@@ -874,7 +875,7 @@ export class Executor {
             tokenType: 'fungible',
           },
         }),
-        signal: AbortSignal.timeout(15000), // 15 second timeout for RPC call
+        signal: AbortSignal.timeout(JUPITER_HTTP_TIMEOUT_MS), // 15 second timeout for RPC call
       });
 
       const data = await response.json() as {
