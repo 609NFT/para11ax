@@ -1,5 +1,13 @@
 # Code Improvements Log
 
+## 2026-02-08 5:16 AM UTC
+- **Fixed**: Added error logging to silent catch block in config loading
+- **Type**: Error handling improvement
+- **Files**: `src/config.ts` - Added logger.warn when database token fetch fails
+- **Impact**: Better visibility into database connectivity issues that were previously silent
+- **Issue**: Catch block was silently falling back to empty token array, potentially hiding DB problems
+- **Commit**: `5fdf897`
+
 ## 2026-02-08 2:48 AM UTC  
 - **Fixed**: Extracted HTTP timeout magic numbers into named constants
 - **Type**: Code maintainability improvement
