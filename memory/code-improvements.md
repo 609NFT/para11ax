@@ -1,5 +1,15 @@
 # Code Improvements Log
 
+## 2026-02-08 2:48 AM UTC  
+- **Fixed**: Extracted HTTP timeout magic numbers into named constants
+- **Type**: Code maintainability improvement
+- **Files**: 
+  - `src/constants.ts` - Added `JUPITER_HTTP_TIMEOUT_MS` (15s) and `JUPITER_ULTRA_HTTP_TIMEOUT_MS` (30s)
+  - `src/execution/jupiterClient.ts` - Replaced hardcoded 15000ms timeout
+  - `src/execution/jupiterUltraClient.ts` - Replaced hardcoded 30000ms timeout
+- **Impact**: Better maintainability, centralized timeout configuration
+- **Commit**: `2a779c4`
+
 ## 2026-02-08 12:30 AM UTC
 - **Fixed**: Added JSDoc comment to `getTradesPool()` function in `src/db/supabaseClient.ts`
 - **Type**: Documentation improvement
