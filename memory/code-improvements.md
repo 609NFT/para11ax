@@ -1,5 +1,32 @@
 # Code Improvements Log
 
+## 2026-02-08 - Replaced Magic Numbers with Constants
+
+**Issue**: Magic number `1000000` used in multiple places to represent "1 USDC"
+- Found in 4 files: onchainFeed.ts, liquidityChecker.ts, server.ts, constants.ts
+- Hardcoded value made intent unclear and maintenance harder
+- Risk of inconsistency if USDC decimal handling changed
+
+**Fix**: Added `ONE_USDC` constant and replaced all instances
+```typescript
+// In constants.ts:
+export const ONE_USDC = Math.pow(10, USDC_DECIMALS);
+
+// Usage examples:
+amount: ONE_USDC, // 1 USDC (instead of amount: 1000000)
+&amount=${ONE_USDC} // in API URLs
+```
+
+**Impact**: 
+- Code is more self-documenting - clearly shows intent of "1 USDC"
+- Centralized calculation based on USDC_DECIMALS constant
+- Easier maintenance if USDC handling needs to change
+- No runtime behavior change, just improved readability
+
+**Commit**: `a996b74` - "chore: replace magic number 1000000 with ONE_USDC constant"
+
+---
+
 ## 2026-02-08 - Improved Error Handling
 
 **Issue**: Bare catch block in `src/signals/shortThresholdCalc.ts` at line 405
