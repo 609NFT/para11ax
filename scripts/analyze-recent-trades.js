@@ -1,139 +1,85 @@
-const { getTradesPool } = require('../dist/db/supabaseClient');
+const { Client } = require('pg');
 const dns = require('dns');
-
-// Required for Supabase pooler
 dns.setDefaultResultOrder('ipv4first');
 
-async function analyze() {
-  const pool = getTradesPool();
-  
+const creds = require('/home/ec2-user/.parallax-secrets/supabase-db.json');
+const client = new Client(creds);
+
+(async () => {
   try {
-    console.log('=== RECENT TRADES ANALYSIS (48h) ===\n');
+    await client.connect();
     
-    // Get recent completed positions (last 48 hours)
-    const cutoffMs = Date.now() - (48 * 60 * 60 * 1000);
-    const { rows: trades } = await pool.query(`
-      SELECT * FROM mean_reversion_positions 
-      WHERE status = 'closed' 
-      AND updated_at >= $1
-      ORDER BY updated_at DESC
-    `, [cutoffMs]);
+    console.log('📊 RECENT TRADES ANALYSIS\n');
     
-    console.log(`Total trades: ${trades.length}`);
+    // Last 20 closed positions
+    const recentTrades = await client.query(`
+      SELECT 
+        symbol, entry_time, exit_time, entry_spread_pct, exit_spread_pct,
+        entry_amount_usd, exit_amount_usd, realized_pnl_usd, exit_reason,
+        hold_time_minutes, size_usd,
+        (exit_time - entry_time) / 60000 as hold_minutes
+      FROM positions 
+      WHERE exit_time IS NOT NULL 
+      ORDER BY exit_time DESC 
+      LIMIT 20
+    `);
     
-    if (trades.length === 0) {
-      console.log('No trades in last 48 hours');
+    if (recentTrades.rows.length === 0) {
+      console.log('❌ No recent closed trades found');
       return;
     }
     
-    // Overall stats
-    let totalPnl = 0;
-    let winCount = 0;
-    let lossCount = 0;
+    const trades = recentTrades.rows;
+    const totalTrades = trades.length;
+    const winners = trades.filter(t => parseFloat(t.realized_pnl_usd) > 0).length;
+    const winRate = (winners / totalTrades * 100).toFixed(1);
+    const totalPnL = trades.reduce((sum, t) => sum + parseFloat(t.realized_pnl_usd || 0), 0);
+    const avgPnL = (totalPnL / totalTrades).toFixed(2);
+    const avgHoldTime = (trades.reduce((sum, t) => sum + parseFloat(t.hold_minutes || 0), 0) / totalTrades).toFixed(1);
     
-    const bySymbol = {};
+    console.log(`🎯 PERFORMANCE (Last ${totalTrades} trades):`);
+    console.log(`   Win Rate: ${winRate}% (${winners}/${totalTrades})`);
+    console.log(`   Total PnL: $${totalPnL.toFixed(2)}`);
+    console.log(`   Avg PnL: $${avgPnL}`);
+    console.log(`   Avg Hold: ${avgHoldTime} min`);
+    
+    // Exit reasons breakdown
     const exitReasons = {};
-    const spreadBuckets = { '4.0-5.0%': 0, '5.0-6.0%': 0, '6.0-7.0%': 0, '7.0%+': 0 };
-    
-    trades.forEach(trade => {
-      const pnl = parseFloat(trade.pnl_usd || 0);
-      totalPnl += pnl;
-      
-      if (pnl > 0) winCount++;
-      else lossCount++;
-      
-      // By symbol
-      const symbol = trade.buy_symbol;
-      if (!bySymbol[symbol]) {
-        bySymbol[symbol] = { count: 0, pnl: 0, entries: [] };
-      }
-      bySymbol[symbol].count++;
-      bySymbol[symbol].pnl += pnl;
-      bySymbol[symbol].entries.push(parseFloat(trade.entry_spread_pct || 0));
-      
-      // Exit reasons
-      const reason = trade.exit_reason || 'unknown';
+    trades.forEach(t => {
+      const reason = t.exit_reason || 'unknown';
       exitReasons[reason] = (exitReasons[reason] || 0) + 1;
-      
-      // Spread distribution
-      const spread = Math.abs(parseFloat(trade.entry_spread_pct || 0));
-      if (spread >= 4.0 && spread < 5.0) spreadBuckets['4.0-5.0%']++;
-      else if (spread >= 5.0 && spread < 6.0) spreadBuckets['5.0-6.0%']++;
-      else if (spread >= 6.0 && spread < 7.0) spreadBuckets['6.0-7.0%']++;
-      else if (spread >= 7.0) spreadBuckets['7.0%+']++;
     });
     
-    const winRate = (winCount / (winCount + lossCount) * 100).toFixed(1);
-    console.log(`Overall PnL: $${totalPnl.toFixed(2)}`);
-    console.log(`Win rate: ${winRate}% (${winCount}W / ${lossCount}L)`);
-    console.log('');
-    
-    // By symbol analysis
-    console.log('By Symbol:');
-    Object.entries(bySymbol)
-      .sort(([,a], [,b]) => b.count - a.count)
-      .forEach(([symbol, data]) => {
-        const avgEntry = data.entries.reduce((a, b) => a + b, 0) / data.entries.length;
-        console.log(`${symbol}: ${data.count} trades, $${data.pnl.toFixed(2)} PnL, avg entry: ${avgEntry.toFixed(2)}%`);
-      });
-    console.log('');
-    
-    // Exit reasons
-    console.log('Exit reasons:');
-    Object.entries(exitReasons)
-      .sort(([,a], [,b]) => b - a)
-      .forEach(([reason, count]) => {
-        console.log(`${reason}: ${count}`);
-      });
-    console.log('');
-    
-    // Spread distribution
-    console.log('Entry spread distribution:');
-    Object.entries(spreadBuckets).forEach(([bucket, count]) => {
-      console.log(`${bucket}: ${count} trades`);
+    console.log('\n📤 EXIT REASONS:');
+    Object.entries(exitReasons).forEach(([reason, count]) => {
+      console.log(`   ${reason}: ${count} trades (${(count/totalTrades*100).toFixed(1)}%)`);
     });
-    console.log('');
     
-    // Check for patterns requiring investigation
-    console.log('=== PATTERN ANALYSIS ===');
+    // Recent trade details
+    console.log('\n📈 RECENT TRADES:');
+    trades.slice(0, 10).forEach(t => {
+      const pnl = parseFloat(t.realized_pnl_usd || 0);
+      const emoji = pnl > 0 ? '✅' : pnl < 0 ? '❌' : '➖';
+      console.log(`${emoji} ${t.symbol}: $${pnl.toFixed(2)} | ${t.entry_spread_pct}%→${t.exit_spread_pct}% | ${parseFloat(t.hold_minutes || 0).toFixed(0)}m | ${t.exit_reason}`);
+    });
     
-    // Check for poor performance on specific symbols
-    const poorPerformers = Object.entries(bySymbol)
-      .filter(([, data]) => data.count >= 3 && data.pnl < -1.0)
-      .sort(([,a], [,b]) => a.pnl - b.pnl);
-      
-    if (poorPerformers.length > 0) {
-      console.log('❌ Poor performing symbols (3+ trades, <-$1 PnL):');
-      poorPerformers.forEach(([symbol, data]) => {
-        console.log(`  ${symbol}: ${data.count} trades, $${data.pnl.toFixed(2)}`);
-      });
-      console.log('');
-    }
+    // Current open positions
+    const openPositions = await client.query(`
+      SELECT symbol, entry_time, entry_spread_pct, size_usd, 
+             (EXTRACT(EPOCH FROM NOW()) * 1000 - entry_time) / 60000 as minutes_open
+      FROM positions 
+      WHERE exit_time IS NULL 
+      ORDER BY entry_time DESC
+    `);
     
-    // Check exit reason effectiveness
-    if (exitReasons.profit_target && exitReasons.stop_loss) {
-      const profitTargetRatio = exitReasons.profit_target / (exitReasons.profit_target + exitReasons.stop_loss);
-      console.log(`Profit target ratio: ${(profitTargetRatio * 100).toFixed(1)}%`);
-      if (profitTargetRatio < 0.5) {
-        console.log('⚠️  More stop losses than profit targets - consider reviewing thresholds');
-      }
-    }
-    
-    // Check spread effectiveness
-    const highSpreadTrades = trades.filter(t => Math.abs(parseFloat(t.entry_spread_pct || 0)) >= 6.0);
-    if (highSpreadTrades.length >= 5) {
-      const highSpreadPnl = highSpreadTrades.reduce((sum, t) => sum + parseFloat(t.pnl_usd || 0), 0);
-      const highSpreadWins = highSpreadTrades.filter(t => parseFloat(t.pnl_usd || 0) > 0).length;
-      console.log(`High spread (6%+) performance: $${highSpreadPnl.toFixed(2)}, ${(highSpreadWins/highSpreadTrades.length*100).toFixed(1)}% WR`);
-    }
-    
-    console.log('Analysis complete.');
+    console.log(`\n🔄 OPEN POSITIONS: ${openPositions.rows.length}`);
+    openPositions.rows.forEach(p => {
+      console.log(`   ${p.symbol}: $${parseFloat(p.size_usd).toFixed(0)} | ${p.entry_spread_pct}% | ${parseFloat(p.minutes_open).toFixed(0)}m open`);
+    });
     
   } catch (error) {
-    console.error('Error analyzing trades:', error);
+    console.error('Database error:', error.message);
   } finally {
-    await pool.end();
+    await client.end();
   }
-}
-
-analyze().catch(console.error);
+})();
