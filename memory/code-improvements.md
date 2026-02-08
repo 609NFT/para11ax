@@ -1,5 +1,13 @@
 # Code Improvements Log
 
+## 2026-02-08 10:25 AM UTC
+- **Fixed**: Extracted duplicate avgResponseMs calculation into reusable helper method
+- **Type**: Code quality improvement (DRY principle)
+- **Files**: `src/feeds/endpointTracker.ts` - Added private `calculateAvgResponseMs()` helper method
+- **Impact**: Eliminated code duplication, improved maintainability
+- **Issue**: Same calculation logic (average of last 10 response times) was duplicated in two methods
+- **Commit**: `6c32577`
+
 ## 2026-02-08 7:37 AM UTC
 - **Fixed**: Added JSDoc comment to `getTokenPool()` function  
 - **Type**: Documentation improvement
