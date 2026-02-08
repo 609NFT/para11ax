@@ -375,6 +375,7 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 ### Exit Target Experiments (Feb 8, 2026)
 | Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
+| **Feb 8** | **2.3%** | **50** | **40.0%** | **+$9.83** | **+4%** | ❌ **MODEST IMPROVEMENT: 2.3% exit target vs current 2.5% baseline shows +4% improvement (+$0.36 gain). Same trade volume and win rate with minimal PnL gain. 72% max_hold exits (36/50) vs 28% target exits (14/50) indicate most trades timeout rather than hitting either exit target. FILLS GAP in pattern: 2.2%(+17%) → 2.3%(+4%) → 2.4%(+2%) → 2.5%(baseline) confirms degradation as exit targets approach baseline. The 0.2% difference between 2.3% and 2.5% exit targets has minimal impact when spreads rarely narrow enough to trigger either threshold. 4% improvement below 10% deployment threshold.** |
 | **Feb 8** | **2.4%** | **48** | **33.3%** | **+$8.42** | **+2%** | ❌ **MINIMAL IMPROVEMENT: 2.4% exit target vs current 2.5% baseline shows +2% improvement (+$0.18 gain). Same trade volume and similar performance with negligible impact. 75% max_hold exits (36/48) vs 25% target exits (12/48) indicate most trades timeout rather than hitting either exit target. The 0.1% difference between 2.4% and 2.5% exit targets has minimal measurable impact when spreads rarely narrow enough to trigger either threshold. Below 10% significance threshold for deployment.** |
 
 ### Entry Threshold Experiments
