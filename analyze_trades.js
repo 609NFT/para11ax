@@ -1,101 +1,97 @@
-const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
+const { getSupabaseClient } = require('./dist/db/supabaseClient.js');
 
-const secretsPath = process.env.HOME + '/.parallax-secrets/supabase-db.json';
-if (!fs.existsSync(secretsPath)) {
-  console.log('❌ Database secrets not found');
-  process.exit(1);
-}
-
-const secrets = JSON.parse(fs.readFileSync(secretsPath, 'utf8'));
-const url = 'https://tixpkokukqccehbnpkpf.supabase.co';
-const client = createClient(url, secrets.service_role_key, {
-  db: { schema: 'public' }
-});
-
-async function analyzeLast6Hours() {
-  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+async function analyzeRecentTrades() {
+  const supabase = getSupabaseClient();
   
-  console.log('📊 LAST 6 HOURS ANALYSIS (since', sixHoursAgo, ')');
-  console.log('');
-  
-  // Check trades
-  const { data: trades, error } = await client
-    .from('mean_reversion_positions')
+  // Get recent trades (last 48 hours)
+  const { data: trades, error } = await supabase
+    .from('trades')
     .select('*')
-    .gte('created_at', sixHoursAgo)
+    .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
     .order('created_at', { ascending: false });
     
   if (error) {
-    console.log('❌ Error fetching trades:', error.message);
+    console.error('Error fetching trades:', error);
     return;
   }
   
-  console.log('🔹 Trades in last 6 hours:', trades.length);
+  console.log('=== RECENT TRADES (48hrs) ===');
+  console.log('Total trades:', trades.length);
   
-  if (trades.length > 0) {
-    trades.forEach(trade => {
-      const entrySpread = (trade.entry_spread_pct * 100).toFixed(2);
-      const pnl = trade.pnl_usd ? trade.pnl_usd.toFixed(2) : 'pending';
-      const status = trade.status;
-      console.log(`  ${trade.token_symbol}: ${entrySpread}% entry, ${status}, $${pnl} PnL`);
-    });
-  } else {
-    console.log('  No trades executed (expected with 4.0% threshold)');
+  if (trades.length === 0) {
+    console.log('No trades in the last 48 hours');
+    return;
   }
   
-  console.log('');
+  // Group by symbol
+  const tradesBySymbol = {};
+  let totalPnL = 0;
+  let winCount = 0;
+  let lossCount = 0;
   
-  // Check current spreads
-  const { data: spreads } = await client
-    .from('discount_history')
-    .select('token_symbol, spread_pct, updated_at')
-    .gte('updated_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()) // Last 30 min
-    .order('updated_at', { ascending: false })
-    .limit(50);
-    
-  if (spreads && spreads.length > 0) {
-    console.log('📈 Current spreads (last 30 min):');
-    const latest = {};
-    spreads.forEach(s => {
-      if (!latest[s.token_symbol]) {
-        latest[s.token_symbol] = s.spread_pct * 100;
-      }
-    });
-    
-    Object.entries(latest)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 10)
-      .forEach(([symbol, spread]) => {
-        const indicator = spread >= 4.0 ? '🟢' : spread >= 3.0 ? '🟡' : '🔴';
-        console.log(`  ${indicator} ${symbol}: ${spread.toFixed(2)}%`);
-      });
-  }
-  
-  console.log('');
-  
-  // Check entry threshold effectiveness
-  const { data: recentTrades } = await client
-    .from('mean_reversion_positions')
-    .select('token_symbol, entry_spread_pct, pnl_usd, status, created_at')
-    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24h
-    .order('created_at', { ascending: false });
-    
-  if (recentTrades && recentTrades.length > 0) {
-    console.log('📊 Last 24h entry analysis:');
-    const above4 = recentTrades.filter(t => t.entry_spread_pct >= 0.04);
-    const below4 = recentTrades.filter(t => t.entry_spread_pct < 0.04);
-    
-    console.log(`  Entries ≥4.0%: ${above4.length} trades`);
-    console.log(`  Entries <4.0%: ${below4.length} trades`);
-    
-    if (above4.length > 0) {
-      const avgEntry = (above4.reduce((sum, t) => sum + t.entry_spread_pct, 0) / above4.length * 100).toFixed(2);
-      const closed = above4.filter(t => t.status === 'closed');
-      const avgPnL = closed.length > 0 ? (closed.reduce((sum, t) => sum + (t.pnl_usd || 0), 0) / closed.length).toFixed(2) : 'N/A';
-      console.log(`    Avg entry: ${avgEntry}%, Avg PnL: $${avgPnL}`);
+  for (const trade of trades) {
+    const symbol = trade.symbol;
+    if (!tradesBySymbol[symbol]) {
+      tradesBySymbol[symbol] = [];
     }
+    tradesBySymbol[symbol].push(trade);
+    
+    if (trade.pnl_usd !== null) {
+      totalPnL += parseFloat(trade.pnl_usd);
+      if (parseFloat(trade.pnl_usd) > 0) winCount++;
+      else lossCount++;
+    }
+  }
+  
+  console.log('Net PnL: $' + totalPnL.toFixed(2));
+  console.log('Win rate: ' + ((winCount / (winCount + lossCount)) * 100).toFixed(1) + '%');
+  console.log('');
+  
+  // Analyze by symbol
+  for (const [symbol, symbolTrades] of Object.entries(tradesBySymbol)) {
+    console.log(symbol + ': ' + symbolTrades.length + ' trades');
+    
+    const symbolPnL = symbolTrades.reduce((sum, t) => sum + (parseFloat(t.pnl_usd) || 0), 0);
+    const avgEntryDiscount = symbolTrades.reduce((sum, t) => sum + Math.abs(parseFloat(t.entry_discount_pct)), 0) / symbolTrades.length;
+    const avgHoldTime = symbolTrades.reduce((sum, t) => {
+      if (t.exit_timestamp && t.entry_timestamp) {
+        return sum + (new Date(t.exit_timestamp) - new Date(t.entry_timestamp)) / (1000 * 60);
+      }
+      return sum;
+    }, 0) / symbolTrades.filter(t => t.exit_timestamp).length;
+    
+    console.log('  PnL: $' + symbolPnL.toFixed(2) + ', Avg Entry: ' + avgEntryDiscount.toFixed(2) + '%, Avg Hold: ' + (avgHoldTime || 0).toFixed(1) + 'min');
+    
+    // Exit reasons
+    const exitReasons = {};
+    for (const trade of symbolTrades.filter(t => t.exit_reason)) {
+      exitReasons[trade.exit_reason] = (exitReasons[trade.exit_reason] || 0) + 1;
+    }
+    console.log('  Exit reasons:', JSON.stringify(exitReasons));
+  }
+  
+  // Check for concerning patterns
+  console.log('\n=== ANALYSIS ===');
+  
+  const recentLosses = trades.filter(t => t.pnl_usd && parseFloat(t.pnl_usd) < -0.50).length;
+  if (recentLosses > 3) {
+    console.log('🚨 CONCERN: ' + recentLosses + ' trades with losses >$0.50 in 48hrs');
+  }
+  
+  const maxHoldTimes = trades.filter(t => t.exit_timestamp && t.entry_timestamp).map(t => 
+    (new Date(t.exit_timestamp) - new Date(t.entry_timestamp)) / (1000 * 60)
+  );
+  const maxHold = Math.max(...maxHoldTimes);
+  if (maxHold > 90) {
+    console.log('⚠️ NOTICE: Maximum hold time was ' + maxHold.toFixed(1) + 'min (>90min threshold)');
+  }
+  
+  // Check for trading frequency issues
+  if (trades.length === 0) {
+    console.log('🚨 CRITICAL: No trades in 48hrs - bot may not be executing');
+  } else if (trades.length < 5) {
+    console.log('⚠️ NOTICE: Low trading frequency: ' + trades.length + ' trades in 48hrs');
   }
 }
 
-analyzeLast6Hours().catch(console.error);
+analyzeRecentTrades().catch(console.error);
