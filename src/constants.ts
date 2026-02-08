@@ -785,3 +785,9 @@ export function calculateNetworkFeeUsd(solPriceUsd: number): { lamports: number;
 
 /** Timeout for quote fetching operations (10 seconds) */
 export const QUOTE_TIMEOUT_MS = 10000;
+
+/** HTTP timeout for Jupiter API client (15 seconds) */
+export const JUPITER_HTTP_TIMEOUT_MS = 15000;
+
+/** HTTP timeout for Jupiter Ultra API client (30 seconds - allows for predictive execution) */
+export const JUPITER_ULTRA_HTTP_TIMEOUT_MS = 30000;

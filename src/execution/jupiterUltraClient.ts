@@ -12,7 +12,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { VersionedTransaction, Keypair } from '@solana/web3.js';
 import { executionLogger } from '../logger';
-import { USDC_MINT, USDC_DECIMALS, getSolPriceUsd } from '../constants';
+import { USDC_MINT, USDC_DECIMALS, getSolPriceUsd, JUPITER_ULTRA_HTTP_TIMEOUT_MS } from '../constants';
 import { TradeResult, FeeBreakdown } from '../types';
 import { recordApiCall } from '../feeds/endpointTracker';
 
@@ -70,7 +70,7 @@ export class JupiterUltraClient {
 
     this.client = axios.create({
       baseURL: ULTRA_API_URL,
-      timeout: 30000, // Ultra can take longer due to predictive execution
+      timeout: JUPITER_ULTRA_HTTP_TIMEOUT_MS, // Ultra can take longer due to predictive execution
       headers,
     });
 

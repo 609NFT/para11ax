@@ -19,7 +19,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { QuoteInfo, RouteInfo } from '../types';
 import { executionLogger } from '../logger';
 import { getConfigSync } from '../config';
-import { USDC_MINT, USDC_DECIMALS } from '../constants';
+import { USDC_MINT, USDC_DECIMALS, JUPITER_HTTP_TIMEOUT_MS } from '../constants';
 import { recordApiCall } from '../feeds/endpointTracker';
 
 export interface SwapResponse {
@@ -68,7 +68,7 @@ export class JupiterClient {
 
     this.primaryClient = axios.create({
       baseURL: this.jupiterApiUrl,
-      timeout: 15000, // Reduced from 30s to fail faster
+      timeout: JUPITER_HTTP_TIMEOUT_MS, // Reduced from 30s to fail faster
       headers: primaryHeaders,
     });
 
