@@ -529,8 +529,9 @@ app.get('/api/logs/file', (req: Request, res: Response) => {
         if (log.level >= minLevel) {
           parsedLogs.push(log);
         }
-      } catch {
-        // Skip unparseable lines when filtering
+      } catch (error) {
+        // Skip unparseable lines when filtering  
+        logger.debug({ error: error instanceof Error ? error.message : String(error), line: allLines[i].slice(0, 100) }, 'Skipping unparseable log line');
         if (minLevel === 0) {
           parsedLogs.push({ msg: allLines[i], level: 30, time: Date.now() });
         }
