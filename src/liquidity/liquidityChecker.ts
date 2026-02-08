@@ -34,6 +34,8 @@ import {
   POSITION_SIZE_FORMULA,
   PERCENTILE_THRESHOLD_FORMULA,
   ADAPTIVE_POSITION_SIZING,
+  MS_PER_HOUR,
+  MS_PER_MINUTE,
 } from '../constants';
 import { getDatabase } from '../db';
 import { fetchBatchDexScreenerPrices, DexScreenerPrice } from '../feeds/dexScreenerFeed';
@@ -83,7 +85,7 @@ const bestPoolCache: Map<string, BestPoolInfo> = new Map();
 // Cache of historically profitable spreads per token (stock ticker -> profitable spread data)
 let profitableSpreadCache: Map<string, TokenProfitableSpread> = new Map();
 let profitableSpreadLastRefresh = 0;
-const PROFITABLE_SPREAD_REFRESH_MS = 60 * 60 * 1000; // Refresh every hour
+const PROFITABLE_SPREAD_REFRESH_MS = MS_PER_HOUR; // Refresh every hour
 
 // Best SOL pool for each token (for routing comparison)
 interface BestSolPoolInfo {
@@ -98,7 +100,7 @@ const bestSolPoolCache: Map<string, BestSolPoolInfo> = new Map();
 // Jupiter tradability cache - tracks tokens that Jupiter can't trade
 // Key: mint address, Value: timestamp of last check
 const jupiterUntradableCache: Map<string, number> = new Map();
-const JUPITER_UNTRADABLE_CACHE_MS = 24 * 60 * 60 * 1000; // 24 hours - don't keep retrying
+const JUPITER_UNTRADABLE_CACHE_MS = 24 * MS_PER_HOUR; // 24 hours - don't keep retrying
 
 // Best fee rate cache - stores the better of Raydium vs Jupiter fee for each token
 // Key: symbol, Value: { feeRate, source, lastUpdated }
@@ -125,7 +127,7 @@ function checkAndResetJupiterFallback(): void {
 function switchToJupiterFallback(reason: string): void {
   if (!usingJupiterFallback) {
     usingJupiterFallback = true;
-    jupiterFallbackUntil = Date.now() + 5 * 60 * 1000; // Retry primary in 5 minutes
+    jupiterFallbackUntil = Date.now() + 5 * MS_PER_MINUTE; // Retry primary in 5 minutes
     logger.warn({ reason }, 'Switched to fallback Jupiter API for liquidity checks');
   }
 }
@@ -944,7 +946,7 @@ export async function refreshLiquidity(): Promise<void> {
 async function refreshPercentileThresholds(): Promise<void> {
   try {
     const db = getDatabase();
-    const windowMs = PERCENTILE_THRESHOLD_FORMULA.ROLLING_WINDOW_HOURS * 60 * 60 * 1000;
+    const windowMs = PERCENTILE_THRESHOLD_FORMULA.ROLLING_WINDOW_HOURS * MS_PER_HOUR;
 
     // Calculate percentiles in PostgreSQL (memory efficient)
     const percentileData = await db.getAllPercentileThresholds(

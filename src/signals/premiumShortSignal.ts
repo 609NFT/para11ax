@@ -14,6 +14,7 @@ import { PairSpread } from '../types';
 import { signalLogger } from '../logger';
 import { getConfigSync } from '../config';
 import { getDatabase } from '../db/database';
+import { MS_PER_HOUR } from '../constants';
 import {
   isShortingEnabled,
   isFlashTradeAvailable,
@@ -559,11 +560,11 @@ export function checkShortExit(position: ShortPosition, currentSpread: PairSprea
 
   // 3. Max hold time (24 hours)
   const holdTimeMs = Date.now() - position.entryTimestamp;
-  const maxHoldTimeMs = 24 * 60 * 60 * 1000;
+  const maxHoldTimeMs = 24 * MS_PER_HOUR;
   if (holdTimeMs > maxHoldTimeMs) {
     signalLogger.info({
       ticker: position.ticker,
-      holdTimeHours: (holdTimeMs / (60 * 60 * 1000)).toFixed(1),
+      holdTimeHours: (holdTimeMs / MS_PER_HOUR).toFixed(1),
     }, 'Short max hold time reached');
     return { shouldExit: true, reason: 'max_hold_time', currentPremiumPct };
   }

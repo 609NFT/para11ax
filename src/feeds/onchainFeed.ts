@@ -16,6 +16,7 @@ import { OnchainPrice, TokenConfig } from '../types';
 import { feedLogger } from '../logger';
 import { getConfigSync } from '../config';
 import { USDC_MINT, ONE_USDC, MS_PER_MINUTE, MS_PER_HOUR } from '../constants';
+import { toHumanAmount } from '../utils/decimals';
 import { fetchDexScreenerPrice, fetchBatchDexScreenerPrices } from './dexScreenerFeed';
 
 interface PriceCache {
@@ -105,7 +106,7 @@ export class OnchainFeed {
   private switchToFallbackQuoteApi(reason: string): void {
     if (!this.usingFallbackQuoteApi) {
       this.usingFallbackQuoteApi = true;
-      this.fallbackQuoteApiUntil = Date.now() + 5 * 60 * 1000; // Retry primary in 5 minutes
+      this.fallbackQuoteApiUntil = Date.now() + 5 * MS_PER_MINUTE; // Retry primary in 5 minutes
       feedLogger.warn({ reason }, 'Switched to fallback Jupiter quote API (public.jupiterapi.com)');
     }
   }
@@ -330,7 +331,7 @@ export class OnchainFeed {
           const priceImpact = parseFloat(quote.priceImpactPct || '0');
 
           // Calculate effective price using correct token decimals
-          const price = sizeUsd / (outputAmount / Math.pow(10, decimals));
+          const price = sizeUsd / toHumanAmount(outputAmount, decimals);
 
           return {
             price,
@@ -583,7 +584,7 @@ export class OnchainFeed {
           const outputAmount = parseInt(quote.outAmount);
 
           // Use correct token decimals from config
-          const price = 100 / (outputAmount / Math.pow(10, decimals));
+          const price = 100 / toHumanAmount(outputAmount, decimals);
           const liquidity = await this.estimateLiquidity(mint);
 
           const priceData: PriceCache = {

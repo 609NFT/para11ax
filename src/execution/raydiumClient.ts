@@ -28,6 +28,7 @@ import {
 } from '../constants';
 import { FeeBreakdown } from '../types';
 import { sleep } from '../utils/time';
+import { toHumanAmount, toRawAmount } from '../utils/decimals';
 
 // Convert to PublicKey for Solana operations
 const USDC_MINT = new PublicKey(USDC_MINT_STRING);
@@ -182,7 +183,7 @@ export class RaydiumClient {
       if (!poolData) return null;
 
       // Convert to BN with proper decimals
-      const amountInBN = new BN(Math.floor(amountIn * Math.pow(10, inputDecimals)));
+      const amountInBN = new BN(Math.floor(toRawAmount(amountIn, inputDecimals)));
 
       // Get epoch info for fee calculation
       const epochInfo = await this.connection.getEpochInfo();
@@ -204,8 +205,8 @@ export class RaydiumClient {
       const isInputA = inputMintPubkey.equals(new PublicKey(poolData.poolInfo.mintA.address));
       const outputDecimals = isInputA ? poolData.poolInfo.mintB.decimals : poolData.poolInfo.mintA.decimals;
 
-      const amountOut = result.amountOut.amount.toNumber() / Math.pow(10, outputDecimals);
-      const minAmountOut = result.minAmountOut.amount.toNumber() / Math.pow(10, outputDecimals);
+      const amountOut = toHumanAmount(result.amountOut.amount.toNumber(), outputDecimals);
+      const minAmountOut = toHumanAmount(result.minAmountOut.amount.toNumber(), outputDecimals);
 
       return {
         amountOut,
@@ -388,7 +389,7 @@ export class RaydiumClient {
       }
 
       // Convert to BN with proper decimals
-      const amountInBN = new BN(Math.floor(amountIn * Math.pow(10, inputDecimals)));
+      const amountInBN = new BN(Math.floor(toRawAmount(amountIn, inputDecimals)));
       const slippage = slippageBps / 10000; // Convert bps to decimal
 
       // Get epoch info
@@ -416,8 +417,8 @@ export class RaydiumClient {
         inputMint: inputMint.slice(0, 8),
         amountIn,
         slippageBps,
-        expectedOut: computeResult.amountOut.amount.toNumber() / Math.pow(10, outputDecimals),
-        minOut: computeResult.minAmountOut.amount.toNumber() / Math.pow(10, outputDecimals),
+        expectedOut: toHumanAmount(computeResult.amountOut.amount.toNumber(), outputDecimals),
+        minOut: toHumanAmount(computeResult.minAmountOut.amount.toNumber(), outputDecimals),
         tokenPriceUsd,
       }, 'Executing Raydium CLMM swap');
 
@@ -460,7 +461,7 @@ export class RaydiumClient {
       const postSwapBalance = await this.getTokenBalanceRaw(outputMint);
 
       if (preSwapBalance !== null && postSwapBalance !== null) {
-        actualOutputAmount = (postSwapBalance - preSwapBalance) / Math.pow(10, outputDecimals);
+        actualOutputAmount = toHumanAmount(postSwapBalance - preSwapBalance, outputDecimals);
         executionLogger.debug({
           outputMint: outputMint.toBase58().slice(0, 8),
           preSwapBalance,
@@ -469,7 +470,7 @@ export class RaydiumClient {
         }, 'Measured actual output from balance change');
       } else {
         // Fall back to estimated amount if we can't read balance
-        actualOutputAmount = computeResult.amountOut.amount.toNumber() / Math.pow(10, outputDecimals);
+        actualOutputAmount = toHumanAmount(computeResult.amountOut.amount.toNumber(), outputDecimals);
         executionLogger.warn({
           preSwapBalance,
           postSwapBalance,
@@ -521,7 +522,7 @@ export class RaydiumClient {
       }
 
       // Calculate execution slippage (legacy - for backwards compatibility)
-      const expectedOutputAmount = computeResult.amountOut.amount.toNumber() / Math.pow(10, outputDecimals);
+      const expectedOutputAmount = toHumanAmount(computeResult.amountOut.amount.toNumber(), outputDecimals);
       const executionSlippagePct = expectedOutputAmount > 0
         ? ((expectedOutputAmount - actualOutputAmount) / expectedOutputAmount) * 100
         : 0;

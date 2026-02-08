@@ -30,6 +30,7 @@ import { PriceServiceConnection } from '@pythnetwork/price-service-client';
 import logger from '../logger';
 import { getConfigSync } from '../config';
 import { getStockFeed } from '../feeds/stockFeed';
+import { getErrorMessage, getErrorDetails } from '../utils/errors';
 
 // Pyth Hermes connection for fetching live oracle prices with correct exponents
 const pythConnection = new PriceServiceConnection('https://hermes.pyth.network', {
@@ -323,11 +324,10 @@ export async function initializeFlashClient(): Promise<boolean> {
     flashInitState = 'success';
     return true;
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    const errStack = error instanceof Error ? error.stack : '';
+    const { message, stack } = getErrorDetails(error);
     logger.error({
-      error: errMsg,
-      stack: errStack?.slice(0, 500),
+      error: message,
+      stack: stack?.slice(0, 500),
     }, 'Failed to initialize Flash Trade client');
     flashInitState = 'failed';
     return false;
@@ -404,7 +404,7 @@ async function sendFlashTransaction(
     // The transaction may still land
     logger.warn({
       txid,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     }, 'Transaction confirmation check failed (tx may still succeed)');
   }
 

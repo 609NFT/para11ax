@@ -19,9 +19,10 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { QuoteInfo, RouteInfo } from '../types';
 import { executionLogger } from '../logger';
 import { getConfigSync } from '../config';
-import { USDC_MINT, USDC_DECIMALS, JUPITER_HTTP_TIMEOUT_MS } from '../constants';
+import { USDC_MINT, USDC_DECIMALS, JUPITER_HTTP_TIMEOUT_MS, MS_PER_MINUTE } from '../constants';
 import { recordApiCall } from '../feeds/endpointTracker';
 import { sleep } from '../utils/time';
+import { toRawAmount } from '../utils/decimals';
 
 export interface SwapResponse {
   swapTransaction: string; // Base64 encoded transaction
@@ -107,7 +108,7 @@ export class JupiterClient {
   private switchToFallback(reason: string): void {
     if (!this.usingFallback) {
       this.usingFallback = true;
-      this.fallbackUntil = Date.now() + 5 * 60 * 1000; // Try primary again in 5 minutes
+      this.fallbackUntil = Date.now() + 5 * MS_PER_MINUTE; // Try primary again in 5 minutes
       executionLogger.warn({ reason, fallbackUntil: new Date(this.fallbackUntil).toISOString() },
         'Switched to fallback Jupiter API (public.jupiterapi.com)');
     }
@@ -363,7 +364,7 @@ export class JupiterClient {
    * @param slippageBps - Optional override for slippage (default: config.maxSlippageBps)
    */
   async getSellQuote(tokenMint: string, tokenAmount: number, decimals: number = 6, slippageBps?: number): Promise<QuoteInfo | null> {
-    return this.getQuote(tokenMint, USDC_MINT, tokenAmount * Math.pow(10, decimals), slippageBps);
+    return this.getQuote(tokenMint, USDC_MINT, toRawAmount(tokenAmount, decimals), slippageBps);
   }
 
   /**

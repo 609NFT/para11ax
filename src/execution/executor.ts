@@ -38,6 +38,7 @@ import { getJupiterClient, JupiterClient } from './jupiterClient';
 import { getRaydiumClient, RaydiumClient } from './raydiumClient';
 import { getConnectionManager } from './connectionManager';
 import { getJupiterUltraClient, JupiterUltraClient } from './jupiterUltraClient';
+import { toHumanAmount, toRawAmount } from '../utils/decimals';
 
 // Simulation slippage constants
 const MAX_RANDOM_SLIPPAGE = 0.002; // 0-0.2% random slippage for realism
@@ -545,7 +546,7 @@ export class Executor {
             if (balanceChange > 0) {
               // Convert to raw units for consistency with quote format
               const decimals = post.uiTokenAmount?.decimals ?? 6;
-              actualOutputAmount = balanceChange * Math.pow(10, decimals);
+              actualOutputAmount = toRawAmount(balanceChange, decimals);
               executionLogger.info({
                 signature: signature.slice(0, 8),
                 side,
@@ -795,7 +796,7 @@ export class Executor {
         }
         // Reset failure count on success
         this.balanceFetchFailures.delete(tokenMint);
-        return totalBalance / Math.pow(10, decimals);
+        return toHumanAmount(totalBalance, decimals);
       }
       // Reset failure count on success (even if balance is 0)
       this.balanceFetchFailures.delete(tokenMint);
@@ -904,7 +905,7 @@ export class Executor {
           tokens.push({
             mint,
             symbol,
-            balance: balance / Math.pow(10, decimals),
+            balance: toHumanAmount(balance, decimals),
             decimals,
           });
         }
