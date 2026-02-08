@@ -108,6 +108,9 @@ export class Orchestrator {
   private readonly maxSolBalance: number = 0.25;  // Max SOL before rebalancing to USDC
   private lastSolRebalanceTime: number = 0;
   private readonly solRebalanceCooldownMs: number = 300000; // 5 minute cooldown
+  
+  // Health check settings
+  private readonly healthCheckTimeoutMs: number = 30000; // 30 second timeout for health check script
 
   constructor() {
     this.dashboard = new Dashboard();
@@ -521,7 +524,7 @@ export class Orchestrator {
     const scriptPath = `${process.env.HOME}/parallax/scripts/health-check.js`;
 
     try {
-      execSync(`node ${scriptPath}`, { encoding: 'utf8', timeout: 30000 });
+      execSync(`node ${scriptPath}`, { encoding: 'utf8', timeout: this.healthCheckTimeoutMs });
     } catch (error) {
       logger.warn({ error }, 'EC2 health check script failed');
     }
