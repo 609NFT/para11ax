@@ -1,5 +1,13 @@
 # Code Improvements Log
 
+## 2026-02-08 7:00 AM UTC
+- **Fixed**: Import style inconsistency for fs module
+- **Type**: Code consistency improvement  
+- **Files**: `src/web/server.ts` - Changed `import fs from 'fs'` to `import * as fs from 'fs'`
+- **Impact**: Consistent import style across codebase (matches other files using fs.* methods)
+- **Issue**: File was using namespace-style fs calls (fs.existsSync, fs.statSync) but had default import
+- **Commit**: `0b3fdc8`
+
 ## 2026-02-08 5:16 AM UTC
 - **Fixed**: Added error logging to silent catch block in config loading
 - **Type**: Error handling improvement
