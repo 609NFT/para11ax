@@ -75,7 +75,7 @@ const MIN_DELAY_BETWEEN_SYMBOLS_MS = 20000; // 20 seconds between symbols
 let lastApiCallTime: number = 0;
 let startupDelayApplied: boolean = false;
 const STARTUP_DELAY_MS = 60000; // 60 second delay on startup to let rate limit window reset
-let rateLimitBackoffMs = 0; // Additional backoff when rate limited
+let rateLimitBackoffMs: number = 0; // Additional backoff when rate limited
 
 /**
  * Wait if needed to respect rate limits
