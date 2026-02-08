@@ -20,7 +20,7 @@ let tradesPool: Pool | null = null;
 
 /**
  * Get the singleton connection pool for the token database
- * 
+ *
  * @returns Postgres connection pool for token data
  * @throws Error if DIRECT_URL environment variable is not set
  */

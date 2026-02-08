@@ -80,7 +80,7 @@ export async function refreshEMRTCache(): Promise<void> {
 
     // Get average target exit times per token (last 30 days)
     const result = await pool.query(`
-      SELECT 
+      SELECT
         buy_symbol as token,
         COUNT(*) FILTER (WHERE exit_reason = 'target') as target_count,
         AVG(CASE WHEN exit_reason = 'target' 
