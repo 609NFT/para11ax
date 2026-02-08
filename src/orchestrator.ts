@@ -621,9 +621,9 @@ export class Orchestrator {
         if (tokenPrice) {
           estimatedValueUsd = orphan.balance * tokenPrice;
         }
-      } catch {
+      } catch (error) {
         // If we can't get price, log and skip (don't waste gas on potential dust)
-        logger.debug({ symbol: orphan.symbol }, 'Could not get price for orphan token');
+        logger.debug({ symbol: orphan.symbol, error: error instanceof Error ? error.message : String(error) }, 'Could not get price for orphan token');
       }
 
       // Skip dust amounts that are too small to be worth selling
