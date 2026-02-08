@@ -13,7 +13,7 @@
 
 import { dbLogger } from '../logger';
 import { notifyError } from '../notifications/discord';
-import { getErrorMessage, getErrorStack } from '../utils/error';
+import { getErrorDetails } from '../utils/errors';
 import { sleep } from '../utils/time';
 
 // Queue processing constants
@@ -71,13 +71,14 @@ export class WriteQueue {
           // Exponential backoff: 1s, 2s, 4s
           const delayMs = Math.pow(2, op.retryCount) * 1000;
 
+          const { message } = getErrorDetails(error);
           dbLogger.warn(
             {
               id: op.id,
               retryCount: op.retryCount + 1,
               maxRetries: op.maxRetries,
               delayMs,
-              error: getErrorMessage(error),
+              error: message,
             },
             'Write operation failed, retrying'
           );
@@ -90,19 +91,20 @@ export class WriteQueue {
           this.queue.push(op);
         } else {
           // Max retries exceeded - log error and give up
+          const { message, stack } = getErrorDetails(error);
           dbLogger.error(
             {
               id: op.id,
               retryCount: op.retryCount,
               timestamp: op.timestamp,
-              error: getErrorMessage(error),
-              stack: getErrorStack(error),
+              error: message,
+              stack,
             },
             'Write operation failed after max retries - DATA LOSS'
           );
 
           // Alert on critical data loss
-          await notifyError('WriteQueue Data Loss', `Operation ${op.id} failed after ${op.maxRetries} retries: ${getErrorMessage(error)}`);
+          await notifyError('WriteQueue Data Loss', `Operation ${op.id} failed after ${op.maxRetries} retries: ${message}`);
         }
       }
     }

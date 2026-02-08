@@ -1,2 +1,2 @@
 export * from './decimals';
-export * from './error';
+export * from './errors';
