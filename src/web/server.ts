@@ -5,7 +5,7 @@
 
 import express, { Request, Response } from 'express';
 import path from 'path';
-import fs from 'fs';
+import * as fs from 'fs';
 import { exec } from 'child_process';
 import { getDatabase } from '../db';
 import { fetchHeatmapSummary, fetchDiscountHeatmapFromSupabase, fetchRecentClosedPositions, fetchClosedPositions, fetchStatsFromSupabase, fetchPnlHistoryFromSupabase } from '../db/supabaseClient';
