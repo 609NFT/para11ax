@@ -779,10 +779,11 @@ export async function refreshLiquidity(): Promise<void> {
 
     // If NOT using Raydium direct, verify Jupiter can trade it
     // This prevents trying to trade tokens that Jupiter doesn't support
+    let finalEnabled = enabled;
     if (enabled && !canUseRaydiumDirect) {
       const jupiterTradable = await checkJupiterTradability(mint);
       if (!jupiterTradable) {
-        enabled = false;
+        finalEnabled = false;
         logger.warn({
           symbol,
           mint: mint.slice(0, 8),
@@ -810,7 +811,7 @@ export async function refreshLiquidity(): Promise<void> {
       tvl,
       entryThresholdPct: entryThreshold,
       exitThresholdPct: exitThreshold,
-      enabled,
+      enabled: finalEnabled,
       feeRate,
     });
 
