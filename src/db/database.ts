@@ -10,7 +10,7 @@ import { TradeStats, MeanReversionPosition, PairSpread } from '../types';
 import { dbLogger } from '../logger';
 import { MS_PER_DAY, MS_PER_WEEK } from '../utils/timeConstants';
 import type { ShortPosition } from '../signals/premiumShortSignal';
-import type { MeanReversionPositionRow } from './supabaseClient';
+import type { MeanReversionPositionRow, ShortPositionRow } from './supabaseClient';
 import {
   upsertMeanReversionPosition,
   upsertShortPosition,
@@ -543,7 +543,7 @@ export class DatabaseManager {
     if (cached) return cached;
 
     const rows = await fetchOpenShortPositions();
-    const positions = rows.map((row) => this.rowToShortPosition(row as unknown as Record<string, unknown>));
+    const positions = rows.map((row) => this.rowToShortPosition(row));
     this.cache.set(cacheKey, positions, CACHE_TTL_SHORT); // 30s TTL
     return positions;
   }
@@ -557,7 +557,7 @@ export class DatabaseManager {
     if (cached) return cached;
 
     const rows = await fetchClosedShortPositions(limit);
-    const positions = rows.map((row) => this.rowToShortPosition(row as unknown as Record<string, unknown>));
+    const positions = rows.map((row) => this.rowToShortPosition(row));
     this.cache.set(cacheKey, positions, CACHE_TTL_MEDIUM); // 5min TTL
     return positions;
   }
@@ -573,26 +573,26 @@ export class DatabaseManager {
   /**
    * Convert database row to ShortPosition
    */
-  private rowToShortPosition(row: Record<string, unknown>): ShortPosition {
+  private rowToShortPosition(row: ShortPositionRow): ShortPosition {
     return {
-      id: row.id as string,
-      ticker: row.ticker as string,
+      id: row.id,
+      ticker: row.ticker,
       flashSymbol: row.rstock_symbol as ShortPosition['flashSymbol'],
-      tokenSymbol: (row.token_symbol as string) || '',  // May be empty for legacy positions
-      tokenMint: (row.token_mint as string) || '',      // May be empty for legacy positions
-      entryPremiumPct: row.entry_premium_pct as number,
-      entryStockPrice: row.entry_stock_price as number,
-      entryTimestamp: row.entry_timestamp as number,
-      collateralUsd: row.collateral_usd as number,
-      leverage: row.leverage as number,
+      tokenSymbol: row.token_symbol || '',  // May be empty for legacy positions
+      tokenMint: row.token_mint || '',      // May be empty for legacy positions
+      entryPremiumPct: row.entry_premium_pct,
+      entryStockPrice: row.entry_stock_price,
+      entryTimestamp: row.entry_timestamp,
+      collateralUsd: row.collateral_usd,
+      leverage: row.leverage,
       status: row.status as 'open' | 'closed',
-      entryTxSignature: row.entry_tx_signature as string | undefined,
-      exitPremiumPct: row.exit_premium_pct as number | undefined,
-      exitTimestamp: row.exit_timestamp as number | undefined,
+      entryTxSignature: row.entry_tx_signature || undefined,
+      exitPremiumPct: row.exit_premium_pct || undefined,
+      exitTimestamp: row.exit_timestamp || undefined,
       exitReason: row.exit_reason as ShortPosition['exitReason'],
-      exitTxSignature: row.exit_tx_signature as string | undefined,
-      pnlUsd: row.pnl_usd as number | undefined,
-      pnlPct: row.pnl_pct as number | undefined,
+      exitTxSignature: row.exit_tx_signature || undefined,
+      pnlUsd: row.pnl_usd || undefined,
+      pnlPct: row.pnl_pct || undefined,
     };
   }
 
