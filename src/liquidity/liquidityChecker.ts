@@ -26,6 +26,7 @@ import {
   API_BATCH_SIZE,
   API_BATCH_DELAY_MS,
   USDC_MINT,
+  ONE_USDC,
   SOL_MINT,
   ENTRY_THRESHOLD_FORMULA,
   LIQUIDITY_INFORMED_EXIT,
@@ -159,7 +160,7 @@ async function checkJupiterTradability(mint: string): Promise<boolean> {
       }
 
       const response = await fetch(
-        `${apiUrl}/quote?inputMint=${USDC_MINT}&outputMint=${mint}&amount=1000000&slippageBps=100`,
+        `${apiUrl}/quote?inputMint=${USDC_MINT}&outputMint=${mint}&amount=${ONE_USDC}&slippageBps=100`,
         { signal: AbortSignal.timeout(5000), headers }
       );
 

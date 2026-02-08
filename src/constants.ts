@@ -17,6 +17,9 @@ export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 /** USDC decimals */
 export const USDC_DECIMALS = 6;
 
+/** One USDC in base units (1000000) */
+export const ONE_USDC = Math.pow(10, USDC_DECIMALS);
+
 /** Wrapped SOL mint address on Solana mainnet */
 export const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
@@ -719,7 +722,7 @@ export async function getSolPriceUsd(): Promise<number> {
     if (jupiterApiKey) {
       headers['x-api-key'] = jupiterApiKey;
     }
-    const response = await fetch('https://api.jup.ag/swap/v1/quote?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=So11111111111111111111111111111111111111112&amount=1000000', { headers });
+    const response = await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${USDC_MINT}&outputMint=${SOL_MINT}&amount=${ONE_USDC}`, { headers });
     const data = await response.json() as { outAmount?: string };
     const solLamports = parseInt(data?.outAmount || '0', 10);
 

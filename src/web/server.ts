@@ -14,7 +14,7 @@ import { getConfigSync } from '../config';
 import { getAllThresholds, getExitThreshold, getTokenFeeRate, getEntryThreshold } from '../liquidity/liquidityChecker';
 import { getExecutor } from '../execution/executor';
 import { getJupiterClient } from '../execution';
-import { USDC_MINT } from '../constants';
+import { USDC_MINT, ONE_USDC } from '../constants';
 import { getWatchlist, getTrailingStopState } from '../signals/meanReversionSignal';
 import { getPremiumWatchlist, getOpenShortPositions, getClosedShortPositions, getPremiumThresholds } from '../signals/premiumShortSignal';
 import { isShortingEnabled, isEquityMarketOpen, getTimeUntilMarketOpen, getOraclePrice, FlashSymbol, getWeekendWarning, getMarketHolidayStatus, HolidayStatus } from '../execution/flashTradeClient';
@@ -60,7 +60,7 @@ async function fetchSolPrice(): Promise<number> {
     if (jupiterApiKey) {
       headers['x-api-key'] = jupiterApiKey;
     }
-    const response = await fetch('https://api.jup.ag/swap/v1/quote?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=So11111111111111111111111111111111111111112&amount=1000000', {
+    const response = await fetch(`https://api.jup.ag/swap/v1/quote?inputMint=${USDC_MINT}&outputMint=So11111111111111111111111111111111111111112&amount=${ONE_USDC}`, {
       headers,
       signal: AbortSignal.timeout(5000), // 5 second timeout
     });

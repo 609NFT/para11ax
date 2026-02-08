@@ -15,7 +15,7 @@ import axios, { AxiosError } from 'axios';
 import { OnchainPrice, TokenConfig } from '../types';
 import { feedLogger } from '../logger';
 import { getConfigSync } from '../config';
-import { USDC_MINT } from '../constants';
+import { USDC_MINT, ONE_USDC } from '../constants';
 import { fetchDexScreenerPrice, fetchBatchDexScreenerPrices } from './dexScreenerFeed';
 
 interface PriceCache {
@@ -690,7 +690,7 @@ export class OnchainFeed {
           params: {
             inputMint: USDC_MINT,
             outputMint: 'So11111111111111111111111111111111111111112', // SOL
-            amount: 1000000, // 1 USDC
+            amount: ONE_USDC, // 1 USDC
             slippageBps: 100,
           },
           headers,
