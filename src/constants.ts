@@ -24,6 +24,13 @@ export const SOL_MINT = 'So11111111111111111111111111111111111111112';
 export const SOL_DECIMALS = 9;
 
 // ============================================================================
+// TIME CONSTANTS
+// ============================================================================
+
+/** Milliseconds in one day */
+export const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+// ============================================================================
 // FORMULA-BASED DYNAMIC THRESHOLDS
 // Thresholds scale smoothly with TVL using: coefficient / sqrt(tvl_in_millions)
 // This eliminates arbitrary tier cutoffs and gives more accurate risk-adjusted thresholds

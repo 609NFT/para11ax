@@ -7,6 +7,7 @@
 
 import { Pool } from 'pg';
 import { dbLogger } from '../logger';
+import { MS_PER_DAY } from '../constants';
 
 // Pool singleton (same pattern as supabaseClient.ts)
 let pool: Pool | null = null;
@@ -46,7 +47,7 @@ export async function calculateAllProfitableSpreads(): Promise<Map<string, Token
   if (!db) return new Map();
 
   try {
-    const cutoffTime = Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+    const cutoffTime = Date.now() - LOOKBACK_DAYS * MS_PER_DAY;
 
     // Find the minimum spread bucket with win rate >= MIN_WIN_RATE for each token
     const result = await db.query(`
