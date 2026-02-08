@@ -395,10 +395,10 @@ export class OnchainFeed {
       'XsjQP3iM', // TQQQx - consistent quote failures
     ]);
     const filteredMints = mints.filter(mint => !PROBLEMATIC_MINTS.has(mint));
-    
+
     if (filteredMints.length !== mints.length) {
-      feedLogger.debug({ 
-        originalCount: mints.length, 
+      feedLogger.debug({
+        originalCount: mints.length,
         filteredCount: filteredMints.length,
         filtered: mints.filter(mint => PROBLEMATIC_MINTS.has(mint))
       }, 'Filtered out problematic mints from price fetch');

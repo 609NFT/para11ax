@@ -35,8 +35,11 @@ const CLUSTER = 'mainnet-beta';
 export type FlashSymbol = string;
 
 // Dynamically built maps - populated on initialization
+// eslint-disable-next-line prefer-const
 let availableShortSymbols: Set<string> = new Set();
+// eslint-disable-next-line prefer-const
 let tickerToFlashSymbol: Map<string, string> = new Map();
+// eslint-disable-next-line prefer-const
 let flashSymbolToTicker: Map<string, string> = new Map();
 
 /**
@@ -135,7 +138,7 @@ function discoverShortMarkets(): void {
 /**
  * Get all available symbols that support shorting
  * Includes equities, crypto, metals, FX, etc.
- * 
+ *
  * @returns Array of Flash Trade symbol names that have short markets available
  * @example ['TSLAr', 'NVDAr', 'SPYr', 'BTCr', 'ETHr']
  */
@@ -878,6 +881,7 @@ export async function getTimeUntilMarketOpen(): Promise<string> {
   const PRE_MARKET_OPEN_ET = 4; // 4:00 AM ET
 
   // Find the next trading day (skip weekends and holidays)
+  // eslint-disable-next-line prefer-const
   let candidateDate = new Date(now);
   let daysChecked = 0;
   const maxDaysToCheck = 10; // Safety limit

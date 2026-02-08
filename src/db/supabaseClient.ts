@@ -42,7 +42,7 @@ function getTokenPool(): Pool {
 
 /**
  * Get the singleton connection pool for the trades database
- * 
+ *
  * @returns Postgres connection pool for trades data
  * @throws Error if TRADES_DB_URL environment variable is not set
  */

@@ -1,9 +1,9 @@
 /**
  * EMRT - Empirical Mean Reversion Time Optimization
- * 
+ *
  * Dynamically adjusts max hold time per token based on historical reversion patterns.
  * Tokens that revert quickly get shorter hold times; slow reverters get longer.
- * 
+ *
  * Strategy: Use 1.5x the average target exit time as the max hold for that token.
  * Falls back to default MAX_HOLD_TIME_MS if insufficient data.
  */
@@ -29,7 +29,7 @@ let lastRefresh = 0;
 
 /**
  * Get the optimal max hold time for a specific token
- * 
+ *
  * @param token Token symbol (e.g., "TSLAx", "SPYr")
  * @returns Max hold time in milliseconds
  */
@@ -37,10 +37,10 @@ export function getTokenMaxHoldTime(token: string): number {
   // Get session multiplier
   const session = getSessionAdjustments();
   const sessionMultiplier = session.maxHoldMultiplier;
-  
+
   // Check if we have token-specific data
   const tokenHoldMs = tokenHoldTimes.get(token);
-  
+
   if (tokenHoldMs) {
     const adjustedHold = tokenHoldMs * sessionMultiplier;
     emrtLogger.debug({
@@ -52,7 +52,7 @@ export function getTokenMaxHoldTime(token: string): number {
     }, 'EMRT: Token-specific hold time');
     return adjustedHold;
   }
-  
+
   // Fall back to default
   const defaultHold = MAX_HOLD_TIME_MS * sessionMultiplier;
   emrtLogger.debug({
@@ -74,10 +74,10 @@ export async function refreshEMRTCache(): Promise<void> {
     emrtLogger.debug('EMRT cache still fresh, skipping refresh');
     return;
   }
-  
+
   try {
     const pool = getTradesPool();
-    
+
     // Get average target exit times per token (last 30 days)
     const result = await pool.query(`
       SELECT 
@@ -92,20 +92,20 @@ export async function refreshEMRTCache(): Promise<void> {
       GROUP BY buy_symbol
       HAVING COUNT(*) FILTER (WHERE exit_reason = 'target') >= $2
     `, [now - 30 * 24 * 60 * 60 * 1000, MIN_TARGET_EXITS]);
-    
+
     // Clear old cache
     tokenHoldTimes.clear();
-    
+
     // Populate with new data
     for (const row of result.rows) {
       const avgTargetMs = parseFloat(row.avg_target_time_ms);
       const recommendedHoldMs = avgTargetMs * HOLD_MULTIPLIER;
-      
+
       // Clamp between 30 min and 8 hours
       const clampedHoldMs = Math.max(30 * 60 * 1000, Math.min(8 * 60 * 60 * 1000, recommendedHoldMs));
-      
+
       tokenHoldTimes.set(row.token, clampedHoldMs);
-      
+
       emrtLogger.info({
         token: row.token,
         targetExits: parseInt(row.target_count),
@@ -113,13 +113,13 @@ export async function refreshEMRTCache(): Promise<void> {
         recommendedHoldMin: Math.round(clampedHoldMs / 60000)
       }, 'EMRT: Set token-specific hold time');
     }
-    
+
     lastRefresh = now;
     emrtLogger.info({
       tokensWithData: tokenHoldTimes.size,
       tokens: Array.from(tokenHoldTimes.keys())
     }, 'EMRT cache refreshed');
-    
+
   } catch (error) {
     emrtLogger.error({ error }, 'Failed to refresh EMRT cache');
     // Keep using existing cache on error
@@ -134,7 +134,7 @@ export function getEMRTStatus(): { tokens: Array<{ token: string; holdTimeMin: n
     token,
     holdTimeMin: Math.round(holdMs / 60000)
   }));
-  
+
   return { tokens, lastRefresh };
 }
 

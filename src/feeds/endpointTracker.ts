@@ -67,7 +67,7 @@ class EndpointTracker {
 
     const stats: EndpointStats[] = [];
 
-    for (const [_id, endpoint] of this.endpoints) {
+    for (const [, endpoint] of this.endpoints) {
       const recentCalls = endpoint.calls.filter(c => c.timestamp > oneMinuteAgo);
       const hourCalls = endpoint.calls.filter(c => c.timestamp > oneHourAgo);
       const lastCall = endpoint.calls.length > 0

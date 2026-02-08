@@ -519,7 +519,7 @@ export async function refreshLiquidity(): Promise<void> {
 
   // Build lookups
   const symbolByMint = new Map<string, string>();
-  const poolAddressBySymbol = new Map<string, String>();
+  const poolAddressBySymbol = new Map<string, string>();
   for (const token of enabledTokens) {
     symbolByMint.set(token.mint, token.symbol);
     if (token.poolAddress) {
@@ -764,7 +764,7 @@ export async function refreshLiquidity(): Promise<void> {
     const raydiumFeeRate = raydiumInfo?.feeRate ?? 0.0025;
     const feeRate = await getBestFeeRate(symbol, mint, raydiumFeeRate);
 
-    let { entryThreshold, exitThreshold, enabled } = calculateThresholds(tvl, feeRate, symbol);
+    const { entryThreshold, exitThreshold, enabled } = calculateThresholds(tvl, feeRate, symbol);
 
     // Track which source won
     if (best.source === 'raydium') raydiumBest++;
@@ -1096,7 +1096,7 @@ export function getEntryThresholdDetails(symbol: string): {
     percentileThreshold !== null &&
     percentileThreshold > tvlBasedThreshold;
 
-  let baseThreshold = usingPercentile ? percentileThreshold! : tvlBasedThreshold;
+  const baseThreshold = usingPercentile ? percentileThreshold! : tvlBasedThreshold;
 
   // Include performance adjustment
   const performanceAdjustment = getPerformanceAdjustmentSync(symbol);

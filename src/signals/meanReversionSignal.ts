@@ -150,7 +150,7 @@ export function getWatchlist(): WatchlistItem[] {
 }
 
 // Cache for batch spreads - used to ensure evaluate() uses the same prices as batch calculation
-let cachedBatchSpreads: Map<string, PairSpread> = new Map();
+const cachedBatchSpreads: Map<string, PairSpread> = new Map();
 let batchSpreadsCacheTime: number = 0;
 let batchSpreadsCacheTtlMs = 10000; // Default: spreads are valid for this long
 const DEXSCREENER_RATE_LIMIT_PER_MIN = 300;

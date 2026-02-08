@@ -220,12 +220,13 @@ export class JupiterClient {
             executionLogger.error('Auth failed on both primary and fallback APIs');
             return null;
 
-          case 'rate_limit':
+          case 'rate_limit': {
             // Rate limited - longer backoff
             const rateLimitDelay = this.calculateBackoff(attempt + 2); // Extra delay
             executionLogger.warn({ delayMs: rateLimitDelay }, 'Rate limited, backing off');
             await this.sleep(rateLimitDelay);
             continue;
+          }
 
           case 'transient':
             // Transient error - retry with backoff
