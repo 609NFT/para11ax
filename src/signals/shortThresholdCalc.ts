@@ -402,7 +402,8 @@ function buildSupabasePoolerUrl(): string | null {
     const region = 'us-west-2'; // Could be derived from URL in future
 
     return `postgresql://postgres.${projectRef}:${password}@aws-0-${region}.pooler.supabase.com:5432/postgres`;
-  } catch {
+  } catch (error) {
+    logger.debug({ error }, 'Failed to load Supabase credentials from secrets file');
     return null;
   }
 }
