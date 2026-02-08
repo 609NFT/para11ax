@@ -372,6 +372,11 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 
 ## Backtest Experiments
 
+### Max Hold Time Experiments (Feb 8, 2026)
+| Date | Max Hold | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|----------|--------|----------|-----|-------------|--------|
+| **Feb 8** | **90min** | **107** | **18.7%** | **+$4.14** | **-49%** | ❌ **SEVERE DEGRADATION: 90min max hold vs current 240min baseline (47 trades, 34.0% WR, +$8.07 PnL) shows 107 trades, 18.7% WR, +$4.14 PnL (-49% decline). Volume explosion (47→107 = +128%) but massive win rate collapse (34.0%→18.7% = -45% relative) with significant PnL degradation (-$3.93). 91% max_hold exits (97/107) vs 9% target exits (10/107) shows forced early exits destroying trade quality. Pattern confirms shorter max hold times force premature exits before mean reversion can work. Quality over quantity violated - more trades but much lower profitability. Current 240min max hold is optimal for allowing sufficient time for spread convergence.** |
+
 ### Exit Target Experiments (Feb 8, 2026)
 | Date | Exit Target | Trades | Win Rate | PnL | vs Baseline | Status |
 |------|-------------|--------|----------|-----|-------------|--------|
