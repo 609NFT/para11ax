@@ -6,13 +6,13 @@
 
 import { z } from 'zod';
 import { Config, TradingMode, TokenConfig } from './types';
-import * as dotenv from 'dotenv';
+import { config as dotenvConfig } from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fetchTokensFromDb } from './db/supabaseClient';
 import logger from './logger';
 
-dotenv.config();
+dotenvConfig();
 
 // Cache for DB tokens (loaded once at startup)
 let dbTokensCache: TokenConfig[] | null = null;
