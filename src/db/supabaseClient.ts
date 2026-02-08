@@ -18,6 +18,12 @@ let tokenPool: Pool | null = null;
 // Pool for trade data (TRADES_DB_URL - new Parallax database)
 let tradesPool: Pool | null = null;
 
+/**
+ * Get the singleton connection pool for the token database
+ * 
+ * @returns Postgres connection pool for token data
+ * @throws Error if DIRECT_URL environment variable is not set
+ */
 function getTokenPool(): Pool {
   if (!tokenPool) {
     const connectionString = process.env.DIRECT_URL;
