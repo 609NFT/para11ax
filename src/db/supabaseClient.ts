@@ -5,6 +5,7 @@
 import { Pool } from 'pg';
 import { TokenConfig } from '../types';
 import { dbLogger } from '../logger';
+import { MS_PER_HOUR } from '../utils/timeConstants';
 
 // Database connection timeout constants
 const TOKEN_POOL_IDLE_TIMEOUT_MS = 30000; // 30 seconds
@@ -792,8 +793,7 @@ export async function getHourlySummaryFromSupabase(sinceTimestamp?: number): Pro
 
   // Default to last 25 hours (overlap for safety)
   const DEFAULT_LOOKBACK_HOURS = 25;
-  const since = sinceTimestamp || Date.now() - DEFAULT_LOOKBACK_HOURS * 60 * 60 * 1000;
-  const HOUR_MS = 60 * 60 * 1000;
+  const since = sinceTimestamp || Date.now() - DEFAULT_LOOKBACK_HOURS * MS_PER_HOUR;
 
   try {
     const result = await pool.query<{
@@ -811,7 +811,7 @@ export async function getHourlySummaryFromSupabase(sinceTimestamp?: number): Pro
       WHERE timestamp >= $2 AND token_a_discount_vs_stock IS NOT NULL
       GROUP BY token_a_symbol, bucket_timestamp
       ORDER BY bucket_timestamp ASC
-    `, [HOUR_MS, since]);
+    `, [MS_PER_HOUR, since]);
 
     return result.rows.map(row => ({
       symbol: row.symbol,
@@ -1297,7 +1297,6 @@ export async function fetchAllHistoricalVolatilityFromSupabase(windowDays: numbe
   }
 
   const cutoffTimestamp = Date.now() - (windowDays * 24 * 60 * 60 * 1000);
-  const HOUR_MS = 60 * 60 * 1000;
 
   try {
     // Get hourly price samples for all tokens
@@ -1311,7 +1310,7 @@ export async function fetchAllHistoricalVolatilityFromSupabase(windowDays: numbe
         AND token_a_price > 0
       GROUP BY token_a_symbol, hour_bucket
       ORDER BY token_a_symbol, hour_bucket ASC
-    `, [HOUR_MS, cutoffTimestamp]);
+    `, [MS_PER_HOUR, cutoffTimestamp]);
 
     // Group by STOCK TICKER (not token symbol)
     const tickerPrices = new Map<string, { hour_bucket: number; avg_price: number }[]>();
