@@ -21,6 +21,7 @@ import { executionLogger } from '../logger';
 import { getConfigSync } from '../config';
 import { USDC_MINT, USDC_DECIMALS, JUPITER_HTTP_TIMEOUT_MS } from '../constants';
 import { recordApiCall } from '../feeds/endpointTracker';
+import { sleep } from '../utils/time';
 
 export interface SwapResponse {
   swapTransaction: string; // Base64 encoded transaction
@@ -165,11 +166,8 @@ export class JupiterClient {
   }
 
   /**
-   * Sleep helper
+   * Execute request with retry logic and fallback
    */
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 
   /**
    * Execute request with retry logic and fallback
@@ -224,7 +222,7 @@ export class JupiterClient {
             // Rate limited - longer backoff
             const rateLimitDelay = this.calculateBackoff(attempt + 2); // Extra delay
             executionLogger.warn({ delayMs: rateLimitDelay }, 'Rate limited, backing off');
-            await this.sleep(rateLimitDelay);
+            await sleep(rateLimitDelay);
             continue;
           }
 
@@ -232,7 +230,7 @@ export class JupiterClient {
             // Transient error - retry with backoff
             if (attempt < this.maxRetries) {
               const delay = this.calculateBackoff(attempt);
-              await this.sleep(delay);
+              await sleep(delay);
 
               // If multiple transient failures on primary, try fallback
               if (!this.usingFallback && attempt >= 1) {

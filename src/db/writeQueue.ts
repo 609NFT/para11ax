@@ -13,6 +13,7 @@
 
 import { dbLogger } from '../logger';
 import { notifyError } from '../notifications/discord';
+import { sleep } from '../utils/time';
 
 // Queue processing constants
 const QUEUE_POLL_INTERVAL_MS = 100;
@@ -81,7 +82,7 @@ export class WriteQueue {
           );
 
           // Wait before retry
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          await sleep(delayMs);
 
           // Re-queue with incremented retry count
           op.retryCount++;
@@ -123,7 +124,7 @@ export class WriteQueue {
    */
   async drain(): Promise<void> {
     while (this.queue.length > 0 || this.processing) {
-      await new Promise((resolve) => setTimeout(resolve, QUEUE_POLL_INTERVAL_MS));
+      await sleep(QUEUE_POLL_INTERVAL_MS);
     }
   }
 }

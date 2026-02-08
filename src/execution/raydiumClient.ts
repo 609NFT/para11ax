@@ -27,6 +27,7 @@ import {
   calculateNetworkFeeUsd,
 } from '../constants';
 import { FeeBreakdown } from '../types';
+import { sleep } from '../utils/time';
 
 // Convert to PublicKey for Solana operations
 const USDC_MINT = new PublicKey(USDC_MINT_STRING);
@@ -299,7 +300,7 @@ export class RaydiumClient {
           priorityFeeSol: (priorityFee * RAYDIUM_COMPUTE_UNITS / 1_000_000_000_000).toFixed(6),
         }, 'Retrying swap with increased priority fee');
         this.poolCache.delete(poolAddress);
-        await this.delay(this.retryDelayMs * attempt);
+        await sleep(this.retryDelayMs * attempt);
       } else {
         executionLogger.debug({ priorityFee }, 'Starting swap with minimal priority fee');
       }
@@ -647,11 +648,9 @@ export class RaydiumClient {
   }
 
   /**
-   * Utility delay function
+   * Get raw token balance (in smallest units) using getParsedTokenAccountsByOwner
+   * This supports both SPL Token and Token-2022 programs
    */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 
   /**
    * Get raw token balance (in smallest units) using getParsedTokenAccountsByOwner
