@@ -58,6 +58,17 @@ class EndpointTracker {
   }
 
   /**
+   * Calculate average response time from recent calls
+   */
+  private calculateAvgResponseMs(calls: CallRecord[]): number {
+    const recentForAvg = calls.slice(-10);
+    if (recentForAvg.length === 0) {
+      return 0;
+    }
+    return recentForAvg.reduce((sum, c) => sum + c.responseMs, 0) / recentForAvg.length;
+  }
+
+  /**
    * Get stats for all endpoints
    */
   getStats(): EndpointStats[] {
@@ -74,11 +85,7 @@ class EndpointTracker {
         ? endpoint.calls[endpoint.calls.length - 1]
         : null;
 
-      // Calculate average response time from last 10 calls
-      const recentForAvg = endpoint.calls.slice(-10);
-      const avgResponseMs = recentForAvg.length > 0
-        ? recentForAvg.reduce((sum, c) => sum + c.responseMs, 0) / recentForAvg.length
-        : 0;
+      const avgResponseMs = this.calculateAvgResponseMs(endpoint.calls);
 
       stats.push({
         name: endpoint.name,
@@ -112,10 +119,7 @@ class EndpointTracker {
       ? endpoint.calls[endpoint.calls.length - 1]
       : null;
 
-    const recentForAvg = endpoint.calls.slice(-10);
-    const avgResponseMs = recentForAvg.length > 0
-      ? recentForAvg.reduce((sum, c) => sum + c.responseMs, 0) / recentForAvg.length
-      : 0;
+    const avgResponseMs = this.calculateAvgResponseMs(endpoint.calls);
 
     return {
       name: endpoint.name,
