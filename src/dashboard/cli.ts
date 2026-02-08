@@ -10,6 +10,8 @@ import { getRiskManager } from '../risk';
 import { getDatabase } from '../db';
 import logger from '../logger';
 
+const DEFAULT_UPDATE_INTERVAL_MS = 5000; // 5 seconds
+
 export class Dashboard {
   private updateInterval: NodeJS.Timeout | null = null;
   private loopCount: number = 0;
@@ -305,7 +307,7 @@ export class Dashboard {
   /**
    * Start live updates
    */
-  startLiveUpdates(intervalMs: number = 5000): void {
+  startLiveUpdates(intervalMs: number = DEFAULT_UPDATE_INTERVAL_MS): void {
     const fullMode = process.env.DASHBOARD_FULL === 'true';
 
     if (fullMode) {
