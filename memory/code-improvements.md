@@ -36,3 +36,24 @@
 **Bot reloaded**: ✅ No errors
 
 **Next opportunity**: Could refactor remaining 25 instances across the codebase to use these utilities.
+
+## 2026-02-08 - Error Utility Functions Extension (7:00 PM UTC)
+
+**Fixed**: Created comprehensive error utility functions and refactored Flash Trade client
+
+**Change**: 
+- Created `src/utils/errors.ts` with `getErrorMessage()` and `getErrorDetails()` functions
+- Refactored 3+ instances in `flashTradeClient.ts` from repeated pattern:
+  - `error instanceof Error ? error.message : String(error)`
+  - `error instanceof Error ? error.stack : ''`
+- Used new utilities for cleaner, more consistent error handling
+
+**Impact**: 
+- Reduces code duplication in error handling patterns
+- Provides standardized error extraction utilities
+- Improves maintainability and consistency across codebase
+- Foundation for further refactoring of similar patterns
+
+**Commit**: `0043a50` - "chore: add error utility functions and reduce code duplication"
+**Build**: ✅ TypeScript compiled successfully  
+**Bot status**: ✅ Running normally (no errors in logs)
