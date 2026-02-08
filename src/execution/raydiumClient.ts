@@ -54,6 +54,9 @@ interface PoolData {
 // Pool cache TTL - refresh pool data after this time to get fresh quotes
 const POOL_CACHE_TTL_MS = 30_000; // 30 seconds
 
+// Default slippage for quotes (1% tolerance)
+const DEFAULT_QUOTE_SLIPPAGE = 0.01;
+
 export class RaydiumClient {
   private connection: Connection;
   private raydium: Raydium | null = null;
@@ -191,7 +194,7 @@ export class RaydiumClient {
         baseMint: new PublicKey(inputMint),
         epochInfo,
         amountIn: amountInBN,
-        slippage: 0.01, // 1% for quote
+        slippage: DEFAULT_QUOTE_SLIPPAGE, // 1% for quote
         priceLimit: undefined,
         catchLiquidityInsufficient: false,
       });
