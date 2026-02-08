@@ -453,6 +453,12 @@ The absence of trades demonstrates **disciplined execution of quality-first appr
 | Feb 8 | **2.0%** | 154 | 21.4% | +$7.44 | -40% | ❌ **Too aggressive - 87% max_hold exits** |
 | Current | 2.5% | 49 | 36.7% | +$5.01 | baseline | - |
 
+### Max Hold Experiments
+| Date | Max Hold | Trades | Win Rate | PnL | vs Baseline | Status |
+|------|----------|--------|----------|-----|-------------|--------|
+| **Feb 8** | **❌ 90min** | **115** | **19.1%** | **+$4.39** | **-43%** | ❌ **SIGNIFICANT DEGRADATION: 90min max hold vs current 240min baseline (50 trades, 34.0% WR, +$7.75 PnL) shows 115 trades, 19.1% WR, +$4.39 PnL (-43% decline). Volume increase (50→115 = +130%) but severe win rate drop (34.0%→19.1% = -44% relative) with substantial PnL degradation (-$3.36). 90% max_hold exits (104/115) vs 10% target exits (11/115) demonstrate forced timeouts before spreads can revert. Pattern: 45min(-157%) → 80min(0%) → 90min(-43%) → 240min(optimal) confirms shorter holds are catastrophic for mean reversion strategy. Validates current 240min max hold as optimal for allowing spreads full time to narrow.** |
+| **Feb 8** | **80min** | **52** | **34.6%** | **+$8.64** | **0%** | ❌ **NO IMPACT: 80min max hold vs 60min baseline shows identical performance (52 trades, 34.6% WR, +$8.64 vs +$8.63 PnL = 0% change). Same trade count, same win rate, negligible $0.01 PnL difference. Combined with comprehensive testing: 45min(-157%) → 60min(optimal) → 80min(0%) → 90min(-43%) establishes 60-80min range has zero measurable impact but 90min+ starts to degrade performance. Most trades average 217min hold naturally, making the max hold limit largely irrelevant unless set too low.** |
+
 **Updated Baseline** (3-day backtest, Feb 6): Current 4.0% entry / 0.5% exit yields 48 trades, 45.8% WR, +$10.59 net PnL.
 
 **CRITICAL FINDING (Feb 9)**: **4.3% threshold is UNRELIABLE due to data variance**:
