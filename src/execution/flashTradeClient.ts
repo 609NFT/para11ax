@@ -13,6 +13,19 @@
 import { AnchorProvider, BN, Wallet } from '@coral-xyz/anchor';
 import { Connection, Keypair, PublicKey, TransactionInstruction, Signer } from '@solana/web3.js';
 import { PerpetualsClient, PoolConfig, Side, OraclePrice, CustodyAccount, Privilege, BN_ZERO, uiDecimalsToNative } from 'flash-sdk';
+
+// Extended interfaces for Flash SDK types with missing properties
+interface ExtendedToken {
+  symbol: string;
+  isStable: boolean;
+  pythTicker?: string;
+  pythPriceId?: string;
+}
+
+interface ExtendedCustody {
+  custodyAccount: PublicKey;
+  symbol: string;
+}
 import { PriceServiceConnection } from '@pythnetwork/price-service-client';
 import logger from '../logger';
 import { getConfigSync } from '../config';
@@ -99,7 +112,7 @@ function discoverShortMarkets(): void {
     if (token.isStable) continue;
 
     // Get pythTicker to extract the underlying ticker
-    const pythTicker = (token as any).pythTicker as string | undefined;
+    const pythTicker = (token as ExtendedToken).pythTicker;
     if (!pythTicker) continue;
 
     // Find matching custody to check if short market exists
@@ -414,7 +427,7 @@ async function getOraclePrices(symbol: FlashSymbol): Promise<{ price: OraclePric
     throw new Error(`Token ${symbol} not found in pool config`);
   }
 
-  const pythPriceId = (tokenConfig as any).pythPriceId;
+  const pythPriceId = (tokenConfig as ExtendedToken).pythPriceId;
   if (!pythPriceId) {
     throw new Error(`No pythPriceId found for ${symbol}`);
   }
@@ -475,7 +488,7 @@ export async function getOraclePrice(symbol: FlashSymbol): Promise<number | null
   }
 
   // Get pythPriceId - need to strip '0x' prefix if present
-  const pythPriceId = (tokenConfig as any).pythPriceId;
+  const pythPriceId = (tokenConfig as ExtendedToken).pythPriceId;
   if (!pythPriceId) {
     logger.warn({ symbol }, `No pythPriceId found for ${symbol}`);
     return null;
@@ -764,8 +777,8 @@ export async function getOpenPerpPositions(): Promise<FlashTradePosition[]> {
         try {
           // Use custody accounts (not mints!) for position key derivation
           // custodyAccount is already a PublicKey, so use it directly
-          const targetCustodyPk = (targetCustody as any).custodyAccount as PublicKey;
-          const usdcCustodyPk = (usdcCustody as any).custodyAccount as PublicKey;
+          const targetCustodyPk = (targetCustody as ExtendedCustody).custodyAccount;
+          const usdcCustodyPk = (usdcCustody as ExtendedCustody).custodyAccount;
 
           const positionKey = flashClient.getPositionKey(
             wallet,
