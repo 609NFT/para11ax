@@ -36,7 +36,10 @@ const MIN_TIME_SPAN_HOURS = 24;   // Data must span at least 24 hours
 const LOOKBACK_DAYS = 7;          // Fetch 7 days of data
 
 /**
- * Fetch spread history for a token from Supabase
+ * Fetch HOURLY aggregated spread history for a token from Supabase
+ * Uses hourly bucketing to get more meaningful mean-reversion dynamics
+ * (raw high-frequency data gives unrealistic half-lives due to noise)
+ *
  * Returns time series of { timestamp, discount }
  */
 async function fetchSpreadHistory(
@@ -52,18 +55,20 @@ async function fetchSpreadHistory(
   const cutoffTime = Date.now() - lookbackMs;
 
   try {
+    // Use hourly aggregation to reduce noise and get meaningful half-life estimates
     const result = await pool.query(`
       SELECT
-        timestamp,
-        COALESCE(token_a_discount_vs_stock, spread_pct, 0) as discount
+        (FLOOR(timestamp / $1) * $1)::bigint as hour_bucket,
+        AVG(COALESCE(token_a_discount_vs_stock, spread_pct, 0)) as discount
       FROM discount_history
-      WHERE token_a_symbol = $1
-        AND timestamp > $2
-      ORDER BY timestamp ASC
-    `, [symbol, cutoffTime]);
+      WHERE token_a_symbol = $2
+        AND timestamp > $3
+      GROUP BY hour_bucket
+      ORDER BY hour_bucket ASC
+    `, [MS_PER_HOUR, symbol, cutoffTime]);
 
     return result.rows.map(row => ({
-      timestamp: Number(row.timestamp),
+      timestamp: Number(row.hour_bucket),
       discount: Number(row.discount),
     }));
   } catch (error) {
