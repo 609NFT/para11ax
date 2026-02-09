@@ -1,27 +1,18 @@
 # Code Improvements Log
 
-## 2026-02-08 21:17 UTC
+## 2026-02-09 03:26 UTC
 
-### Consolidated Duplicate Error Utilities (commit: 0ad78fd)
+**Fixed:** Inconsistent error message handling in `flashTradeClient.ts`
 
-**Issue**: Found two error utility files with duplicate functionality:
-- `src/utils/error.ts` - had `getErrorMessage` and `getErrorStack` functions  
-- `src/utils/errors.ts` - had `getErrorMessage` and `getErrorDetails` functions
+**Details:**
+- Replaced 4 inline `error instanceof Error ? error.message : String(error)` patterns 
+- Used existing `getErrorMessage` utility function instead
+- Improves code consistency and reduces duplication
+- Same utility was already imported but not used everywhere
 
-**Fix**: 
-- Removed `src/utils/error.ts` (duplicate file)
-- Updated `src/db/writeQueue.ts` to use `getErrorDetails` from `errors.ts`
-- Updated `src/utils/index.ts` export path
-- `getErrorDetails` is more comprehensive (returns both message and stack in one call)
+**Files changed:**
+- `src/execution/flashTradeClient.ts` (4 replacements)
 
-**Result**: 
-- Removed 27 lines of duplicate code
-- More consistent error handling
-- All tests still pass (15/15 ✅)
-- Build successful
+**Commit:** `b1dc8e5` - "chore: use getErrorMessage utility for consistent error handling"
 
-**Files changed**: 
-- Deleted: `src/utils/error.ts`
-- Modified: `src/db/writeQueue.ts`, `src/utils/index.ts`
-
-This was a small, safe refactoring that removes code duplication without affecting runtime behavior.
+**Impact:** Cosmetic improvement, no runtime behavior change. Better code maintainability.
