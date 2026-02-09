@@ -324,10 +324,8 @@ src/
 ├── notifications/           # Alerts
 │   └── discord.ts           #   Discord webhook notifications
 │
-├── backtest/                # Strategy backtesting
-│   └── backtester.ts        #   Historical strategy simulation
-│
-└── standalone-dashboard.ts  # Dashboard-only mode
+└── backtest/                # Strategy backtesting
+    └── backtester.ts        #   Historical strategy simulation
 ```
 
 ---
