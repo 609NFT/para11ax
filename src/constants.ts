@@ -823,3 +823,5 @@ export const HALF_LIFE_FILTER = {
   THRESHOLD_MULTIPLIER: 1.5,    // Or boost threshold by 50% instead of skipping
   CACHE_HOURS: 24,              // Recalculate daily
 } as const;
+
+// Half-life filter for mean reversion speed analysis
