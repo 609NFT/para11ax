@@ -319,7 +319,7 @@ async function readOnChainFees(
 
     logger.info({ symbols: Array.from(result.keys()) }, `Read on-chain fees for ${result.size} custodies`);
   } catch (error) {
-    logger.error({ error: String(error) }, 'Failed to read on-chain fees — thresholds will use fallbacks');
+    logger.error({ error }, 'Failed to read on-chain fees — thresholds will use fallbacks');
   }
 
   return result;
