@@ -214,7 +214,7 @@ async function getDashboardData(timeRange: string = 'ALL') {
   const rawOpenPositions = await database.getOpenPositions();
   // Fetch closed positions from Supabase (has correct exit reasons)
   const closedPositions = await fetchRecentClosedPositions(10, 24 * 60 * 60 * 1000); // 10 max, within 24h
-  const closedShortPositions = await getClosedShortPositions(10);
+  const closedShortPositions = await getClosedShortPositions(10, 24 * 60 * 60 * 1000); // 10 max, within 24h
   // Use Supabase for PnL history (production source of truth)
   const pnlHistory = await fetchPnlHistoryFromSupabase(sinceTimestamp);
   const riskSummary = riskManager.getSummary();

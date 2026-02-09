@@ -625,9 +625,9 @@ export async function getOpenShortPositions(): Promise<ShortPosition[]> {
 /**
  * Get closed short positions (most recent first) from database
  */
-export async function getClosedShortPositions(limit: number = 10): Promise<ShortPosition[]> {
+export async function getClosedShortPositions(limit: number = 10, maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<ShortPosition[]> {
   const db = getDatabase();
-  return await db.getClosedShortPositions(limit);
+  return await db.getClosedShortPositions(limit, maxAgeMs);
 }
 
 /**

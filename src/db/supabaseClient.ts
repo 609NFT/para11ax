@@ -399,9 +399,11 @@ export async function fetchOpenShortPositions(): Promise<ShortPositionRow[]> {
 /**
  * Fetch closed short positions
  */
-export async function fetchClosedShortPositions(limit: number = 100): Promise<ShortPositionRow[]> {
+export async function fetchClosedShortPositions(limit: number = 100, maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<ShortPositionRow[]> {
   const pool = getTradesPool();
   if (!pool) return [];
+
+  const cutoffTime = Date.now() - maxAgeMs;
 
   try {
     const result = await pool.query(`
@@ -412,9 +414,10 @@ export async function fetchClosedShortPositions(limit: number = 100): Promise<Sh
              pnl_usd, pnl_pct
       FROM short_positions
       WHERE status = 'closed'
+        AND exit_timestamp > $2
       ORDER BY exit_timestamp DESC
       LIMIT $1
-    `, [limit]);
+    `, [limit, cutoffTime]);
 
     return result.rows as ShortPositionRow[];
   } catch (error) {

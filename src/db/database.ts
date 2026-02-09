@@ -555,12 +555,12 @@ export class DatabaseManager {
   /**
    * Get closed short positions (most recent first)
    */
-  async getClosedShortPositions(limit: number = 100): Promise<ShortPosition[]> {
-    const cacheKey = `short_positions:closed:${limit}`;
+  async getClosedShortPositions(limit: number = 100, maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<ShortPosition[]> {
+    const cacheKey = `short_positions:closed:${limit}:${maxAgeMs}`;
     const cached = this.cache.get<ShortPosition[]>(cacheKey);
     if (cached) return cached;
 
-    const rows = await fetchClosedShortPositions(limit);
+    const rows = await fetchClosedShortPositions(limit, maxAgeMs);
     const positions = rows.map((row) => this.rowToShortPosition(row));
     this.cache.set(cacheKey, positions, CACHE_TTL_MEDIUM); // 5min TTL
     return positions;
