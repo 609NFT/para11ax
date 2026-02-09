@@ -66,7 +66,7 @@ Parallax trades **tokenized stocks on Solana** (rTSLA, rNVDA, rSPY, etc.) agains
 ## Active Parameters
 
 ```
-MIN_FLOOR: 4.0%           # CURRENT: 4.0% captures more opportunities with similar performance (reduced from 4.3% per recent optimization)
+MIN_FLOOR: 3.0%           # CURRENT: 4.0% captures more opportunities with similar performance (reduced from 4.3% per recent optimization)
 MAX_CAP: 10.0%            # Raised from 2.5% — allow high thresholds
 MIN_HOLD_TIME_MS: 5 min   # Raised from 2 min — <5min exits are 10% WR
 MAX_HOLD_TIME_MS: 60 min  # UPDATED Feb 5: was 4h. Data: 0% WR past 2hr, sweet spot 15-30min
