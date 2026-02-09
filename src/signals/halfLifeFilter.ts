@@ -35,6 +35,27 @@ const MIN_SAMPLES = 50;           // Need at least 50 data points
 const MIN_TIME_SPAN_HOURS = 24;   // Data must span at least 24 hours
 const LOOKBACK_DAYS = 7;          // Fetch 7 days of data
 
+// Concurrency control to avoid overwhelming DB pool
+const MAX_CONCURRENT_QUERIES = 3;
+let activeQueries = 0;
+const queryQueue: Array<() => void> = [];
+
+async function withQueryLimit<T>(fn: () => Promise<T>): Promise<T> {
+  // If at capacity, wait in queue
+  if (activeQueries >= MAX_CONCURRENT_QUERIES) {
+    await new Promise<void>(resolve => queryQueue.push(resolve));
+  }
+  activeQueries++;
+  try {
+    return await fn();
+  } finally {
+    activeQueries--;
+    // Release next queued query
+    const next = queryQueue.shift();
+    if (next) next();
+  }
+}
+
 /**
  * Fetch HOURLY aggregated spread history for a token from Supabase
  * Uses hourly bucketing to get more meaningful mean-reversion dynamics
@@ -72,7 +93,12 @@ async function fetchSpreadHistory(
       discount: Number(row.discount),
     }));
   } catch (error) {
-    signalLogger.error({ error, symbol }, 'Half-life: Failed to fetch spread history');
+    const err = error as Error;
+    signalLogger.error({ 
+      symbol, 
+      errorMessage: err.message,
+      errorName: err.name,
+    }, 'Half-life: Failed to fetch spread history');
     return [];
   }
 }
@@ -206,8 +232,8 @@ export async function getHalfLife(symbol: string): Promise<number> {
     return cached.halfLifeHours;
   }
 
-  // Fetch spread history
-  const spreadData = await fetchSpreadHistory(symbol);
+  // Fetch spread history (rate-limited to avoid overwhelming DB pool)
+  const spreadData = await withQueryLimit(() => fetchSpreadHistory(symbol));
 
   if (spreadData.length < MIN_SAMPLES) {
     signalLogger.debug({
