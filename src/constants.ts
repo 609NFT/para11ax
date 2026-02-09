@@ -86,9 +86,9 @@ export const ENTRY_THRESHOLD_FORMULA = {
  */
 export const DYNAMIC_FLOOR_FORMULA = {
   ENABLED: true,
-  BASE_FLOOR: 3.0,              // 609-approved 2026-02-09 — lowered for activity (+$11.85 backtest)
+  BASE_FLOOR: 4.0,              // 609-approved 2026-02-08 — raised for quality (backtest: +26% PnL, +3.4% WR)
   VOLATILITY_COEFFICIENT: 0.6,  // Floor += ATR% × 0.6
-  ABSOLUTE_MIN: 3.0,            // Absolute minimum threshold
+  ABSOLUTE_MIN: 4.0,            // Absolute minimum threshold
   ABSOLUTE_MAX: 6.0,            // Cap for high-vol tokens
   FALLBACK_ATR: 2.7,            // Default ATR if no data available
 } as const;
