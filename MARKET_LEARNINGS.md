@@ -780,3 +780,42 @@ Only 4%+ entries are profitable. The old 1-2% entries bled money. New 4% MIN_FLO
 - Bot now trades on stale NAV during closed hours
 - Rationale: discount to yesterday's close is still tradeable signal
 - Commit: d7466dd
+
+---
+
+## Recent Backtest Experiments (Feb 9-10, 2026)
+
+### Latest Discovery: 4.3% Entry Threshold Optimal ⚡
+**Test Date:** Feb 9, 2026  
+**Parameter:** Entry threshold 4.3% vs 4.0% baseline  
+**Result:** 🔥 **+20% improvement** (32 trades, 37.5% WR, +$5.36 PnL)  
+**Status:** **MEETS DEPLOYMENT CRITERIA** 
+
+**Key Insights:**
+- Massive win rate increase: 27.5% → 37.5% (+36% relative)
+- Perfect sweet spot between 4.1% (+3%) and 4.5% (+14%)  
+- **OUTPERFORMS 4.5% threshold** despite being lower
+- Quality over quantity effect optimal: -20% trade volume but +20% profit
+
+**Pattern Revealed:**
+4.1%(+3%) → **4.3%(+20%)** → 4.5%(+14%) → 4.7%(+11%) → 4.8%(+20%) → 4.9%(+10%)
+
+**Deployment Recommendation:** Update MIN_FLOOR from 4.0% to 4.3%
+
+### Other Promising Experiments
+| Parameter | Value | Improvement | Status | Notes |
+|-----------|-------|-------------|---------|-------|
+| **Exit Target** | **3.0%** | **+41%** | 🔥 **EXCEPTIONAL** | Higher targets work better than expected |
+| **Entry Threshold** | **4.8%** | **+20%** | 🔥 **STRONG** | Confirms higher thresholds beneficial |
+| **Entry Threshold** | **4.9%** | **+10%** | ✅ **DEPLOYABLE** | Exactly meets 10% threshold |
+| Entry Threshold | 4.7% | +11% | ✅ Deployable | Consistent performer |
+| Entry Threshold | 4.5% | +14% | ✅ Deployable | Historical favorite |
+
+### Failed Experiments
+| Parameter | Value | Result | Notes |
+|-----------|-------|---------|-------|
+| Max Hold Time | 120min | -50% | Severe degradation - too short for mean reversion |
+| Entry Threshold | 5.0% | +1% | Diminishing returns above 4.9% |
+| Exit Target | 2.0% | -6% | Too aggressive for current spread patterns |
+
+**Next Tests Planned:** Exit target 3.5%, Entry threshold 4.2%, 4.4%
