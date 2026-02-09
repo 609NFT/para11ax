@@ -672,7 +672,7 @@ export async function openPerpPosition(params: OpenPositionParams): Promise<{
       txSignature,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     logger.error({
       symbol,
       side,
@@ -740,7 +740,7 @@ export async function closePerpPosition(params: ClosePositionParams): Promise<{
       txSignature,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getErrorMessage(error);
     logger.error({
       symbol,
       side,
@@ -828,7 +828,7 @@ export async function getOpenPerpPositions(): Promise<FlashTradePosition[]> {
     return positions;
   } catch (error) {
     logger.error({
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     }, 'Failed to get open perp positions');
     return [];
   }
@@ -935,7 +935,7 @@ export async function getTimeUntilMarketOpen(): Promise<string> {
     } catch (error) {
       // If holiday check fails, assume it's a trading day
       logger.warn('Holiday check failed, assuming trading day', {
-        error: error instanceof Error ? error.message : String(error),
+        error: getErrorMessage(error),
         date: candidateDate.toISOString().split('T')[0]
       });
     }
