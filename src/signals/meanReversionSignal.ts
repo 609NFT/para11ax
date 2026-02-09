@@ -53,6 +53,7 @@ import {
 import { getTokenMaxHoldTime } from './emrt';
 import { getDynamicStopLossPct, getVolatilityPositionMultiplier, getVolatilityEntryMultiplier } from '../feeds/volatilityFeed';
 import { isOptimalTradingTime } from './timeOfDayOptimizer';
+import { checkHalfLifeFilter } from './halfLifeFilter';
 
 // Timeout helper for quote fetching
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
@@ -678,6 +679,29 @@ export class MeanReversionSignalGenerator {
         expectedProfitUsd: 0,
         expectedProfitPct: 0,
         reasons: [`❌ Entry cooldown (${remainingSec}s remaining) - position just opened`],
+      };
+    }
+
+    // Check 0e: Half-life filter - skip tokens with slow mean-reversion
+    // Uses cached OU estimation to filter tokens that won't revert in time
+    const halfLifeCheck = await checkHalfLifeFilter(token.symbol);
+    if (!halfLifeCheck.allowed) {
+      signalLogger.debug({
+        ticker: pair.stockTicker,
+        token: token.symbol,
+        halfLife: halfLifeCheck.halfLife.toFixed(1),
+        reason: halfLifeCheck.reason,
+      }, 'Half-life filter blocked token');
+      return {
+        shouldTrade: false,
+        pair,
+        spread: this.createEmptySpread(pair),
+        buyToken: token,
+        sellToken: token,
+        suggestedSizeUsd: 0,
+        expectedProfitUsd: 0,
+        expectedProfitPct: 0,
+        reasons: [`❌ ${halfLifeCheck.reason}`],
       };
     }
 

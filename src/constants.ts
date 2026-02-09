@@ -137,6 +137,25 @@ export const PERCENTILE_THRESHOLD_FORMULA = {
 } as const;
 
 /**
+ * Half-Life Filter Configuration
+ *
+ * Uses Ornstein-Uhlenbeck process to estimate mean-reversion speed.
+ * Tokens with slow mean-reversion (high half-life) are filtered or
+ * require higher entry thresholds.
+ *
+ * Half-life = time for spread to revert halfway to mean
+ * - 1 hour: Very fast (great for trading)
+ * - 4 hours: Moderate (acceptable)
+ * - 8+ hours: Slow (risky, may not revert before max_hold)
+ */
+export const HALF_LIFE_FILTER = {
+  ENABLED: true,                   // Feature flag
+  MAX_HALF_LIFE_HOURS: 4,          // Skip tokens with slower reversion
+  THRESHOLD_MULTIPLIER: 1.5,       // Or boost threshold by 50% instead of skipping
+  CACHE_HOURS: 24,                 // Recalculate daily
+} as const;
+
+/**
  * Exit threshold formula parameters
  * Formula: max(MIN_FLOOR, COEFFICIENT / sqrt(tvl_in_millions))
  *
