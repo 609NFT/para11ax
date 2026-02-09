@@ -22,3 +22,11 @@ export {
   type ShortPosition,
   type PremiumWatchlistItem,
 } from './premiumShortSignal';
+
+export {
+  getHalfLife,
+  checkHalfLifeFilter,
+  calculateBatchHalfLives,
+  getAllCachedHalfLives,
+  clearHalfLifeCache,
+} from './halfLifeFilter';
