@@ -57,3 +57,24 @@
 **Commit**: `0043a50` - "chore: add error utility functions and reduce code duplication"
 **Build**: ✅ TypeScript compiled successfully  
 **Bot status**: ✅ Running normally (no errors in logs)
+
+## 2026-02-09 - Time Constants Refactor (1:15 AM UTC)
+
+**Fixed**: Replaced hardcoded time calculations with timeConstants imports
+
+**Change**: 
+- Added `MS_PER_DAY` and `MS_PER_MINUTE` to timeConstants imports in `src/db/supabaseClient.ts`
+- Replaced 5 instances of hardcoded time calculations:
+  - `24 * 60 * 60 * 1000` → `MS_PER_DAY` (3 occurrences)
+  - `60 * 60 * 1000` → `MS_PER_HOUR` (1 occurrence)
+  - `60 * 1000` → `MS_PER_MINUTE` (1 occurrence)
+
+**Impact**: 
+- Eliminates magic numbers for time calculations
+- Improves code maintainability and readability
+- Follows existing pattern of using timeConstants utilities
+- Reduces chance of calculation errors
+
+**Commit**: `6e47bd8` - "chore: replace hardcoded time calculations with timeConstants"
+**Build**: ✅ TypeScript compiled successfully
+**Bot reloaded**: ✅ PM2 reload completed, bot running normally
