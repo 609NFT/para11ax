@@ -13,6 +13,7 @@
 
 import { getTradesPool, MeanReversionPositionRow } from '../db/supabaseClient';
 import loggerInstance from '../logger';
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../constants';
 
 const logger = loggerInstance.child({ module: 'performanceTracker' });
 
@@ -23,7 +24,7 @@ export const PERFORMANCE_CONFIG = {
   MIN_TRADES_REQUIRED: 5,        // Minimum trades before applying adjustment
   LOW_WR_THRESHOLD: 0.30,        // 30% - below this triggers penalty
   THRESHOLD_PENALTY_PCT: 1.0,    // +1% to entry threshold for poor performers
-  CACHE_TTL_MS: 5 * 60 * 1000,   // 5 minute cache
+  CACHE_TTL_MS: 5 * MS_PER_MINUTE,   // 5 minute cache
   ENABLED: true,                 // Feature flag
 } as const;
 
@@ -205,7 +206,7 @@ export async function getAllSymbolPerformance(): Promise<SymbolPerformance[]> {
       FROM mean_reversion_positions
       WHERE status = 'closed'
         AND exit_timestamp > $1
-    `, [Date.now() - 7 * 24 * 60 * 60 * 1000]); // Last 7 days
+    `, [Date.now() - 7 * 24 * MS_PER_HOUR]); // Last 7 days
 
     const symbols = symbolsResult.rows.map((r: { buy_symbol: string }) => r.buy_symbol);
 
