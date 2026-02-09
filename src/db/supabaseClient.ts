@@ -5,7 +5,7 @@
 import { Pool } from 'pg';
 import { TokenConfig } from '../types';
 import { dbLogger } from '../logger';
-import { MS_PER_HOUR } from '../utils/timeConstants';
+import { MS_PER_HOUR, MS_PER_DAY, MS_PER_MINUTE } from '../utils/timeConstants';
 
 // Database connection timeout constants
 const TOKEN_POOL_IDLE_TIMEOUT_MS = 30000; // 30 seconds
@@ -223,7 +223,7 @@ export async function upsertMeanReversionPosition(position: MeanReversionPositio
  * Fetch recent closed mean reversion positions from Supabase
  * Used by dashboard to show recent trades with correct exit reasons
  */
-export async function fetchRecentClosedPositions(limit: number = 10, withinMs: number = 24 * 60 * 60 * 1000): Promise<MeanReversionPositionRow[]> {
+export async function fetchRecentClosedPositions(limit: number = 10, withinMs: number = MS_PER_DAY): Promise<MeanReversionPositionRow[]> {
   const pool = getTradesPool();
   if (!pool) return [];
 
@@ -515,7 +515,7 @@ export async function pruneOldDiscountHistory(): Promise<{ deleted: number }> {
   const pool = getTradesPool();
   if (!pool) return { deleted: 0 };
 
-  const cutoffMs = Date.now() - (RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const cutoffMs = Date.now() - (RETENTION_DAYS * MS_PER_DAY);
 
   try {
     const result = await pool.query(
@@ -739,7 +739,7 @@ export async function fetchAllPercentileThresholds(
     dbLogger.info({
       tokens: map.size,
       percentile,
-      windowHours: windowMs / (60 * 60 * 1000)
+      windowHours: windowMs / MS_PER_HOUR
     }, 'Fetched percentile thresholds from PostgreSQL');
 
     return map;
@@ -933,7 +933,7 @@ export async function fetchDiscountHeatmapFromSupabase(
     return { symbols: [], timestamps: [], data: [] };
   }
 
-  const bucketMs = bucketMinutes * 60 * 1000;
+  const bucketMs = bucketMinutes * MS_PER_MINUTE;
 
   try {
     const result = await pool.query<{
@@ -1296,7 +1296,7 @@ export async function fetchAllHistoricalVolatilityFromSupabase(windowDays: numbe
     return new Map();
   }
 
-  const cutoffTimestamp = Date.now() - (windowDays * 24 * 60 * 60 * 1000);
+  const cutoffTimestamp = Date.now() - (windowDays * MS_PER_DAY);
 
   try {
     // Get hourly price samples for all tokens
