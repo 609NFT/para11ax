@@ -1874,7 +1874,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       return new Date(timestamp).toLocaleTimeString();
     }
 
-    function formatTimeSince(timestamp)
+    function formatTimeSince(timestamp) {
       if (!timestamp) return '--';
       const now = Date.now();
       const diff = now - timestamp;
