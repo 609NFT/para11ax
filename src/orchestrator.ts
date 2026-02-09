@@ -63,6 +63,11 @@ import { scanCrossDexOpportunities } from './signals/crossDexMonitor';
 export class Orchestrator {
   private running: boolean = false;
   private loopInterval: NodeJS.Timeout | null = null;
+  private pruningInterval: NodeJS.Timeout | null = null;
+  private logRotationInterval: NodeJS.Timeout | null = null;
+  private healthCheckInterval: NodeJS.Timeout | null = null;
+  private heatmapSyncInterval: NodeJS.Timeout | null = null;
+  private emrtRefreshInterval: NodeJS.Timeout | null = null;
   private dashboard: Dashboard;
 
   // Component references
@@ -444,7 +449,7 @@ export class Orchestrator {
     await pruneOldDiscountHistory();
 
     // Schedule daily pruning (runs every 24 hours)
-    setInterval(() => {
+    this.pruningInterval = setInterval(() => {
       this.database.pruneOldDiscountHistory();
       pruneOldDiscountHistory().catch((err) => {
         dbLogger.error({ error: err }, 'Daily pruning failed');
@@ -452,14 +457,14 @@ export class Orchestrator {
     }, 24 * 60 * 60 * 1000);
 
     // Schedule log rotation every 6 hours (keeps parallax.log under 50MB)
-    setInterval(() => {
+    this.logRotationInterval = setInterval(() => {
       this.rotateLogsIfNeeded().catch(err => {
         logger.warn({ error: err }, 'Log rotation failed');
       });
     }, 6 * 60 * 60 * 1000);
 
     // EC2 health monitoring every 15 minutes
-    setInterval(() => {
+    this.healthCheckInterval = setInterval(() => {
       this.runEc2HealthCheck().catch(err => {
         logger.warn({ error: err }, 'EC2 health check failed');
       });
@@ -471,14 +476,14 @@ export class Orchestrator {
     this.syncHeatmapSummary().catch(err => {
       logger.warn({ error: err }, 'Failed initial heatmap summary sync');
     });
-    setInterval(() => {
+    this.heatmapSyncInterval = setInterval(() => {
       this.syncHeatmapSummary().catch(err => {
         logger.warn({ error: err }, 'Failed hourly heatmap summary sync');
       });
     }, 60 * 60 * 1000); // Every hour
 
     // Refresh EMRT cache every hour (uses latest trade data for hold time optimization)
-    setInterval(() => {
+    this.emrtRefreshInterval = setInterval(() => {
       refreshEMRTCache().catch(err => {
         logger.warn({ error: err }, 'Failed hourly EMRT cache refresh');
       });
@@ -842,6 +847,31 @@ export class Orchestrator {
     if (this.loopInterval) {
       clearInterval(this.loopInterval);
       this.loopInterval = null;
+    }
+
+    if (this.pruningInterval) {
+      clearInterval(this.pruningInterval);
+      this.pruningInterval = null;
+    }
+
+    if (this.logRotationInterval) {
+      clearInterval(this.logRotationInterval);
+      this.logRotationInterval = null;
+    }
+
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+
+    if (this.heatmapSyncInterval) {
+      clearInterval(this.heatmapSyncInterval);
+      this.heatmapSyncInterval = null;
+    }
+
+    if (this.emrtRefreshInterval) {
+      clearInterval(this.emrtRefreshInterval);
+      this.emrtRefreshInterval = null;
     }
 
     this.dashboard.stopLiveUpdates();
