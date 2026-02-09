@@ -1,18 +1,18 @@
 # Code Improvements Log
 
-## 2026-02-09 04:13 UTC
-**Dead Code Removal**: Removed `src/standalone-dashboard.ts` 
+## 2026-02-09 — Cache TTL Constants (commit 6a8779e)
 
-- **File**: `src/standalone-dashboard.ts` (46 lines)
-- **Reason**: Standalone dashboard server was built for zero-downtime deployments but never used
-- **Evidence**: Not in PM2 ecosystem config, no running process, cluster mode handles zero-downtime instead
-- **Files removed**: 
-  - `src/standalone-dashboard.ts` 
-  - Generated dist files: `standalone-dashboard.js`, `.d.ts`, `.js.map`, `.d.ts.map`
-- **README updated**: Removed reference from architecture section
-- **Impact**: Cleaner codebase, no functional changes
-- **Commit**: `08aae05`
+**Fixed**: Replaced magic number 600000 (10min in ms) with named constant CACHE_TTL_LONG
+
+**Files changed**: `src/db/database.ts`
+- Added `CACHE_TTL_LONG = 600000` constant
+- Replaced two hardcoded `600000` values in cache.set() calls
+- Improves code maintainability and readability
+
+**Impact**: No runtime changes, constants-only improvement. No restart needed.
+
+**Type**: Code cleanup - replaced magic numbers with named constants
 
 ---
 
-*Track improvements here to avoid duplicate work and measure progress.*
+*Track incremental code quality improvements here. Focus on small, safe changes.*
