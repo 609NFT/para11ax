@@ -10,7 +10,7 @@ import { getRiskManager } from '../risk';
 import { getDatabase } from '../db';
 import logger from '../logger';
 
-const DEFAULT_UPDATE_INTERVAL_MS = 5000; // 5 seconds
+const DEFAULT_UPDATE_INTERVAL_MS: number = 5000; // 5 seconds
 
 export class Dashboard {
   private updateInterval: NodeJS.Timeout | null = null;
