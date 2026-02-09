@@ -1,98 +1,18 @@
 # Code Improvements Log
 
-## 2026-02-08 - Config Error Context (5:18 PM UTC)
+## 2026-02-09 04:13 UTC
+**Dead Code Removal**: Removed `src/standalone-dashboard.ts` 
 
-**Fixed**: Improved error context in config file parsing catch block
+- **File**: `src/standalone-dashboard.ts` (46 lines)
+- **Reason**: Standalone dashboard server was built for zero-downtime deployments but never used
+- **Evidence**: Not in PM2 ecosystem config, no running process, cluster mode handles zero-downtime instead
+- **Files removed**: 
+  - `src/standalone-dashboard.ts` 
+  - Generated dist files: `standalone-dashboard.js`, `.d.ts`, `.js.map`, `.d.ts.map`
+- **README updated**: Removed reference from architecture section
+- **Impact**: Cleaner codebase, no functional changes
+- **Commit**: `08aae05`
 
-**Change**: 
-- Enhanced `src/config.ts` catch block (line ~148) to include more diagnostic information
-- Added `isJsonError`, `errorType` fields to help distinguish JSON parsing vs other errors
-- Extracted error message for better logging context
+---
 
-**Impact**: 
-- Better debugging when config.json has syntax issues
-- Helps distinguish between file read errors vs JSON parsing vs schema validation
-- Maintains existing fallback behavior (use defaults)
-
-**Commit**: `714dcd7` - "chore: improve error context in config file parsing catch block"
-**Build**: ✅ TypeScript compiled successfully
-**Bot status**: ✅ Running normally (no reload needed - config only loaded at startup)
-
-## 2026-02-08 - Error Handling Utilities (4:41 PM UTC)
-
-**Fixed**: Extracted repeated error handling pattern into reusable utilities
-
-**Change**: 
-- Created `src/utils/error.ts` with `getErrorMessage()` and `getErrorStack()` utilities
-- Added exports to `src/utils/index.ts`
-- Refactored 3 instances in `writeQueue.ts` from `error instanceof Error ? error.message : String(error)` pattern
-
-**Impact**: 
-- Eliminates code duplication (28 total occurrences found across codebase)
-- Improves maintainability and consistency
-- Provides foundation for future error handling improvements
-
-**Commit**: `2b14221` - "chore: add error handling utilities and refactor writeQueue error patterns"
-**Bot reloaded**: ✅ No errors
-
-**Next opportunity**: Could refactor remaining 25 instances across the codebase to use these utilities.
-
-## 2026-02-08 - Error Utility Functions Extension (7:00 PM UTC)
-
-**Fixed**: Created comprehensive error utility functions and refactored Flash Trade client
-
-**Change**: 
-- Created `src/utils/errors.ts` with `getErrorMessage()` and `getErrorDetails()` functions
-- Refactored 3+ instances in `flashTradeClient.ts` from repeated pattern:
-  - `error instanceof Error ? error.message : String(error)`
-  - `error instanceof Error ? error.stack : ''`
-- Used new utilities for cleaner, more consistent error handling
-
-**Impact**: 
-- Reduces code duplication in error handling patterns
-- Provides standardized error extraction utilities
-- Improves maintainability and consistency across codebase
-- Foundation for further refactoring of similar patterns
-
-**Commit**: `0043a50` - "chore: add error utility functions and reduce code duplication"
-**Build**: ✅ TypeScript compiled successfully  
-**Bot status**: ✅ Running normally (no errors in logs)
-
-## 2026-02-09 - Time Constants Refactor (1:15 AM UTC)
-
-**Fixed**: Replaced hardcoded time calculations with timeConstants imports
-
-**Change**: 
-- Added `MS_PER_DAY` and `MS_PER_MINUTE` to timeConstants imports in `src/db/supabaseClient.ts`
-- Replaced 5 instances of hardcoded time calculations:
-  - `24 * 60 * 60 * 1000` → `MS_PER_DAY` (3 occurrences)
-  - `60 * 60 * 1000` → `MS_PER_HOUR` (1 occurrence)
-  - `60 * 1000` → `MS_PER_MINUTE` (1 occurrence)
-
-**Impact**: 
-- Eliminates magic numbers for time calculations
-- Improves code maintainability and readability
-- Follows existing pattern of using timeConstants utilities
-- Reduces chance of calculation errors
-
-**Commit**: `6e47bd8` - "chore: replace hardcoded time calculations with timeConstants"
-**Build**: ✅ TypeScript compiled successfully
-**Bot reloaded**: ✅ PM2 reload completed, bot running normally
-
-## 2026-02-09 - Type Annotation Added (2:38 AM UTC)
-
-**Fixed**: Added explicit type annotation to constant declaration
-
-**Change**: 
-- Added `: number` type annotation to `DEFAULT_UPDATE_INTERVAL_MS` constant in `src/dashboard/cli.ts`
-- Changed from `const DEFAULT_UPDATE_INTERVAL_MS = 5000;` to `const DEFAULT_UPDATE_INTERVAL_MS: number = 5000;`
-
-**Impact**: 
-- Improves TypeScript code quality with explicit typing
-- Follows TypeScript best practices for constant declarations  
-- Small but meaningful improvement to code maintainability
-- Makes developer intent explicit
-
-**Commit**: `7c669b1` - "chore: add explicit type annotation to DEFAULT_UPDATE_INTERVAL_MS constant"
-**Build**: ✅ TypeScript compiled successfully
-**Bot status**: ✅ Running normally (no reload needed - CLI file not used at runtime)
+*Track improvements here to avoid duplicate work and measure progress.*
