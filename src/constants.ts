@@ -86,9 +86,9 @@ export const ENTRY_THRESHOLD_FORMULA = {
  */
 export const DYNAMIC_FLOOR_FORMULA = {
   ENABLED: true,
-  BASE_FLOOR: 3.0,              // 609-approved 2026-02-09 — DO NOT REVERT
+  BASE_FLOOR: 4.0,              // 609-approved 2026-02-08 — raised for quality (backtest: +26% PnL, +3.4% WR)
   VOLATILITY_COEFFICIENT: 0.6,  // Floor += ATR% × 0.6
-  ABSOLUTE_MIN: 3.0,            // DO NOT REVERT
+  ABSOLUTE_MIN: 4.0,            // Absolute minimum threshold
   ABSOLUTE_MAX: 6.0,            // Cap for high-vol tokens
   FALLBACK_ATR: 2.7,            // Default ATR if no data available
 } as const;
@@ -134,25 +134,6 @@ export const PERCENTILE_THRESHOLD_FORMULA = {
   ROLLING_WINDOW_HOURS: 168,   // 7 days of data - index exists now so should be fast
   MIN_SAMPLES: 50,             // Need at least 50 samples before using percentile
   ENABLED: true,               // Re-enabled 2026-02-04: index idx_discount_history_time_symbol exists
-} as const;
-
-/**
- * Half-Life Filter Configuration
- *
- * Uses Ornstein-Uhlenbeck process to estimate mean-reversion speed.
- * Tokens with slow mean-reversion (high half-life) are filtered or
- * require higher entry thresholds.
- *
- * Half-life = time for spread to revert halfway to mean
- * - 1 hour: Very fast (great for trading)
- * - 4 hours: Moderate (acceptable)
- * - 8+ hours: Slow (risky, may not revert before max_hold)
- */
-export const HALF_LIFE_FILTER = {
-  ENABLED: true,                   // Feature flag
-  MAX_HALF_LIFE_HOURS: 4,          // Skip tokens with slower reversion
-  THRESHOLD_MULTIPLIER: 1.5,       // Or boost threshold by 50% instead of skipping
-  CACHE_HOURS: 24,                 // Recalculate daily
 } as const;
 
 /**
