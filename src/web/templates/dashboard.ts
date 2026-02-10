@@ -49,6 +49,12 @@ export const TAB_CONFIG: Record<string, TabConfig> = {
     ogImage: 'https://parallax.report/public/SEO.jpg',
     activeTab: 'admin',
   },
+  predict: {
+    title: 'Parallax Predictions',
+    description: 'Prediction market information arbitrage.',
+    ogImage: 'https://parallax.report/public/SEO.jpg',
+    activeTab: 'predict',
+  },
 };
 
 /**
@@ -1432,6 +1438,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       <div class="tab${tabConfig.activeTab === 'trades' ? ' active' : ''}" data-tab="trades"><a href="/trades">Trades</a></div>
       <div class="tab${tabConfig.activeTab === 'blog' ? ' active' : ''}" data-tab="blog"><a href="/method">Method</a></div>
       <div class="tab${tabConfig.activeTab === 'changelog' ? ' active' : ''}" data-tab="changelog"><a href="/changelog"><span class="desktop-only">Changelog</span><span class="mobile-only">Log</span></a></div>
+      <div class="tab${tabConfig.activeTab === 'predict' ? ' active' : ''}" data-tab="predict"><a href="/predict"><span class="desktop-only">Predict</span><span class="mobile-only">🔮</span></a></div>
     </div>
     <div class="tabs-line"></div>
     <div class="time-range${tabConfig.activeTab !== 'dashboard' ? ' hidden' : ''}" id="time-range">
@@ -1766,6 +1773,67 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
       </div>
     </div>
   </div><!-- end tab-changelog -->
+
+
+  <div id="tab-predict" class="tab-content${tabConfig.activeTab === 'predict' ? ' active' : ''}">
+    <div class="predict-container" style="max-width: 1200px; margin: 0 auto; padding: var(--space-4);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-5);">
+        <h2 style="color: var(--text-primary); margin: 0;">🔮 Prediction Markets</h2>
+        <div style="display: flex; gap: var(--space-3); align-items: center;">
+          <span id="predict-status" style="font-size: var(--text-sm); color: var(--text-secondary);">Loading...</span>
+          <button onclick="refreshPredictData()" class="admin-btn" style="padding: 6px 12px;">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="predict-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-5);">
+        <div class="stat-card" style="background: var(--surface-1); padding: var(--space-4); border-radius: 8px; border: 1px solid var(--border-primary);">
+          <div style="font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;">Open Positions</div>
+          <div id="predict-open" style="font-size: 24px; font-weight: 600; color: var(--text-primary);">-</div>
+        </div>
+        <div class="stat-card" style="background: var(--surface-1); padding: var(--space-4); border-radius: 8px; border: 1px solid var(--border-primary);">
+          <div style="font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;">Win Rate</div>
+          <div id="predict-winrate" style="font-size: 24px; font-weight: 600; color: var(--text-primary);">-</div>
+        </div>
+        <div class="stat-card" style="background: var(--surface-1); padding: var(--space-4); border-radius: 8px; border: 1px solid var(--border-primary);">
+          <div style="font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;">Total PnL</div>
+          <div id="predict-pnl" style="font-size: 24px; font-weight: 600; color: var(--text-primary);">-</div>
+        </div>
+        <div class="stat-card" style="background: var(--surface-1); padding: var(--space-4); border-radius: 8px; border: 1px solid var(--border-primary);">
+          <div style="font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;">Avg Edge</div>
+          <div id="predict-edge" style="font-size: 24px; font-weight: 600; color: var(--text-primary);">-</div>
+        </div>
+      </div>
+      <div class="predict-section" style="margin-bottom: var(--space-5);">
+        <h3 style="color: var(--text-primary); margin-bottom: var(--space-3); font-size: var(--text-base);">⚡ Live Opportunities</h3>
+        <div id="predict-opportunities" style="background: var(--surface-1); border-radius: 8px; border: 1px solid var(--border-primary); overflow: hidden;">
+          <div style="padding: var(--space-4); color: var(--text-secondary); text-align: center;">Scanning markets...</div>
+        </div>
+      </div>
+      <div class="predict-section" style="margin-bottom: var(--space-5);">
+        <h3 style="color: var(--text-primary); margin-bottom: var(--space-3); font-size: var(--text-base);">📊 Open Positions</h3>
+        <div id="predict-positions" style="background: var(--surface-1); border-radius: 8px; border: 1px solid var(--border-primary); overflow: hidden;">
+          <div style="padding: var(--space-4); color: var(--text-secondary); text-align: center;">No open positions</div>
+        </div>
+      </div>
+      <div class="predict-section">
+        <h3 style="color: var(--text-primary); margin-bottom: var(--space-3); font-size: var(--text-base);">📈 Recent Trades</h3>
+        <div id="predict-trades" style="background: var(--surface-1); border-radius: 8px; border: 1px solid var(--border-primary); overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead><tr style="border-bottom: 1px solid var(--border-primary);">
+              <th style="text-align: left; padding: 12px; color: var(--text-secondary);">Market</th>
+              <th style="text-align: center; padding: 12px; color: var(--text-secondary);">Outcome</th>
+              <th style="text-align: right; padding: 12px; color: var(--text-secondary);">Entry</th>
+              <th style="text-align: right; padding: 12px; color: var(--text-secondary);">Edge</th>
+              <th style="text-align: center; padding: 12px; color: var(--text-secondary);">Result</th>
+              <th style="text-align: right; padding: 12px; color: var(--text-secondary);">PnL</th>
+            </tr></thead>
+            <tbody id="predict-trades-body">
+              <tr><td colspan="6" style="padding: 16px; text-align: center; color: var(--text-secondary);">No trades yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- end tab-predict -->
 
   ${isAdminTab ? `<div id="tab-admin" class="tab-content active">
     <div class="admin-container" style="max-width: 800px; margin: 0 auto; padding: var(--space-5);">
@@ -3410,6 +3478,108 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
           }
         }
       });
+    }
+
+    // Predict tab functions
+    async function refreshPredictData() {
+      try {
+        document.getElementById('predict-status').textContent = 'Refreshing...';
+        
+        // Fetch stats
+        const statsRes = await fetch('/api/predict/stats');
+        const stats = await statsRes.json();
+        
+        document.getElementById('predict-open').textContent = stats.openPositions || '0';
+        document.getElementById('predict-winrate').textContent = stats.totalTrades > 0 
+          ? stats.winRate.toFixed(0) + '%' 
+          : '-';
+        document.getElementById('predict-pnl').textContent = stats.totalPnL !== undefined
+          ? (stats.totalPnL >= 0 ? '+' : '') + '$' + stats.totalPnL.toFixed(2)
+          : '-';
+        document.getElementById('predict-edge').textContent = stats.avgEdge
+          ? (stats.avgEdge * 100).toFixed(0) + '%'
+          : '-';
+        
+        // Fetch opportunities
+        const oppsRes = await fetch('/api/predict/opportunities');
+        const opps = await oppsRes.json();
+        
+        const oppsContainer = document.getElementById('predict-opportunities');
+        if (Array.isArray(opps) && opps.length > 0) {
+          oppsContainer.innerHTML = opps.map(o => \`
+            <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-primary); display: flex; justify-content: space-between; align-items: center;">
+              <div style="flex: 1;">
+                <div style="color: var(--text-primary); font-weight: 500;">\${o.title.length > 80 ? o.title.substring(0, 80) + '...' : o.title}</div>
+                <div style="color: var(--text-secondary); font-size: var(--text-xs); margin-top: 4px;">
+                  \${o.dataValue} via \${o.dataSource} • Expires in \${o.hoursToExpiry.toFixed(0)}h
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="color: var(--color-green); font-weight: 600;">\${(o.edge * 100).toFixed(0)}% edge</div>
+                <div style="color: var(--text-secondary); font-size: var(--text-xs);">
+                  \${o.outcome.toUpperCase()} @ \${(o.marketPrice * 100).toFixed(1)}¢
+                </div>
+              </div>
+            </div>
+          \`).join('');
+        } else {
+          oppsContainer.innerHTML = '<div style="padding: var(--space-4); color: var(--text-secondary); text-align: center;">No opportunities found</div>';
+        }
+        
+        // Fetch positions
+        const posRes = await fetch('/api/predict/positions');
+        const positions = await posRes.json();
+        
+        // Open positions
+        const openContainer = document.getElementById('predict-positions');
+        if (positions.open && positions.open.length > 0) {
+          openContainer.innerHTML = positions.open.map(p => \`
+            <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-primary); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="color: var(--text-primary);">\${p.title ? (p.title.length > 70 ? p.title.substring(0, 70) + '...' : p.title) : p.marketTicker}</div>
+                <div style="color: var(--text-secondary); font-size: var(--text-xs);">\${p.outcome.toUpperCase()} • \${p.dataValue}</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="color: var(--text-primary);">$\${p.sizeUsd.toFixed(2)}</div>
+                <div style="color: var(--color-green); font-size: var(--text-xs);">\${(p.edgePct * 100).toFixed(0)}% edge</div>
+              </div>
+            </div>
+          \`).join('');
+        } else {
+          openContainer.innerHTML = '<div style="padding: var(--space-4); color: var(--text-secondary); text-align: center;">No open positions</div>';
+        }
+        
+        // Recent trades
+        const tradesBody = document.getElementById('predict-trades-body');
+        if (positions.recent && positions.recent.length > 0) {
+          tradesBody.innerHTML = positions.recent.filter(p => p.status !== 'open').map(p => \`
+            <tr style="border-bottom: 1px solid var(--border-primary);">
+              <td style="padding: 12px; color: var(--text-primary);">\${p.title ? (p.title.length > 60 ? p.title.substring(0, 60) + '...' : p.title) : p.marketTicker}</td>
+              <td style="padding: 12px; text-align: center; color: var(--text-secondary);">\${p.outcome.toUpperCase()}</td>
+              <td style="padding: 12px; text-align: right; color: var(--text-secondary);">\${(p.entryPrice * 100).toFixed(1)}¢</td>
+              <td style="padding: 12px; text-align: right; color: var(--text-secondary);">\${(p.edgePct * 100).toFixed(0)}%</td>
+              <td style="padding: 12px; text-align: center;">
+                <span style="color: \${p.settlementResult === 'win' ? 'var(--color-green)' : 'var(--color-red)'};">
+                  \${p.settlementResult ? (p.settlementResult === 'win' ? '✓ WIN' : '✗ LOSS') : p.status}
+                </span>
+              </td>
+              <td style="padding: 12px; text-align: right; color: \${p.pnlUsd >= 0 ? 'var(--color-green)' : 'var(--color-red)'};">
+                \${p.pnlUsd !== undefined ? (p.pnlUsd >= 0 ? '+' : '') + '$' + p.pnlUsd.toFixed(2) : '-'}
+              </td>
+            </tr>
+          \`).join('') || '<tr><td colspan="6" style="padding: 16px; text-align: center; color: var(--text-secondary);">No settled trades</td></tr>';
+        }
+        
+        document.getElementById('predict-status').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        document.getElementById('predict-status').textContent = 'Error: ' + e.message;
+      }
+    }
+    
+    // Auto-refresh predict data if on that tab
+    if (window.location.pathname === '/predict') {
+      refreshPredictData();
+      setInterval(refreshPredictData, 60000); // Refresh every minute
     }
   </script>
 </body>
