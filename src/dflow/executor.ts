@@ -274,7 +274,7 @@ export function calculateSettledPnL(
 
 // Paper trading mode check
 export function isPaperMode(): boolean {
-  const mode = process.env.TRADING_MODE || 'paper';
+  const mode = process.env.PREDICT_MODE || process.env.TRADING_MODE || 'paper';
   return mode !== 'live';
 }
 
