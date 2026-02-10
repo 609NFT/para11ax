@@ -116,7 +116,7 @@ export async function getWalletBalance(): Promise<WalletBalance | null> {
     ]);
 
     if (!balance) {
-      logger.warn('Failed to fetch wallet balance');
+      logger.debug('Failed to fetch wallet balance');
       return cachedBalance; // Return stale if available
     }
 
