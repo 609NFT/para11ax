@@ -40,7 +40,7 @@ const PREDICT_CONFIG = {
   MIN_EDGE_PCT: 0.10,                 // Minimum 10% edge
   MIN_CONFIDENCE: 0.80,               // Minimum 80% data confidence
   MIN_HOURS_TO_EXPIRY: 0.5,           // At least 30 min to expiry
-  MAX_HOURS_TO_EXPIRY: 24,            // Max 24 hours out
+  MAX_HOURS_TO_EXPIRY: 720,           // Max 30 days out (use closeTime for urgency)
   
   // Sizing
   BASE_SIZE_USD: 10,                  // Base position size
@@ -182,7 +182,7 @@ export class PredictOrchestrator {
       });
 
       if (tradeableMarkets.length === 0) {
-        logger.debug('No tradeable markets found in supported categories');
+        logger.info('No tradeable markets found in supported categories');
         return;
       }
 
@@ -196,7 +196,7 @@ export class PredictOrchestrator {
       );
 
       if (opportunities.length === 0) {
-        logger.debug('No opportunities found');
+        logger.info({ markets: tradeableMarkets.length }, 'Scan complete - no opportunities above thresholds');
         return;
       }
 
