@@ -25,7 +25,7 @@ export const PERFORMANCE_CONFIG = {
   LOW_WR_THRESHOLD: 0.30,        // 30% - below this triggers penalty
   THRESHOLD_PENALTY_PCT: 1.0,    // +1% to entry threshold for poor performers
   CACHE_TTL_MS: 5 * MS_PER_MINUTE,   // 5 minute cache
-  ENABLED: true,                 // Feature flag
+  ENABLED: false,                // DISABLED - was blocking all entries (Feb 10)
 } as const;
 
 // ==================== Types ====================

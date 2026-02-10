@@ -818,8 +818,8 @@ export const JUPITER_ULTRA_HTTP_TIMEOUT_MS = 30000;
  * Filters tokens based on mean-reversion speed using Ornstein-Uhlenbeck process
  */
 export const HALF_LIFE_FILTER = {
-  ENABLED: true,
-  MAX_HALF_LIFE_HOURS: 8,       // Skip tokens with slower reversion (raised from 4 to 8 per initial testing)
+  ENABLED: false,               // DISABLED - was blocking all opportunities (Feb 10)
+  MAX_HALF_LIFE_HOURS: 48,      // Raised from 24 but filter disabled anyway
   THRESHOLD_MULTIPLIER: 1.5,    // Or boost threshold by 50% instead of skipping
   CACHE_HOURS: 24,              // Recalculate daily
 } as const;
