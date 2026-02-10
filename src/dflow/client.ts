@@ -1,0 +1,357 @@
+/**
+ * DFlow Prediction Markets API Client
+ * Connects to DFlow for Kalshi market data and quotes
+ */
+
+import https from 'https';
+import { 
+  DFlowMarket, 
+  DFlowEvent, 
+  DFlowSeries, 
+  DFlowQuote,
+  USDC_MINT,
+  CASH_MINT,
+  MarketCategory 
+} from './types';
+import logger from '../logger';
+
+const PREDICTION_API = 'c.prediction-markets-api.dflow.net';
+const QUOTE_API = 'c.quote-api.dflow.net';
+
+// API key from environment
+function getApiKey(): string {
+  const key = process.env.DFLOW_API_KEY;
+  if (!key) {
+    throw new Error('DFLOW_API_KEY environment variable not set');
+  }
+  return key;
+}
+
+/**
+ * Make an HTTPS GET request to DFlow API
+ */
+async function dflowGet<T>(host: string, path: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: host,
+      path,
+      method: 'GET',
+      headers: {
+        'x-api-key': getApiKey(),
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => (data += chunk));
+      res.on('end', () => {
+        try {
+          if (res.statusCode !== 200) {
+            reject(new Error(`DFlow API error: ${res.statusCode} - ${data}`));
+            return;
+          }
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error(`Failed to parse DFlow response: ${e}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.setTimeout(10000, () => {
+      req.destroy();
+      reject(new Error('DFlow API timeout'));
+    });
+    req.end();
+  });
+}
+
+/**
+ * Fetch all active markets with pagination
+ */
+export async function getActiveMarkets(limit: number = 1000): Promise<DFlowMarket[]> {
+  const allMarkets: DFlowMarket[] = [];
+  let cursor = '';
+  const pageSize = 100;
+
+  while (allMarkets.length < limit) {
+    const path = `/api/v1/markets?status=active&limit=${pageSize}${cursor ? `&cursor=${cursor}` : ''}`;
+    const response = await dflowGet<{ markets: DFlowMarket[]; cursor?: string }>(PREDICTION_API, path);
+
+    if (!response.markets || response.markets.length === 0) break;
+    allMarkets.push(...response.markets);
+
+    if (!response.cursor) break;
+    cursor = response.cursor;
+  }
+
+  logger.info({ count: allMarkets.length }, 'Fetched DFlow markets');
+  return allMarkets;
+}
+
+/**
+ * Fetch markets expiring within the given hours
+ */
+export async function getNearTermMarkets(hoursAhead: number = 24): Promise<DFlowMarket[]> {
+  const markets = await getActiveMarkets();
+  const now = Date.now();
+  const cutoff = now + hoursAhead * 60 * 60 * 1000;
+
+  return markets.filter((m) => {
+    const expiry = m.expirationTime * 1000;
+    return expiry > now && expiry <= cutoff;
+  });
+}
+
+/**
+ * Fetch a specific market by ticker
+ */
+export async function getMarketByTicker(ticker: string): Promise<DFlowMarket | null> {
+  try {
+    const response = await dflowGet<{ markets: DFlowMarket[] }>(
+      PREDICTION_API,
+      `/api/v1/markets?ticker=${encodeURIComponent(ticker)}`
+    );
+    return response.markets?.[0] || null;
+  } catch (e) {
+    logger.warn({ ticker, error: e }, 'Failed to fetch market');
+    return null;
+  }
+}
+
+/**
+ * Fetch all events (for settlement sources)
+ */
+export async function getEvents(limit: number = 500): Promise<DFlowEvent[]> {
+  const allEvents: DFlowEvent[] = [];
+  let cursor = 0;
+  const pageSize = 100;
+
+  while (allEvents.length < limit) {
+    const path = `/api/v1/events?limit=${pageSize}${cursor ? `&cursor=${cursor}` : ''}`;
+    const response = await dflowGet<{ events: DFlowEvent[]; cursor?: number }>(PREDICTION_API, path);
+
+    if (!response.events || response.events.length === 0) break;
+    allEvents.push(...response.events);
+
+    if (!response.cursor) break;
+    cursor = response.cursor;
+  }
+
+  return allEvents;
+}
+
+/**
+ * Fetch all series (for settlement source mapping)
+ */
+export async function getSeries(): Promise<DFlowSeries[]> {
+  const response = await dflowGet<{ series: DFlowSeries[] }>(PREDICTION_API, '/api/v1/series');
+  return response.series || [];
+}
+
+/**
+ * Build a map of series ticker to settlement sources
+ */
+export async function getSettlementSourceMap(): Promise<Map<string, DFlowSeries>> {
+  const series = await getSeries();
+  const map = new Map<string, DFlowSeries>();
+  for (const s of series) {
+    map.set(s.ticker, s);
+  }
+  return map;
+}
+
+/**
+ * Get a quote for swapping tokens
+ */
+export async function getQuote(
+  inputMint: string,
+  outputMint: string,
+  amountSmallestUnits: string,
+  slippageBps: number = 100
+): Promise<DFlowQuote> {
+  const path = `/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountSmallestUnits}&slippageBps=${slippageBps}`;
+  return dflowGet<DFlowQuote>(QUOTE_API, path);
+}
+
+/**
+ * Get quote to buy YES tokens for a market
+ * Uses USDC as input - DFlow routes through CASH if needed
+ */
+export async function getYesBuyQuote(
+  market: DFlowMarket,
+  amountUsd: number
+): Promise<DFlowQuote | null> {
+  // Get the market's collateral (CASH preferred)
+  const collateral = getMarketCollateral(market);
+  if (!collateral) {
+    logger.warn({ ticker: market.ticker }, 'No initialized collateral for market');
+    return null;
+  }
+
+  const account = market.accounts[collateral];
+  if (!account?.yesMint) {
+    logger.warn({ ticker: market.ticker }, 'No YES mint for market');
+    return null;
+  }
+
+  // Always use USDC as input - DFlow routes through CASH if needed
+  const amountSmallest = Math.floor(amountUsd * 1_000_000).toString();
+  
+  try {
+    // Route USDC → YES token (DFlow handles USDC→CASH→YES internally)
+    return await getQuote(USDC_MINT, account.yesMint, amountSmallest, 200); // 2% slippage for routing
+  } catch (e) {
+    logger.warn({ ticker: market.ticker, error: e }, 'Failed to get YES buy quote');
+    return null;
+  }
+}
+
+/**
+ * Get quote to buy NO tokens for a market
+ * Uses USDC as input - DFlow routes through CASH if needed
+ */
+export async function getNoBuyQuote(
+  market: DFlowMarket,
+  amountUsd: number
+): Promise<DFlowQuote | null> {
+  const collateral = getMarketCollateral(market);
+  if (!collateral) return null;
+
+  const account = market.accounts[collateral];
+  if (!account?.noMint) return null;
+
+  const amountSmallest = Math.floor(amountUsd * 1_000_000).toString();
+  
+  try {
+    return await getQuote(USDC_MINT, account.noMint, amountSmallest, 200);
+  } catch (e) {
+    logger.warn({ ticker: market.ticker, error: e }, 'Failed to get NO buy quote');
+    return null;
+  }
+}
+
+/**
+ * Classify a market by category based on title/series
+ */
+export function classifyMarket(market: DFlowMarket): MarketCategory {
+  const title = market.title.toLowerCase();
+  const ticker = market.ticker.toLowerCase();
+
+  // Weather patterns
+  if (
+    title.includes('temperature') ||
+    title.includes('temp ') ||
+    title.includes('high temp') ||
+    title.includes('weather') ||
+    ticker.includes('highny') ||
+    ticker.includes('highchi') ||
+    ticker.includes('temp')
+  ) {
+    return 'weather';
+  }
+
+  // Crypto patterns
+  if (
+    title.includes('bitcoin') ||
+    title.includes('btc') ||
+    title.includes('ethereum') ||
+    title.includes('eth ') ||
+    title.includes('crypto')
+  ) {
+    return 'crypto';
+  }
+
+  // Stock patterns
+  if (
+    title.includes('s&p') ||
+    title.includes('nasdaq') ||
+    title.includes('dow ') ||
+    title.includes('stock') ||
+    ticker.includes('inx')
+  ) {
+    return 'stocks';
+  }
+
+  // Sports patterns
+  if (
+    title.includes('nfl') ||
+    title.includes('nba') ||
+    title.includes('mlb') ||
+    title.includes('super bowl') ||
+    title.includes(' vs ') ||
+    title.includes(' at ') // "Team A at Team B"
+  ) {
+    return 'sports';
+  }
+
+  // Politics patterns
+  if (
+    title.includes('trump') ||
+    title.includes('congress') ||
+    title.includes('senate') ||
+    title.includes('house ') ||
+    title.includes('president') ||
+    title.includes('fed chair') ||
+    title.includes('election')
+  ) {
+    return 'politics';
+  }
+
+  return 'other';
+}
+
+/**
+ * Parse price string to number (e.g., "0.0300" -> 0.03)
+ */
+export function parsePrice(priceStr: string | undefined): number {
+  if (!priceStr) return 0;
+  const parsed = parseFloat(priceStr);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Get the best price to buy an outcome
+ */
+export function getBuyPrice(market: DFlowMarket, outcome: 'yes' | 'no'): number {
+  return outcome === 'yes' ? parsePrice(market.yesAsk) : parsePrice(market.noAsk);
+}
+
+/**
+ * Get the best price to sell an outcome
+ */
+export function getSellPrice(market: DFlowMarket, outcome: 'yes' | 'no'): number {
+  return outcome === 'yes' ? parsePrice(market.yesBid) : parsePrice(market.noBid);
+}
+
+/**
+ * Check if a market is tradeable (has liquidity)
+ * Prefers CASH collateral (most DFlow markets use CASH)
+ */
+export function isMarketTradeable(market: DFlowMarket): boolean {
+  // Check CASH first (most common), then USDC
+  const cashAccount = market.accounts[CASH_MINT];
+  const usdcAccount = market.accounts[USDC_MINT];
+  
+  const hasAccount = (cashAccount?.isInitialized) || (usdcAccount?.isInitialized);
+  if (!hasAccount) return false;
+  
+  // Must have at least a YES or NO ask price
+  const yesAsk = parsePrice(market.yesAsk);
+  const noAsk = parsePrice(market.noAsk);
+  
+  return yesAsk > 0 || noAsk > 0;
+}
+
+/**
+ * Get the best collateral mint for a market (prefers CASH)
+ */
+export function getMarketCollateral(market: DFlowMarket): string | null {
+  if (market.accounts[CASH_MINT]?.isInitialized) return CASH_MINT;
+  if (market.accounts[USDC_MINT]?.isInitialized) return USDC_MINT;
+  return null;
+}
+
+// Export for testing
+export { PREDICTION_API, QUOTE_API };

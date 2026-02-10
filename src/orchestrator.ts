@@ -443,6 +443,16 @@ export class Orchestrator {
       startWebServer(webPort);
     }
 
+    // Start predict orchestrator (prediction market trading loop)
+    try {
+      const { getPredictOrchestrator } = await import('./predict');
+      const predictOrch = getPredictOrchestrator();
+      await predictOrch.start();
+      logger.info('🔮 Predict orchestrator started');
+    } catch (err) {
+      logger.warn({ error: err }, 'Failed to start predict orchestrator - continuing without it');
+    }
+
     // Prune old discount history from both SQLite and Supabase (keep last 8 days)
     logger.info('Pruning old data...');
     this.database.pruneOldDiscountHistory();

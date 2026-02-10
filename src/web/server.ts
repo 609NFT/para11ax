@@ -1275,6 +1275,60 @@ app.get('/admin', (_req: Request, res: Response) => {
   res.send(getDashboardHTML('admin'));
 });
 
+app.get('/predict', (_req: Request, res: Response) => {
+  res.send(getDashboardHTML('predict'));
+});
+
+// Predict API endpoints
+app.get('/api/predict/stats', async (_req: Request, res: Response) => {
+  try {
+    const { getPredictStats, getOpenPredictPositions } = await import('../predict/database');
+    const stats = await getPredictStats();
+    const openPositions = await getOpenPredictPositions();
+    res.json({ ...stats, openPositions: openPositions.length });
+  } catch (e) {
+    res.json({ error: (e as Error).message, totalTrades: 0, wins: 0, losses: 0, winRate: 0, totalPnL: 0, avgEdge: 0, openPositions: 0 });
+  }
+});
+
+app.get('/api/predict/opportunities', async (_req: Request, res: Response) => {
+  try {
+    const { getNearTermMarkets, classifyMarket, isMarketTradeable } = await import('../dflow/client');
+    const { scanForOpportunities, getSupportedCategories } = await import('../resolvers');
+    
+    const markets = await getNearTermMarkets(168); // 7 days
+    const tradeable = markets.filter(m => 
+      getSupportedCategories().includes(classifyMarket(m)) && isMarketTradeable(m)
+    );
+    const opportunities = await scanForOpportunities(tradeable, 0.05, 0.7);
+    
+    res.json(opportunities.slice(0, 20).map(o => ({
+      ticker: o.market.ticker,
+      title: o.market.title,
+      outcome: o.outcome,
+      dataValue: o.dataValue,
+      dataSource: o.dataSource,
+      confidence: o.dataConfidence,
+      marketPrice: o.marketPrice,
+      edge: o.edgePct,
+      hoursToExpiry: o.hoursToExpiry,
+      suggestedSize: o.suggestedSizeUsd,
+    })));
+  } catch (e) {
+    res.json({ error: (e as Error).message, opportunities: [] });
+  }
+});
+
+app.get('/api/predict/positions', async (_req: Request, res: Response) => {
+  try {
+    const { getOpenPredictPositions, getRecentPredictPositions } = await import('../predict/database');
+    const open = await getOpenPredictPositions();
+    const recent = await getRecentPredictPositions(20);
+    res.json({ open, recent });
+  } catch (e) {
+    res.json({ error: (e as Error).message, open: [], recent: [] });
+  }
+});
 
 let server: ReturnType<typeof app.listen> | null = null;
 

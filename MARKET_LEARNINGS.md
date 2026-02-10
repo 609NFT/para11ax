@@ -66,8 +66,8 @@ Parallax trades **tokenized stocks on Solana** (rTSLA, rNVDA, rSPY, etc.) agains
 ## Active Parameters
 
 ```
-MIN_FLOOR: 3.0%           # CURRENT: 4.0% captures more opportunities with similar performance (reduced from 4.3% per recent optimization)
-MAX_CAP: 10.0%            # Raised from 2.5% — allow high thresholds
+MIN_FLOOR: 2.5%           # UPDATED Feb 9: 4.0%→2.5% (testing lower thresholds after half-life filter fix)
+MAX_CAP: 10.0%            # Raised from 2.5% — allow high thresholds  
 MIN_HOLD_TIME_MS: 5 min   # Raised from 2 min — <5min exits are 10% WR
 MAX_HOLD_TIME_MS: 60 min  # UPDATED Feb 5: was 4h. Data: 0% WR past 2hr, sweet spot 15-30min
 EXIT_TARGET: 2.0-3.0%     # TVL-based; backtest: 2.5% exit >> 0.5% (+$8 vs +$4)
@@ -76,16 +76,17 @@ SPREAD_WIDENING_STOP: 1.5% # NEW Feb 5: exit if spread widens 1.5% from entry (c
 PERCENTILE: 95            # Be highly selective
 PRICE_STOP_LOSS_PCT: -5%  # Emergency exit
 RETENTION_DAYS: 30         # Extended from 7 for better backtesting
+MAX_HALF_LIFE_HOURS: 24   # NEW Feb 9: was 8h, blocking all major tokens
 ```
 
-**Volatility Adjustment (recalibrated Feb 4):**
+**Volatility Adjustment (updated Feb 9):**
 ```
 BASE_ATR: 2.7%            # Median ATR of our token universe
-SENSITIVITY: 0.15          # Gentle: +/-0.15x per 1% ATR deviation
+SENSITIVITY: 0.15          # UPDATED Feb 9: 0.6→0.3 (reduced volatility impact)
 MIN_MULTIPLIER: 0.85       # Calm stocks get up to 15% discount on threshold
 MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 ```
-**Effective thresholds:** SPY/QQQ: 3.4% | TSLA: 4.1% | COIN: 4.3% | MSTR/SLV: 5.2%
+**Effective thresholds (Feb 9):** SPY/QQQ: 2.9% | TSLA: 3.1% | COIN: 3.2% | MSTR/SLV: 3.6%
 
 ---
 
@@ -93,6 +94,7 @@ MAX_MULTIPLIER: 1.30       # Volatile stocks get up to 30% premium on threshold
 
 | Date | Change | Commit | Result |
 |------|--------|--------|--------|
+| **Feb 10 17:00** | **📊 DAILY REVIEW: Lower thresholds still yielding zero trades** | N/A | 🟡 **MONITORING** (0 trades in 24h despite 2.5% BASE_FLOOR, bot evaluating 45 tokens/10s, PM2 restarts 229, half-life filter fixed, quality filtering working, new parameters need 24-48h evaluation) |
 | **Feb 8 17:00** | **📊 DAILY REVIEW: Quality strategy confirmed optimal** | N/A | ✅ **VALIDATED** (0 trades in 24h, bot online and evaluating 44 tokens/10s, no spreads above 4% threshold, all systems healthy, 60min max hold working correctly) |
 | **Feb 7 17:00** | **📊 DAILY REVIEW: Zero trades = quality strategy success** | N/A | ✅ **VALIDATED** (0 trades in 24h due to quality 4%+ filtering working correctly - no spreads above threshold, system evaluating 44 tokens/10s, all parameters optimal) |
 |------|--------|--------|--------|
