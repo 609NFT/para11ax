@@ -3570,12 +3570,31 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
               <div style="display: flex; gap: 24px; align-items: center; flex-shrink: 0;">
                 <div style="width: 60px; text-align: right; color: var(--text-primary);">$\${p.sizeUsd.toFixed(2)}</div>
                 <div style="width: 50px; text-align: right; color: var(--color-green); font-size: var(--text-xs);">\${(p.edgePct * 100).toFixed(0)}%</div>
-                <div style="width: 70px; text-align: right; font-size: var(--text-xs); font-weight: 600; color: \${countdownColor(timeLeft)};">\${formatCountdown(timeLeft)}</div>
+                <div class="predict-countdown" data-expires="\${Number(p.expirationTime)}" style="width: 70px; text-align: right; font-size: var(--text-xs); font-weight: 600; color: \${countdownColor(timeLeft)};">\${formatCountdown(timeLeft)}</div>
               </div>
             </div>\`;
           }).join('');
         } else {
           openContainer.innerHTML = '<div style="padding: var(--space-4); color: var(--text-secondary); text-align: center;">No open positions</div>';
+        }
+        
+        // Start live countdown ticker
+        if (!window._countdownTimer) {
+          window._countdownTimer = setInterval(() => {
+            document.querySelectorAll('.predict-countdown').forEach(el => {
+              const expires = Number(el.dataset.expires);
+              const ms = expires - Date.now();
+              if (ms <= 0) { el.textContent = 'settling...'; el.style.color = 'var(--color-accent)'; return; }
+              const h = Math.floor(ms / 3600000);
+              const m = Math.floor((ms % 3600000) / 60000);
+              const s = Math.floor((ms % 60000) / 1000);
+              if (h > 24) { el.textContent = Math.floor(h/24) + 'd ' + (h%24) + 'h'; }
+              else if (h > 0) { el.textContent = h + 'h ' + m + 'm ' + s + 's'; }
+              else if (m > 0) { el.textContent = m + 'm ' + s + 's'; }
+              else { el.textContent = s + 's'; }
+              el.style.color = ms < 3600000 ? 'var(--color-red)' : ms < 86400000 ? 'var(--color-yellow, #f5a623)' : 'var(--text-secondary)';
+            });
+          }, 1000);
         }
         
         // Recent trades
