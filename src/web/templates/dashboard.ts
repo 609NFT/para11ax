@@ -3537,7 +3537,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
             <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-primary); display: flex; justify-content: space-between; align-items: center;">
               <div>
                 <div style="color: var(--text-primary);">\${p.title ? (p.title.length > 70 ? p.title.substring(0, 70) + '...' : p.title) : p.marketTicker}</div>
-                <div style="color: var(--text-secondary); font-size: var(--text-xs);">\${p.outcome.toUpperCase()} • \${p.dataValue}</div>
+                <div style="color: var(--text-secondary); font-size: var(--text-xs);">\${p.outcome.toUpperCase()} • \${p.dataValue}\${p.entryTxSignature && !p.entryTxSignature.startsWith('paper_') ? ' • <a href="https://solscan.io/tx/' + p.entryTxSignature + '" target="_blank" style="color: var(--color-accent);">tx ↗</a>' : ''}</div>
               </div>
               <div style="text-align: right;">
                 <div style="color: var(--text-primary);">$\${p.sizeUsd.toFixed(2)}</div>
