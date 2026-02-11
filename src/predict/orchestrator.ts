@@ -282,11 +282,11 @@ export class PredictOrchestrator {
           tx: position.entryTxSignature,
         }, '✅ Predict position opened');
       } else {
-        logger.warn({ ticker: opp.market.ticker, error: result.error }, 'Failed to execute predict trade - blacklisting for 1h');
+        logger.warn({ ticker: opp.market.ticker, err: result.error }, 'Failed to execute predict trade - blacklisting for 1h');
         this.failedMarkets.set(opp.market.ticker, Date.now());
       }
     } catch (e) {
-      logger.error({ ticker: opp.market.ticker, error: e }, 'Exception executing predict opportunity');
+      logger.error({ ticker: opp.market.ticker, err: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined }, 'Exception executing predict opportunity');
       this.failedMarkets.set(opp.market.ticker, Date.now());
     }
   }
