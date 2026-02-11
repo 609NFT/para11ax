@@ -229,10 +229,17 @@ export function getTimeScaledConfidence(hoursRemaining: number, baseConfidence: 
   }
 
   // Combined confidence: blend base (distance) confidence with time factor
-  // Use the higher of: baseConfidence alone, or the time-boosted version
-  // The formula: conf = base * timeFactor, but never below base * 0.5
-  // and never above 0.95
-  const combined = baseConfidence * timeFactor;
+  // For very high base confidence (>0.90), time should barely matter —
+  // if BTC is $69K and threshold is $8M, it's not happening regardless of timeframe.
+  // Scale the time penalty down as base confidence increases.
+  const timeWeight = baseConfidence > 0.90 
+    ? 0.15  // Only 15% time influence for extreme distances
+    : baseConfidence > 0.80 
+      ? 0.30  // 30% time influence for strong signals
+      : 1.0;  // Full time influence for uncertain signals
+  
+  const adjustedTimeFactor = 1.0 - (1.0 - timeFactor) * timeWeight;
+  const combined = baseConfidence * adjustedTimeFactor;
 
   return Math.min(0.95, Math.max(0.05, combined));
 }
