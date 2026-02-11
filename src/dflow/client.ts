@@ -358,6 +358,12 @@ export function getSellPrice(market: DFlowMarket, outcome: 'yes' | 'no'): number
  * Prefers CASH collateral (most DFlow markets use CASH)
  */
 export function isMarketTradeable(market: DFlowMarket): boolean {
+  // Must be active (not finalized, closed, or settled)
+  if (market.status && market.status !== 'active') return false;
+  
+  // Must not already have a result
+  if (market.result) return false;
+  
   // Check CASH first (most common), then USDC
   const cashAccount = market.accounts[CASH_MINT];
   const usdcAccount = market.accounts[USDC_MINT];
