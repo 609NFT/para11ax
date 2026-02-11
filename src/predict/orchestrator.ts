@@ -34,7 +34,7 @@ const PREDICT_CONFIG = {
   // Risk limits
   MAX_POSITION_USD: 2,                // Max $2 per position (live testing cap)
   MAX_OPEN_POSITIONS: 10,             // Max concurrent positions
-  MAX_DAILY_LOSS_USD: 10,             // Daily loss limit
+  MAX_DAILY_LOSS_USD: 20,             // Daily loss limit (raised from $10)
   
   // Entry criteria
   MIN_EDGE_PCT: 0.20,                // Minimum 20% edge (was 8% — too many low-quality trades)
