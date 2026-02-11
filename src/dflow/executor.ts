@@ -141,16 +141,13 @@ export async function buyYes(
   }
 
   // Check if quote has transaction (DFlow should return executable tx)
-  if (!('transaction' in quote)) {
-    // If no transaction, we need to build it ourselves
-    // For now, return quote info for paper trading
-    logger.warn({ ticker: market.ticker }, 'Quote does not include transaction - paper trade only');
+  if (!('transaction' in quote) || !quote.transaction) {
+    logger.warn({ ticker: market.ticker }, 'Quote has no transaction - market may not be tradeable');
     return {
-      success: true,
-      txSignature: `paper_${uuidv4().slice(0, 8)}`,
-      inputAmount: amountUsd,
-      outputAmount: parseFloat(quote.outputAmount) / 1_000_000_000,
-      tokensReceived: parseFloat(quote.outputAmount) / 1_000_000_000,
+      success: false,
+      error: 'No transaction in quote - market not tradeable',
+      inputAmount: 0,
+      outputAmount: 0,
       timestamp: Date.now(),
     };
   }
@@ -179,13 +176,13 @@ export async function buyNo(
     };
   }
 
-  if (!('transaction' in quote)) {
+  if (!('transaction' in quote) || !quote.transaction) {
+    logger.warn({ ticker: market.ticker }, 'Quote has no transaction - market may not be tradeable');
     return {
-      success: true,
-      txSignature: `paper_${uuidv4().slice(0, 8)}`,
-      inputAmount: amountUsd,
-      outputAmount: parseFloat(quote.outputAmount) / 1_000_000_000,
-      tokensReceived: parseFloat(quote.outputAmount) / 1_000_000_000,
+      success: false,
+      error: 'No transaction in quote - market not tradeable',
+      inputAmount: 0,
+      outputAmount: 0,
       timestamp: Date.now(),
     };
   }
