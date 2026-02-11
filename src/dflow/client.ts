@@ -169,9 +169,13 @@ export async function getQuote(
   inputMint: string,
   outputMint: string,
   amountSmallestUnits: string,
-  slippageBps: number = 100
+  slippageBps: number = 100,
+  userPublicKey?: string
 ): Promise<DFlowQuote> {
-  const path = `/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountSmallestUnits}&slippageBps=${slippageBps}`;
+  let path = `/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountSmallestUnits}&slippageBps=${slippageBps}`;
+  if (userPublicKey) {
+    path += `&userPublicKey=${userPublicKey}`;
+  }
   return dflowGet<DFlowQuote>(QUOTE_API, path);
 }
 
@@ -181,7 +185,8 @@ export async function getQuote(
  */
 export async function getYesBuyQuote(
   market: DFlowMarket,
-  amountUsd: number
+  amountUsd: number,
+  userPublicKey?: string
 ): Promise<DFlowQuote | null> {
   // Get the market's collateral (CASH preferred)
   const collateral = getMarketCollateral(market);
@@ -201,7 +206,7 @@ export async function getYesBuyQuote(
   
   try {
     // Route USDC → YES token (DFlow handles USDC→CASH→YES internally)
-    return await getQuote(USDC_MINT, account.yesMint, amountSmallest, 200); // 2% slippage for routing
+    return await getQuote(USDC_MINT, account.yesMint, amountSmallest, 200, userPublicKey); // 2% slippage for routing
   } catch (e) {
     logger.warn({ ticker: market.ticker, error: e }, 'Failed to get YES buy quote');
     return null;
@@ -214,7 +219,8 @@ export async function getYesBuyQuote(
  */
 export async function getNoBuyQuote(
   market: DFlowMarket,
-  amountUsd: number
+  amountUsd: number,
+  userPublicKey?: string
 ): Promise<DFlowQuote | null> {
   const collateral = getMarketCollateral(market);
   if (!collateral) return null;
@@ -225,7 +231,7 @@ export async function getNoBuyQuote(
   const amountSmallest = Math.floor(amountUsd * 1_000_000).toString();
   
   try {
-    return await getQuote(USDC_MINT, account.noMint, amountSmallest, 200);
+    return await getQuote(USDC_MINT, account.noMint, amountSmallest, 200, userPublicKey);
   } catch (e) {
     logger.warn({ ticker: market.ticker, error: e }, 'Failed to get NO buy quote');
     return null;

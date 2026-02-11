@@ -19,6 +19,20 @@ function getRpcEndpoint(): string {
   return process.env.RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com';
 }
 
+// Get wallet public key from private key (for quote requests)
+let _walletPubkey: string | null = null;
+function getWalletPublicKey(): string | null {
+  if (_walletPubkey) return _walletPubkey;
+  const pk = process.env.SOLANA_PRIVATE_KEY;
+  if (!pk) return null;
+  try {
+    const bs58 = require('bs58');
+    const kp = Keypair.fromSecretKey(bs58.decode(pk));
+    _walletPubkey = kp.publicKey.toBase58();
+    return _walletPubkey;
+  } catch { return null; }
+}
+
 // Get wallet keypair from environment
 function getWalletKeypair(): Keypair {
   const privateKey = process.env.WALLET_PRIVATE_KEY;
@@ -114,7 +128,8 @@ export async function buyYes(
 ): Promise<DFlowTradeResult> {
   logger.info({ ticker: market.ticker, amount: amountUsd }, 'Buying YES tokens');
 
-  const quote = await getYesBuyQuote(market, amountUsd);
+  const walletPubkey = getWalletPublicKey();
+  const quote = await getYesBuyQuote(market, amountUsd, walletPubkey || undefined);
   if (!quote) {
     return {
       success: false,
@@ -152,7 +167,8 @@ export async function buyNo(
 ): Promise<DFlowTradeResult> {
   logger.info({ ticker: market.ticker, amount: amountUsd }, 'Buying NO tokens');
 
-  const quote = await getNoBuyQuote(market, amountUsd);
+  const walletPubkey = getWalletPublicKey();
+  const quote = await getNoBuyQuote(market, amountUsd, walletPubkey || undefined);
   if (!quote) {
     return {
       success: false,
