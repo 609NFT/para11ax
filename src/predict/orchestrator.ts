@@ -32,18 +32,18 @@ const PREDICT_CONFIG = {
   SETTLEMENT_CHECK_INTERVAL_MS: 300_000, // Check settlements every 5 min
   
   // Risk limits
-  MAX_POSITION_USD: 20,               // Max per position
-  MAX_OPEN_POSITIONS: 5,              // Max concurrent positions
-  MAX_DAILY_LOSS_USD: 50,             // Daily loss limit
+  MAX_POSITION_USD: 2,                // Max $2 per position (live testing cap)
+  MAX_OPEN_POSITIONS: 10,             // Max concurrent positions
+  MAX_DAILY_LOSS_USD: 10,             // Daily loss limit
   
   // Entry criteria
-  MIN_EDGE_PCT: 0.10,                 // Minimum 10% edge
-  MIN_CONFIDENCE: 0.80,               // Minimum 80% data confidence
+  MIN_EDGE_PCT: 0.08,                // Minimum 8% edge
+  MIN_CONFIDENCE: 0.70,              // Minimum 70% data confidence
   MIN_HOURS_TO_EXPIRY: 0.5,           // At least 30 min to expiry
-  MAX_HOURS_TO_EXPIRY: 720,           // Max 30 days out (use closeTime for urgency)
+  MAX_HOURS_TO_EXPIRY: 720,            // Max 30 days out (use closeTime for urgency)
   
   // Sizing
-  BASE_SIZE_USD: 10,                  // Base position size
+  BASE_SIZE_USD: 2,                   // Base position size ($2 cap)
   KELLY_FRACTION: 0.25,               // Use 25% of Kelly optimal
 };
 
