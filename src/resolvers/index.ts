@@ -154,7 +154,8 @@ export async function analyzeMarket(market: DFlowMarket): Promise<PredictOpportu
 export async function scanForOpportunities(
   markets: DFlowMarket[],
   minEdgePct: number = 0.10,
-  minConfidence: number = 0.80
+  minConfidence: number = 0.80,
+  minMarketPrice: number = 0.03
 ): Promise<PredictOpportunity[]> {
   const opportunities: PredictOpportunity[] = [];
 
@@ -162,6 +163,11 @@ export async function scanForOpportunities(
     try {
       const opp = await analyzeMarket(market);
       if (opp && opp.edgePct >= minEdgePct && opp.dataConfidence >= minConfidence) {
+        // Skip markets with very low prices (no real liquidity, inflated edge)
+        if (opp.marketPrice < minMarketPrice) {
+          logger.debug({ ticker: market.ticker, price: opp.marketPrice, edge: opp.edgePct }, 'Skipping low-price market (fake edge)');
+          continue;
+        }
         opportunities.push(opp);
       }
     } catch (e) {

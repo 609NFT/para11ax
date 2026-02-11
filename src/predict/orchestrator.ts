@@ -37,8 +37,9 @@ const PREDICT_CONFIG = {
   MAX_DAILY_LOSS_USD: 10,             // Daily loss limit
   
   // Entry criteria
-  MIN_EDGE_PCT: 0.08,                // Minimum 8% edge
-  MIN_CONFIDENCE: 0.70,              // Minimum 70% data confidence
+  MIN_EDGE_PCT: 0.20,                // Minimum 20% edge (was 8% — too many low-quality trades)
+  MIN_CONFIDENCE: 0.75,              // Minimum 75% data confidence
+  MIN_MARKET_PRICE: 0.03,            // Minimum 3¢ market price (1¢ = no liquidity, fake edge)
   MIN_HOURS_TO_EXPIRY: 0.5,           // At least 30 min to expiry
   MAX_HOURS_TO_EXPIRY: 720,            // Max 30 days out (use closeTime for urgency)
   
@@ -195,7 +196,8 @@ export class PredictOrchestrator {
       const opportunities = await scanForOpportunities(
         tradeableMarkets,
         PREDICT_CONFIG.MIN_EDGE_PCT,
-        PREDICT_CONFIG.MIN_CONFIDENCE
+        PREDICT_CONFIG.MIN_CONFIDENCE,
+        PREDICT_CONFIG.MIN_MARKET_PRICE
       );
 
       if (opportunities.length === 0) {
@@ -410,7 +412,8 @@ export class PredictOrchestrator {
     return scanForOpportunities(
       tradeableMarkets,
       PREDICT_CONFIG.MIN_EDGE_PCT,
-      PREDICT_CONFIG.MIN_CONFIDENCE
+      PREDICT_CONFIG.MIN_CONFIDENCE,
+      PREDICT_CONFIG.MIN_MARKET_PRICE
     );
   }
 }
