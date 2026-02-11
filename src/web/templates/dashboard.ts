@@ -3540,7 +3540,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
         // Open positions — sort by expiration (settling soonest first)
         const openContainer = document.getElementById('predict-positions');
         if (positions.open && positions.open.length > 0) {
-          const sorted = [...positions.open].sort((a, b) => a.expirationTime - b.expirationTime);
+          const sorted = [...positions.open].sort((a, b) => Number(a.expirationTime) - Number(b.expirationTime));
           const now = Date.now();
           
           function formatCountdown(ms) {
@@ -3560,7 +3560,7 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
           }
           
           openContainer.innerHTML = '<div style="padding: 8px 16px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-primary); font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;"><span>Market</span><span style="display: flex; gap: 24px;"><span style="width: 60px; text-align: right;">Size</span><span style="width: 50px; text-align: right;">Edge</span><span style="width: 70px; text-align: right;">Settles In</span></span></div>' + sorted.map(p => {
-            const timeLeft = (p.expirationTime * 1000) - now;
+            const timeLeft = Number(p.expirationTime) - now;
             return \`
             <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-primary); display: flex; justify-content: space-between; align-items: center;">
               <div style="flex: 1; min-width: 0;">
