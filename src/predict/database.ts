@@ -180,6 +180,19 @@ export async function updatePredictPosition(
 /**
  * Get all open predict positions
  */
+export async function getAllPredictPositions(): Promise<PredictPosition[]> {
+  const pool = getTradesPool();
+  const sql = `SELECT * FROM ${TABLE} WHERE entry_tx_signature IS NOT NULL AND entry_tx_signature NOT LIKE 'paper_%' ORDER BY created_at DESC`;
+  try {
+    const result = await pool.query(sql);
+    return result.rows.map(rowToPosition);
+  } catch (e) {
+    if ((e as Error).message.includes('does not exist')) return [];
+    logger.error({ error: e }, 'Failed to get all predict positions');
+    return [];
+  }
+}
+
 export async function getOpenPredictPositions(): Promise<PredictPosition[]> {
   const pool = getTradesPool();
 

@@ -19,7 +19,8 @@ import { PredictPosition, PredictOpportunity } from '../dflow/types';
 import { scanForOpportunities, getSupportedCategories } from '../resolvers';
 import { 
   savePredictPosition, 
-  getOpenPredictPositions, 
+  getOpenPredictPositions,
+  getAllPredictPositions,
   updatePredictPosition,
   getPredictStats 
 } from './database';
@@ -211,15 +212,15 @@ export class PredictOrchestrator {
 
       logger.info({ count: opportunities.length }, 'Found predict opportunities');
 
-      // Check for duplicate positions
-      const openPositions = await getOpenPredictPositions();
-      const openTickers = new Set(openPositions.map(p => p.marketTicker));
+      // Block markets we've already traded (open or settled — never re-enter)
+      const allPositions = await getAllPredictPositions();
+      const tradedTickers = new Set(allPositions.map(p => p.marketTicker));
 
       // Execute best opportunities
       for (const opp of opportunities) {
-        // Skip if we already have a position in this market
-        if (openTickers.has(opp.market.ticker)) {
-          logger.debug({ ticker: opp.market.ticker }, 'Already have position in market');
+        // Skip if we've ever traded this market (open or settled)
+        if (tradedTickers.has(opp.market.ticker)) {
+          logger.debug({ ticker: opp.market.ticker }, 'Already traded this market (open or settled)');
           continue;
         }
 
