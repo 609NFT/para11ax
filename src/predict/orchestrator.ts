@@ -60,6 +60,9 @@ export class PredictOrchestrator {
   // Locks
   private scanning: boolean = false;
   private checkingSettlements: boolean = false;
+  
+  // Failed markets cache (don't retry for 1 hour)
+  private failedMarkets: Map<string, number> = new Map();
 
   constructor() {
     logger.info('PredictOrchestrator initialized');
@@ -214,6 +217,12 @@ export class PredictOrchestrator {
           continue;
         }
 
+        // Skip if market previously failed (retry after 1 hour)
+        const failedAt = this.failedMarkets.get(opp.market.ticker);
+        if (failedAt && Date.now() - failedAt < 3600_000) {
+          continue;
+        }
+
         // Calculate size using fractional Kelly
         const size = Math.min(
           PREDICT_CONFIG.MAX_POSITION_USD,
@@ -273,10 +282,12 @@ export class PredictOrchestrator {
           tx: position.entryTxSignature,
         }, '✅ Predict position opened');
       } else {
-        logger.error({ ticker: opp.market.ticker, error: result.error }, 'Failed to execute predict trade');
+        logger.warn({ ticker: opp.market.ticker, error: result.error }, 'Failed to execute predict trade - blacklisting for 1h');
+        this.failedMarkets.set(opp.market.ticker, Date.now());
       }
     } catch (e) {
       logger.error({ ticker: opp.market.ticker, error: e }, 'Exception executing predict opportunity');
+      this.failedMarkets.set(opp.market.ticker, Date.now());
     }
   }
 
