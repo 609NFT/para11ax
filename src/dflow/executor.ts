@@ -96,15 +96,31 @@ async function executeSwap(
       };
     }
 
-    logger.info({ txSignature }, 'DFlow swap executed successfully');
+    // Calculate fees from quote data
+    const actualInput = parseInt(quote.inAmount as string || '0');
+    const platformFee = quote.platformFee ? parseFloat(quote.platformFee as string) / 1_000_000 : 0;
+    const priorityFeeLamports = parseInt(quote.prioritizationFeeLamports as string || '0');
+    const networkFeeSol = priorityFeeLamports / 1_000_000_000;
+    const priceImpact = quote.priceImpactPct ? parseFloat(quote.priceImpactPct as string) : 0;
+    const slippage = parseInt(quote.slippageBps as string || '0');
+    
+    // Fee = requested amount - actual input amount (in USDC)
+    const routingFeeUsd = (parseInt(quote.amount as string || quote.inAmount as string || '0') - actualInput) / 1_000_000;
+    const totalFeeUsd = routingFeeUsd + platformFee + (networkFeeSol * 200); // ~$200/SOL estimate for SOL fees in USD
+
+    logger.info({ txSignature, feeUsd: totalFeeUsd.toFixed(4), networkFeeSol: networkFeeSol.toFixed(6), priceImpact: priceImpact.toFixed(4), slippageBps: slippage }, 'DFlow swap executed successfully');
 
     return {
       success: true,
       txSignature,
-      inputAmount: parseInt(quote.inputAmount as string) / 1_000_000, // USDC decimals
-      outputAmount: parseInt(quote.outputAmount as string) / 1_000_000_000, // Outcome token decimals (9)
+      inputAmount: actualInput / 1_000_000,
+      outputAmount: parseInt(quote.outputAmount as string) / 1_000_000_000,
       tokensReceived: parseInt(quote.outputAmount as string) / 1_000_000_000,
       timestamp: now,
+      feeUsd: totalFeeUsd,
+      networkFeeSol,
+      slippageBps: slippage,
+      priceImpactPct: priceImpact,
     };
   } catch (e) {
     const error = e as Error;
@@ -375,6 +391,11 @@ export async function executePredictTrade(
     dataConfidence,
     result.txSignature
   );
+
+  // Attach fee data
+  position.entryFeeUsd = result.feeUsd;
+  position.networkFeeSol = result.networkFeeSol;
+  position.priceImpactPct = result.priceImpactPct;
 
   return { position, result };
 }

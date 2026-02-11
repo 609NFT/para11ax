@@ -1801,6 +1801,10 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
           <div style="font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;">Avg Edge</div>
           <div id="predict-edge" style="font-size: 24px; font-weight: 600; color: var(--text-primary);">-</div>
         </div>
+        <div class="stat-card" style="background: var(--surface-1); padding: var(--space-4); border-radius: 8px; border: 1px solid var(--border-primary);">
+          <div style="font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;">Total Fees</div>
+          <div id="predict-fees" style="font-size: 24px; font-weight: 600; color: var(--color-red);">-</div>
+        </div>
       </div>
       <div class="predict-section" style="margin-bottom: var(--space-5);">
         <h3 style="color: var(--text-primary); margin-bottom: var(--space-3); font-size: var(--text-base);">⚡ Live Opportunities</h3>
@@ -3499,6 +3503,9 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
         document.getElementById('predict-edge').textContent = stats.avgEdge
           ? (stats.avgEdge * 100).toFixed(0) + '%'
           : '-';
+        document.getElementById('predict-fees').textContent = stats.totalFees
+          ? '-$' + stats.totalFees.toFixed(4)
+          : '$0';
         
         // Fetch opportunities
         const oppsRes = await fetch('/api/predict/opportunities');

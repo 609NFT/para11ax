@@ -100,6 +100,11 @@ export interface DFlowTradeResult {
   tokensReceived?: number;
   error?: string;
   timestamp: number;
+  // Fees
+  feeUsd?: number;              // Platform/routing fee in USD
+  networkFeeSol?: number;       // Priority fee in SOL
+  slippageBps?: number;         // Actual slippage in bps
+  priceImpactPct?: number;      // Price impact percentage
 }
 
 // Predict position for database
@@ -119,6 +124,9 @@ export interface PredictPosition {
   tokenMint: string;
   collateralMint: string;
   entryTxSignature?: string;
+  entryFeeUsd?: number;        // Platform/routing fee
+  networkFeeSol?: number;      // Priority fee in SOL
+  priceImpactPct?: number;     // Price impact
   
   // Data edge at entry
   dataSource: string;          // "NWS"

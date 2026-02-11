@@ -53,6 +53,11 @@ export async function initPredictTable(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS idx_predict_status ON ${TABLE}(status);
+
+    -- Fee tracking columns (added later, nullable)
+    ALTER TABLE ${TABLE} ADD COLUMN IF NOT EXISTS entry_fee_usd DECIMAL(10, 6);
+    ALTER TABLE ${TABLE} ADD COLUMN IF NOT EXISTS network_fee_sol DECIMAL(10, 9);
+    ALTER TABLE ${TABLE} ADD COLUMN IF NOT EXISTS price_impact_pct DECIMAL(10, 6);
     CREATE INDEX IF NOT EXISTS idx_predict_market ON ${TABLE}(market_ticker);
     CREATE INDEX IF NOT EXISTS idx_predict_created ON ${TABLE}(created_at DESC);
   `;
@@ -77,12 +82,14 @@ export async function savePredictPosition(position: PredictPosition): Promise<vo
       id, market_ticker, event_ticker, series_ticker, title, outcome,
       entry_price, entry_timestamp, size_usd, tokens_held, token_mint, collateral_mint, entry_tx_signature,
       data_source, data_value, data_timestamp, data_confidence, market_implied_prob, edge_pct,
-      expiration_time, status, created_at, updated_at
+      expiration_time, status, created_at, updated_at,
+      entry_fee_usd, network_fee_sol, price_impact_pct
     ) VALUES (
       $1, $2, $3, $4, $5, $6,
       $7, $8, $9, $10, $11, $12, $13,
       $14, $15, $16, $17, $18, $19,
-      $20, $21, $22, $23
+      $20, $21, $22, $23,
+      $24, $25, $26
     )
   `;
 
@@ -110,6 +117,9 @@ export async function savePredictPosition(position: PredictPosition): Promise<vo
     position.status,
     position.createdAt,
     position.updatedAt,
+    position.entryFeeUsd || null,
+    position.networkFeeSol || null,
+    position.priceImpactPct || null,
   ];
 
   try {
@@ -220,6 +230,7 @@ export async function getPredictStats(): Promise<{
   avgPnL: number;
   avgEdge: number;
   openPositions: number;
+  totalFees: number;
 }> {
   const pool = getTradesPool();
 
@@ -231,7 +242,8 @@ export async function getPredictStats(): Promise<{
       COALESCE(SUM(pnl_usd) FILTER (WHERE status = 'settled'), 0) as total_pnl,
       COALESCE(AVG(pnl_usd) FILTER (WHERE status = 'settled'), 0) as avg_pnl,
       COALESCE(AVG(edge_pct), 0) as avg_edge,
-      COUNT(*) FILTER (WHERE status = 'open') as open_positions
+      COUNT(*) FILTER (WHERE status = 'open') as open_positions,
+      COALESCE(SUM(entry_fee_usd), 0) as total_fees
     FROM ${TABLE}
     WHERE (entry_tx_signature IS NULL OR entry_tx_signature NOT LIKE 'paper_%')
   `;
@@ -253,6 +265,7 @@ export async function getPredictStats(): Promise<{
       avgPnL: parseFloat(row.avg_pnl) || 0,
       avgEdge: parseFloat(row.avg_edge) || 0,
       openPositions: parseInt(row.open_positions) || 0,
+      totalFees: parseFloat(row.total_fees) || 0,
     };
   } catch (e) {
     if ((e as Error).message.includes('does not exist')) {
@@ -265,6 +278,7 @@ export async function getPredictStats(): Promise<{
         avgPnL: 0,
         avgEdge: 0,
         openPositions: 0,
+        totalFees: 0,
       };
     }
     logger.error({ error: e }, 'Failed to get predict stats');
@@ -291,6 +305,9 @@ function rowToPosition(row: Record<string, unknown>): PredictPosition {
     tokenMint: row.token_mint as string,
     collateralMint: row.collateral_mint as string,
     entryTxSignature: row.entry_tx_signature as string | undefined,
+    entryFeeUsd: row.entry_fee_usd ? parseFloat(row.entry_fee_usd as string) : undefined,
+    networkFeeSol: row.network_fee_sol ? parseFloat(row.network_fee_sol as string) : undefined,
+    priceImpactPct: row.price_impact_pct ? parseFloat(row.price_impact_pct as string) : undefined,
     
     dataSource: row.data_source as string,
     dataValue: row.data_value as string,
