@@ -25,6 +25,7 @@ import {
   getPredictStats 
 } from './database';
 import logger from '../logger';
+import { notifyPredictEntry, notifyPredictSettlement } from '../notifications/discord';
 
 // Configuration constants
 const PREDICT_CONFIG = {
@@ -288,6 +289,19 @@ export class PredictOrchestrator {
           tokens: position.tokensHeld,
           tx: position.entryTxSignature,
         }, '✅ Predict position opened');
+
+        // Notify Discord
+        notifyPredictEntry({
+          ticker: position.marketTicker,
+          title: position.title || position.marketTicker,
+          outcome: position.outcome as 'yes' | 'no',
+          sizeUsd: position.sizeUsd,
+          entryPrice: position.entryPrice,
+          confidence: opp.dataConfidence,
+          edgePct: opp.edgePct,
+          dataSource: opp.dataSource,
+          txSignature: position.entryTxSignature || undefined,
+        }).catch(() => {}); // Fire and forget
       } else {
         logger.warn({ ticker: opp.market.ticker, err: result.error }, 'Failed to execute predict trade - blacklisting for 1h');
         this.failedMarkets.set(opp.market.ticker, Date.now());
@@ -367,6 +381,21 @@ export class PredictOrchestrator {
       pnlUsd: pnlUsd.toFixed(2),
       pnlPct: pnlPct.toFixed(1) + '%',
     }, `${emoji} Predict position settled`);
+
+    // Notify Discord
+    notifyPredictSettlement({
+      ticker: position.marketTicker,
+      title: position.title || position.marketTicker,
+      outcome: position.outcome as 'yes' | 'no',
+      sizeUsd: position.sizeUsd,
+      entryPrice: position.entryPrice,
+      confidence: position.dataConfidence,
+      edgePct: position.edgePct,
+      dataSource: position.dataSource || 'unknown',
+      pnlUsd,
+      settlementResult: winLoss,
+      txSignature: position.entryTxSignature || undefined,
+    }).catch(() => {}); // Fire and forget
   }
 
   /**

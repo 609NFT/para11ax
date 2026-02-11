@@ -114,6 +114,60 @@ export async function notifyError(context: string, error: string): Promise<void>
 }
 
 /**
+ * Predict market trade notifications
+ */
+interface PredictNotification {
+  ticker: string;
+  title: string;
+  outcome: 'yes' | 'no';
+  sizeUsd: number;
+  entryPrice: number;
+  confidence: number;
+  edgePct: number;
+  dataSource: string;
+  pnlUsd?: number;
+  settlementResult?: string;
+  txSignature?: string;
+}
+
+export async function notifyPredictEntry(trade: PredictNotification): Promise<void> {
+  const solscanLink = trade.txSignature
+    ? `[tx](https://solscan.io/tx/${trade.txSignature})`
+    : '';
+
+  const message = [
+    `🔮 **PREDICT ENTRY** | ${trade.outcome.toUpperCase()} @ ${(trade.entryPrice * 100).toFixed(0)}¢`,
+    `Market: ${trade.title.substring(0, 80)}`,
+    `Edge: ${(trade.edgePct * 100).toFixed(1)}% • Conf: ${(trade.confidence * 100).toFixed(0)}%`,
+    `Size: $${trade.sizeUsd.toFixed(2)} • Data: ${trade.dataSource}`,
+    solscanLink,
+  ].filter(Boolean).join('\n');
+
+  await sendDiscordMessage(message, 'trades');
+}
+
+export async function notifyPredictSettlement(trade: PredictNotification): Promise<void> {
+  const isWin = trade.settlementResult === 'win';
+  const emoji = isWin ? '🟢' : '🔴';
+  const pnlStr = trade.pnlUsd !== undefined
+    ? `${trade.pnlUsd >= 0 ? '+' : ''}$${trade.pnlUsd.toFixed(2)}`
+    : 'n/a';
+
+  const solscanLink = trade.txSignature
+    ? `[tx](https://solscan.io/tx/${trade.txSignature})`
+    : '';
+
+  const message = [
+    `${emoji} **PREDICT ${trade.settlementResult?.toUpperCase()}** | ${trade.outcome.toUpperCase()} @ ${(trade.entryPrice * 100).toFixed(0)}¢`,
+    `Market: ${trade.title.substring(0, 80)}`,
+    `P&L: ${pnlStr}`,
+    solscanLink,
+  ].filter(Boolean).join('\n');
+
+  await sendDiscordMessage(message, 'trades');
+}
+
+/**
  * Short position notification
  */
 interface ShortNotification {
