@@ -307,13 +307,9 @@ export class PredictOrchestrator {
       logger.debug({ count: openPositions.length }, 'Checking settlements');
 
       for (const position of openPositions) {
-        // Check if market is expired
         const now = Date.now();
-        if (position.expirationTime > now) {
-          continue; // Not yet expired
-        }
 
-        // Fetch current market state
+        // Always fetch market state — DFlow may finalize before our stored expiration
         const market = await getMarketByTicker(position.marketTicker);
         if (!market) {
           logger.warn({ ticker: position.marketTicker }, 'Could not fetch market for settlement');
