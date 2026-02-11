@@ -41,7 +41,7 @@ const PREDICT_CONFIG = {
   MIN_CONFIDENCE: 0.75,              // Minimum 75% data confidence
   MIN_MARKET_PRICE: 0.03,            // Minimum 3¢ market price (1¢ = no liquidity, fake edge)
   MIN_HOURS_TO_EXPIRY: 0.5,           // At least 30 min to expiry
-  MAX_HOURS_TO_EXPIRY: 720,            // Max 30 days out (use closeTime for urgency)
+  MAX_HOURS_TO_EXPIRY: 24,             // Only markets settling within 24h
   
   // Sizing
   BASE_SIZE_USD: 2,                   // Base position size ($2 cap)
