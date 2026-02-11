@@ -38,8 +38,10 @@ const PREDICT_CONFIG = {
   
   // Entry criteria
   MIN_EDGE_PCT: 0.20,                // Minimum 20% edge (was 8% — too many low-quality trades)
+  MAX_EDGE_PCT: 0.50,                // Maximum 50% edge — beyond this means illiquid/mispriced market
   MIN_CONFIDENCE: 0.75,              // Minimum 75% data confidence
   MIN_MARKET_PRICE: 0.03,            // Minimum 3¢ market price (1¢ = no liquidity, fake edge)
+  MAX_MARKET_PRICE: 0.95,            // Maximum 95¢ — near-certain markets have no upside
   MIN_HOURS_TO_EXPIRY: 0.5,           // At least 30 min to expiry
   MAX_HOURS_TO_EXPIRY: 24,             // Only markets settling within 24h
   
@@ -197,7 +199,9 @@ export class PredictOrchestrator {
         tradeableMarkets,
         PREDICT_CONFIG.MIN_EDGE_PCT,
         PREDICT_CONFIG.MIN_CONFIDENCE,
-        PREDICT_CONFIG.MIN_MARKET_PRICE
+        PREDICT_CONFIG.MIN_MARKET_PRICE,
+        PREDICT_CONFIG.MAX_EDGE_PCT,
+        PREDICT_CONFIG.MAX_MARKET_PRICE
       );
 
       if (opportunities.length === 0) {
@@ -409,7 +413,9 @@ export class PredictOrchestrator {
       tradeableMarkets,
       PREDICT_CONFIG.MIN_EDGE_PCT,
       PREDICT_CONFIG.MIN_CONFIDENCE,
-      PREDICT_CONFIG.MIN_MARKET_PRICE
+      PREDICT_CONFIG.MIN_MARKET_PRICE,
+      PREDICT_CONFIG.MAX_EDGE_PCT,
+      PREDICT_CONFIG.MAX_MARKET_PRICE
     );
   }
 }

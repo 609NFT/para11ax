@@ -155,7 +155,9 @@ export async function scanForOpportunities(
   markets: DFlowMarket[],
   minEdgePct: number = 0.10,
   minConfidence: number = 0.80,
-  minMarketPrice: number = 0.03
+  minMarketPrice: number = 0.03,
+  maxEdgePct: number = 0.50,
+  maxMarketPrice: number = 0.95
 ): Promise<PredictOpportunity[]> {
   const opportunities: PredictOpportunity[] = [];
 
@@ -166,6 +168,16 @@ export async function scanForOpportunities(
         // Skip markets with very low prices (no real liquidity, inflated edge)
         if (opp.marketPrice < minMarketPrice) {
           logger.debug({ ticker: market.ticker, price: opp.marketPrice, edge: opp.edgePct }, 'Skipping low-price market (fake edge)');
+          continue;
+        }
+        // Skip markets priced too high (near-certain, no upside)
+        if (opp.marketPrice > maxMarketPrice) {
+          logger.debug({ ticker: market.ticker, price: opp.marketPrice }, 'Skipping high-price market (no upside)');
+          continue;
+        }
+        // Skip absurdly high edge — means market is illiquid/mispriced, not real alpha
+        if (opp.edgePct > maxEdgePct) {
+          logger.debug({ ticker: market.ticker, edge: opp.edgePct, price: opp.marketPrice }, 'Skipping excessive edge (illiquid market)');
           continue;
         }
         opportunities.push(opp);
