@@ -35,9 +35,9 @@ function getWalletPublicKey(): string | null {
 
 // Get wallet keypair from environment
 function getWalletKeypair(): Keypair {
-  const privateKey = process.env.WALLET_PRIVATE_KEY;
+  const privateKey = process.env.SOLANA_PRIVATE_KEY || process.env.WALLET_PRIVATE_KEY;
   if (!privateKey) {
-    throw new Error('WALLET_PRIVATE_KEY environment variable not set');
+    throw new Error('SOLANA_PRIVATE_KEY environment variable not set');
   }
   
   // Support both base58 and JSON array format
