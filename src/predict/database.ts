@@ -173,7 +173,7 @@ export async function updatePredictPosition(
 export async function getOpenPredictPositions(): Promise<PredictPosition[]> {
   const pool = getTradesPool();
 
-  const sql = `SELECT * FROM ${TABLE} WHERE status = 'open' ORDER BY created_at DESC`;
+  const sql = `SELECT * FROM ${TABLE} WHERE status = 'open' AND (entry_tx_signature IS NULL OR entry_tx_signature NOT LIKE 'paper_%') ORDER BY created_at DESC`;
 
   try {
     const result = await pool.query(sql);
@@ -194,7 +194,7 @@ export async function getOpenPredictPositions(): Promise<PredictPosition[]> {
 export async function getRecentPredictPositions(limit: number = 50): Promise<PredictPosition[]> {
   const pool = getTradesPool();
 
-  const sql = `SELECT * FROM ${TABLE} ORDER BY created_at DESC LIMIT $1`;
+  const sql = `SELECT * FROM ${TABLE} WHERE (entry_tx_signature IS NULL OR entry_tx_signature NOT LIKE 'paper_%') ORDER BY created_at DESC LIMIT $1`;
 
   try {
     const result = await pool.query(sql, [limit]);
@@ -233,6 +233,7 @@ export async function getPredictStats(): Promise<{
       COALESCE(AVG(edge_pct), 0) as avg_edge,
       COUNT(*) FILTER (WHERE status = 'open') as open_positions
     FROM ${TABLE}
+    WHERE (entry_tx_signature IS NULL OR entry_tx_signature NOT LIKE 'paper_%')
   `;
 
   try {
