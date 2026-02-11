@@ -70,20 +70,45 @@ async function dflowGet<T>(host: string, path: string): Promise<T> {
 /**
  * Fetch all active markets with pagination
  */
-export async function getActiveMarkets(limit: number = 1000): Promise<DFlowMarket[]> {
+export async function getActiveMarkets(_limit: number = 5000): Promise<DFlowMarket[]> {
   const allMarkets: DFlowMarket[] = [];
-  let cursor = '';
-  const pageSize = 100;
-
-  while (allMarkets.length < limit) {
-    const path = `/api/v1/markets?status=active&limit=${pageSize}${cursor ? `&cursor=${cursor}` : ''}`;
-    const response = await dflowGet<{ markets: DFlowMarket[]; cursor?: string }>(PREDICTION_API, path);
-
-    if (!response.markets || response.markets.length === 0) break;
-    allMarkets.push(...response.markets);
-
-    if (!response.cursor) break;
-    cursor = response.cursor;
+  
+  // Fetch by category to avoid loading 6000+ markets
+  // Focus on categories we have resolvers for
+  const seriesPrefixes = [
+    'KXNCAAMB',   // NCAA Men's Basketball
+    'KXNCAAW',    // NCAA Women's Basketball
+    'KXNBA',      // NBA
+    'KXNFL',      // NFL
+    'KXNHL',      // NHL
+    'KXMLB',      // MLB
+    'KXEPL',      // EPL Soccer
+    'KXUCL',      // Champions League
+    'KXHIGH',     // Weather highs
+    'KXLOW',      // Weather lows
+    'KXBTC',      // Bitcoin
+    'KXETH',      // Ethereum
+    'KXSPY',      // S&P 500
+    'KXFED',      // Fed decisions
+    'KXATP',      // Tennis
+  ];
+  
+  for (const series of seriesPrefixes) {
+    let cursor = '';
+    let fetched = 0;
+    while (fetched < 500) { // Max 500 per category
+      const path = `/api/v1/markets?status=active&seriesTicker=${series}&limit=100${cursor ? `&cursor=${cursor}` : ''}`;
+      try {
+        const response = await dflowGet<{ markets: DFlowMarket[]; cursor?: string }>(PREDICTION_API, path);
+        if (!response.markets || response.markets.length === 0) break;
+        allMarkets.push(...response.markets);
+        fetched += response.markets.length;
+        if (!response.cursor) break;
+        cursor = response.cursor;
+      } catch {
+        break; // Skip failed series
+      }
+    }
   }
 
   logger.info({ count: allMarkets.length }, 'Fetched DFlow markets');
