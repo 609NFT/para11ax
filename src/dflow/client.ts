@@ -93,15 +93,12 @@ export async function getActiveMarkets(limit: number = 1000): Promise<DFlowMarke
 /**
  * Fetch markets expiring within the given hours
  */
-export async function getNearTermMarkets(hoursAhead: number = 24): Promise<DFlowMarket[]> {
-  const markets = await getActiveMarkets();
-  const now = Date.now();
-  const cutoff = now + hoursAhead * 60 * 60 * 1000;
-
-  return markets.filter((m) => {
-    const expiry = m.expirationTime * 1000;
-    return expiry > now && expiry <= cutoff;
-  });
+export async function getNearTermMarkets(_hoursAhead: number = 24): Promise<DFlowMarket[]> {
+  // DFlow sets expirationTime to the series end date (weeks/months out),
+  // NOT the individual event time. Sports games finalize within hours
+  // but are listed with long expirations. Return all active markets
+  // and let the resolvers + confidence scoring handle time relevance.
+  return await getActiveMarkets();
 }
 
 /**
