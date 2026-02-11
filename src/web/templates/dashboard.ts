@@ -3537,21 +3537,43 @@ export function getDashboardHTML(tab: string = 'dashboard'): string {
         const posRes = await fetch('/api/predict/positions');
         const positions = await posRes.json();
         
-        // Open positions
+        // Open positions — sort by expiration (settling soonest first)
         const openContainer = document.getElementById('predict-positions');
         if (positions.open && positions.open.length > 0) {
-          openContainer.innerHTML = positions.open.map(p => \`
+          const sorted = [...positions.open].sort((a, b) => a.expirationTime - b.expirationTime);
+          const now = Date.now();
+          
+          function formatCountdown(ms) {
+            if (ms <= 0) return 'settling...';
+            const h = Math.floor(ms / 3600000);
+            const m = Math.floor((ms % 3600000) / 60000);
+            if (h > 24) return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+            if (h > 0) return h + 'h ' + m + 'm';
+            return m + 'm';
+          }
+          
+          function countdownColor(ms) {
+            if (ms <= 0) return 'var(--color-accent)';
+            if (ms < 3600000) return 'var(--color-red)';      // <1h
+            if (ms < 86400000) return 'var(--color-yellow, #f5a623)'; // <24h
+            return 'var(--text-secondary)';
+          }
+          
+          openContainer.innerHTML = '<div style="padding: 8px 16px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-primary); font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase;"><span>Market</span><span style="display: flex; gap: 24px;"><span style="width: 60px; text-align: right;">Size</span><span style="width: 50px; text-align: right;">Edge</span><span style="width: 70px; text-align: right;">Settles In</span></span></div>' + sorted.map(p => {
+            const timeLeft = (p.expirationTime * 1000) - now;
+            return \`
             <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-primary); display: flex; justify-content: space-between; align-items: center;">
-              <div>
-                <div style="color: var(--text-primary);">\${p.title ? (p.title.length > 70 ? p.title.substring(0, 70) + '...' : p.title) : p.marketTicker}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">\${p.title ? (p.title.length > 60 ? p.title.substring(0, 60) + '...' : p.title) : p.marketTicker}</div>
                 <div style="color: var(--text-secondary); font-size: var(--text-xs);">\${p.outcome.toUpperCase()} • \${p.dataValue}\${p.entryTxSignature && !p.entryTxSignature.startsWith('paper_') ? ' • <a href="https://solscan.io/tx/' + p.entryTxSignature + '" target="_blank" style="color: var(--color-accent);">tx ↗</a>' : ''}</div>
               </div>
-              <div style="text-align: right;">
-                <div style="color: var(--text-primary);">$\${p.sizeUsd.toFixed(2)}</div>
-                <div style="color: var(--color-green); font-size: var(--text-xs);">\${(p.edgePct * 100).toFixed(0)}% edge</div>
+              <div style="display: flex; gap: 24px; align-items: center; flex-shrink: 0;">
+                <div style="width: 60px; text-align: right; color: var(--text-primary);">$\${p.sizeUsd.toFixed(2)}</div>
+                <div style="width: 50px; text-align: right; color: var(--color-green); font-size: var(--text-xs);">\${(p.edgePct * 100).toFixed(0)}%</div>
+                <div style="width: 70px; text-align: right; font-size: var(--text-xs); font-weight: 600; color: \${countdownColor(timeLeft)};">\${formatCountdown(timeLeft)}</div>
               </div>
-            </div>
-          \`).join('');
+            </div>\`;
+          }).join('');
         } else {
           openContainer.innerHTML = '<div style="padding: var(--space-4); color: var(--text-secondary); text-align: center;">No open positions</div>';
         }
