@@ -343,17 +343,21 @@ export function classifyMarket(market: DFlowMarket): MarketCategory {
     return 'stocks';
   }
 
-  // Sports patterns
+  // Sports patterns — only leagues we can actually resolve (NBA, NCAA, NFL, MLB, NHL, UFC)
   if (
     title.includes('nfl') ||
     title.includes('nba') ||
     title.includes('mlb') ||
+    title.includes('nhl') ||
+    title.includes('ncaa') ||
     title.includes('super bowl') ||
-    title.includes(' vs ') ||
-    title.includes(' at ') || // "Team A at Team B"
+    title.includes('march madness') ||
     ticker.includes('kxnfl') ||
     ticker.includes('kxnba') ||
-    ticker.includes('kxmlb')
+    ticker.includes('kxmlb') ||
+    ticker.includes('kxnhl') ||
+    ticker.includes('kxncaa') ||
+    ticker.includes('kxufc')
   ) {
     return 'sports';
   }

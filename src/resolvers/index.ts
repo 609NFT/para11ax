@@ -55,7 +55,7 @@ export async function resolveMarket(
   try {
     return await resolver(market);
   } catch (e) {
-    logger.warn({ ticker: market.ticker, category, error: e }, 'Resolver failed');
+    logger.debug({ ticker: market.ticker, category, error: e }, 'Resolver failed');
     return null;
   }
 }

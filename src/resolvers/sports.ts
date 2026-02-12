@@ -36,13 +36,14 @@ const LEAGUE_MAP: Record<string, LeagueConfig> = {
   MLB:  { sport: 'baseball',   league: 'mlb',               keywords: ['mlb', 'baseball'] },
   NHL:  { sport: 'hockey',     league: 'nhl',               keywords: ['nhl', 'hockey', 'stanley cup'] },
   UFC:  { sport: 'mma',        league: 'ufc',               keywords: ['ufc', 'mma', 'fight', 'fighter'] },
-  EPL:  { sport: 'soccer',     league: 'eng.1',             keywords: ['premier league', 'epl'] },
-  MLS:  { sport: 'soccer',     league: 'usa.1',             keywords: ['mls', 'major league soccer'] },
-  LIGA: { sport: 'soccer',     league: 'esp.1',             keywords: ['la liga'] },
-  CL:   { sport: 'soccer',     league: 'uefa.champions',    keywords: ['champions league', 'ucl'] },
-  ATP:  { sport: 'tennis',     league: 'atp',               keywords: ['atp', 'tennis'] },
-  WTA:  { sport: 'tennis',     league: 'wta',               keywords: ['wta'] },
-  PGA:  { sport: 'golf',       league: 'pga',               keywords: ['pga', 'golf', 'masters', 'open championship'] },
+  // Soccer/tennis/golf disabled — ESPN API doesn't work reliably for these
+  // EPL:  { sport: 'soccer',     league: 'eng.1',             keywords: ['premier league', 'epl'] },
+  // MLS:  { sport: 'soccer',     league: 'usa.1',             keywords: ['mls', 'major league soccer'] },
+  // LIGA: { sport: 'soccer',     league: 'esp.1',             keywords: ['la liga'] },
+  // CL:   { sport: 'soccer',     league: 'uefa.champions',    keywords: ['champions league', 'ucl'] },
+  // ATP:  { sport: 'tennis',     league: 'atp',               keywords: ['atp', 'tennis'] },
+  // WTA:  { sport: 'tennis',     league: 'wta',               keywords: ['wta'] },
+  // PGA:  { sport: 'golf',       league: 'pga',               keywords: ['pga', 'golf', 'masters', 'open championship'] },
 };
 
 // Common team name aliases
