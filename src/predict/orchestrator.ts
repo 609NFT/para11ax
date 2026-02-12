@@ -229,13 +229,19 @@ export class PredictOrchestrator {
           : allPositions.map(p => p.marketTicker)
       );
 
-      // Execute best opportunities
+      // Execute best opportunities (one per ticker per scan)
+      const scannedThisCycle = new Set<string>();
       for (const opp of opportunities) {
-        // Skip if we've ever traded this market (open or settled)
+        // Skip if already traded this ticker (DB check)
         if (tradedTickers.has(opp.market.ticker)) {
           logger.debug({ ticker: opp.market.ticker }, 'Already traded this market (open or settled)');
           continue;
         }
+        // Skip if already traded this ticker in this scan cycle
+        if (scannedThisCycle.has(opp.market.ticker)) {
+          continue;
+        }
+        scannedThisCycle.add(opp.market.ticker);
 
         // Skip if market previously failed (retry after 1 hour)
         const failedAt = this.failedMarkets.get(opp.market.ticker);
