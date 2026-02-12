@@ -1,7 +1,11 @@
 /**
- * Stock Price Resolver (Time-Aware)
+ * Stock Price Resolver (Intraday-Aware)
  * Fetches real-time stock/index prices and calculates confidence
  * based on distance from threshold, time to resolution, AND market hours
+ * 
+ * Now handles INTRADAY markets resolving in hours:
+ * - KXINXU-26FEB11H1600-T6949.9999 = "S&P above 6949.99 at 4pm EST"
+ * - KXNASDAQ100U-26FEB11H1600-T25199.99 = "Nasdaq above 25199.99 at 4pm EST"
  * 
  * Data sources:
  * - Yahoo Finance (free, no API key)
@@ -28,24 +32,37 @@ import logger from '../logger';
 const priceCache: Map<string, { price: number; timestamp: number }> = new Map();
 const CACHE_TTL_MS = 60_000;
 
-// Daily volatility estimates (decimal)
-const DAILY_VOLATILITY: Record<string, number> = {
-  SP500: 0.012,  // ~1.2% daily vol
-  NDX: 0.015,    // ~1.5% daily vol (more volatile)
-  DJI: 0.011,    // ~1.1% daily vol
-};
-
-// Yahoo Finance symbols
-const YAHOO_SYMBOLS: Record<string, string> = {
-  SP500: '^GSPC',
-  NDX: '^NDX',
-  DJI: '^DJI',
-};
-
-const YAHOO_URLS: Record<string, string> = {
-  SP500: 'https://finance.yahoo.com/quote/%5EGSPC',
-  NDX: 'https://finance.yahoo.com/quote/%5ENDX',
-  DJI: 'https://finance.yahoo.com/quote/%5EDJI',
+// Supported indices with metadata
+const STOCK_INDICES: Record<string, { 
+  yahooSymbol: string; 
+  name: string; 
+  volatility: number; 
+  url: string; 
+}> = {
+  SP500: { 
+    yahooSymbol: '^GSPC', 
+    name: 'S&P 500', 
+    volatility: 0.012, 
+    url: 'https://finance.yahoo.com/quote/%5EGSPC' 
+  },
+  NDX: { 
+    yahooSymbol: '^NDX', 
+    name: 'Nasdaq-100', 
+    volatility: 0.015, 
+    url: 'https://finance.yahoo.com/quote/%5ENDX' 
+  },
+  NASDAQ100: { 
+    yahooSymbol: '^NDX', 
+    name: 'Nasdaq-100', 
+    volatility: 0.015, 
+    url: 'https://finance.yahoo.com/quote/%5ENDX' 
+  },
+  DJI: { 
+    yahooSymbol: '^DJI', 
+    name: 'Dow Jones', 
+    volatility: 0.011, 
+    url: 'https://finance.yahoo.com/quote/%5EDJI' 
+  },
 };
 
 /**
@@ -96,30 +113,73 @@ async function fetchYahooPrice(symbol: string): Promise<number | null> {
 }
 
 /**
- * Detect which stock index a market is about
+ * Detect which stock index a market is about from ticker
+ * Handles new intraday format: KXINXU-26FEB11H1600-T6949.9999, KXNASDAQ100U-26FEB11H1600-T25199.99
  */
-function detectStockIndex(title: string, ticker: string): 'SP500' | 'NDX' | 'DJI' | null {
+function detectStockIndex(title: string, ticker: string): string | null {
   const combined = (title + ' ' + ticker).toLowerCase();
-  if (combined.includes('s&p') || combined.includes('sp500') || combined.includes('s&p 500') || combined.includes('kxinx')) {
-    return 'SP500';
-  }
-  if (combined.includes('nasdaq') || combined.includes('ndx') || combined.includes('kxndx')) {
-    return 'NDX';
-  }
-  if (combined.includes('dow') || combined.includes('dji') || combined.includes('kxdji')) {
-    return 'DJI';
-  }
+  const tickerUpper = ticker.toUpperCase();
+  
+  // Check ticker patterns first for precision
+  if (tickerUpper.includes('KXINX')) return 'SP500';
+  if (tickerUpper.includes('KXNASDAQ100')) return 'NASDAQ100';
+  if (tickerUpper.includes('KXNASDAQ')) return 'NDX';
+  if (tickerUpper.includes('KXDOW') || tickerUpper.includes('KXDJI')) return 'DJI';
+  
+  // Fallback to text patterns
+  if (combined.includes('s&p') || combined.includes('sp500') || combined.includes('s&p 500')) return 'SP500';
+  if (combined.includes('nasdaq-100') || combined.includes('nasdaq 100')) return 'NASDAQ100';
+  if (combined.includes('nasdaq')) return 'NDX';
+  if (combined.includes('dow') || combined.includes('dji')) return 'DJI';
+  
   return null;
+}
+
+/**
+ * Parse intraday stock ticker to extract resolution time
+ * Examples:
+ * - KXINXU-26FEB11H1600-T6949.9999 → Feb 11, 2026, 4pm EST (H1600 = 4:00pm EST)
+ * - KXNASDAQ100U-26FEB11H1600-T25199.99 → Feb 11, 2026, 4pm EST
+ */
+function parseIntradayResolutionTime(ticker: string): Date | null {
+  // Pattern: KXINDEX-DDMMMYYHttmm- where ttmm is time (1600 = 4:00pm EST)
+  const match = ticker.match(/KX\w+-(\d{2})(\w{3})(\d{2})H(\d{2})(\d{2})-/);
+  if (!match) return null;
+  
+  const day = parseInt(match[1], 10);
+  const monthStr = match[2].toUpperCase();
+  const year = 2000 + parseInt(match[3], 10);
+  const hour = parseInt(match[4], 10);
+  const minute = parseInt(match[5], 10);
+  
+  // Month mapping
+  const monthMap: Record<string, number> = {
+    JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+    JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
+  };
+  
+  const month = monthMap[monthStr];
+  if (month === undefined) return null;
+  
+  // Convert EST to UTC (EST = UTC-5, so add 5 hours)
+  // Note: Should handle EDT vs EST properly, but for February this is correct
+  const utcHour = hour + 5;
+  const utcMinute = minute;
+  
+  return new Date(Date.UTC(year, month, day, utcHour, utcMinute, 0));
 }
 
 /**
  * Get price data for a stock index
  */
 async function getIndexPrice(index: string): Promise<ResolverResult | null> {
-  const symbol = YAHOO_SYMBOLS[index];
-  if (!symbol) return null;
+  const indexInfo = STOCK_INDICES[index];
+  if (!indexInfo) {
+    logger.debug({ index }, 'Unsupported stock index');
+    return null;
+  }
 
-  const price = await fetchYahooPrice(symbol);
+  const price = await fetchYahooPrice(indexInfo.yahooSymbol);
   if (!price) return null;
 
   return {
@@ -128,7 +188,7 @@ async function getIndexPrice(index: string): Promise<ResolverResult | null> {
     numericValue: price,
     confidence: 0.95,
     source: 'Yahoo Finance',
-    sourceUrl: YAHOO_URLS[index] || 'https://finance.yahoo.com',
+    sourceUrl: indexInfo.url,
     timestamp: Date.now(),
   };
 }
@@ -178,12 +238,20 @@ function minutesUntilClose(): number {
 
 /**
  * Get the resolution time for a stock market
+ * Priority: intraday ticker parsing > rules text > expirationTime from API
  */
 function getResolutionTime(market: DFlowMarket): Date {
+  // Try intraday ticker parsing first (most precise for new markets)
+  const intradayTime = parseIntradayResolutionTime(market.ticker);
+  if (intradayTime) return intradayTime;
+  
+  // Fallback to rules text parsing
   if (market.rulesPrimary) {
     const parsed = parseResolutionTimeFromRules(market.rulesPrimary);
     if (parsed) return parsed.date;
   }
+  
+  // Last resort: API expirationTime
   return new Date(market.expirationTime * 1000);
 }
 
@@ -219,7 +287,8 @@ export async function resolveStockMarket(market: DFlowMarket): Promise<{
   const currentPrice = priceData.numericValue;
   const resolutionTime = getResolutionTime(market);
   const hoursLeft = hoursUntilResolution(resolutionTime);
-  const vol = DAILY_VOLATILITY[index] || 0.012;
+  const indexInfo = STOCK_INDICES[index];
+  const vol = indexInfo?.volatility || 0.012;
   const marketStatus = getMarketStatus();
 
   // Handle 'between' markets
@@ -257,6 +326,12 @@ export async function resolveStockMarket(market: DFlowMarket): Promise<{
     }
   }
 
+  // Intraday bonus: if resolving in <2 hours and price is far from threshold, boost confidence
+  if (hoursLeft <= 2 && distResult.confidence >= 0.85) {
+    finalConfidence = Math.min(0.95, finalConfidence * 1.05);
+    logger.debug({ index, hoursLeft, baseConf: distResult.confidence, boosted: finalConfidence }, 'Intraday confidence boost applied');
+  }
+
   // Cap at 95%
   finalConfidence = Math.min(0.95, finalConfidence);
 
@@ -270,7 +345,8 @@ export async function resolveStockMarket(market: DFlowMarket): Promise<{
     distanceConfidence: distResult.confidence.toFixed(3),
     finalConfidence: finalConfidence.toFixed(3),
     outcome: distResult.outcome,
-  }, 'Stock market resolved');
+    resolutionTime: resolutionTime.toISOString(),
+  }, 'Stock market resolved (intraday-aware)');
 
   return {
     outcome: distResult.outcome,

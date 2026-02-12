@@ -27,6 +27,15 @@ function getApiKey(): string {
   return key;
 }
 
+// Market cache with TTL
+interface MarketCache {
+  markets: DFlowMarket[];
+  timestamp: number;
+}
+
+let marketCache: MarketCache | null = null;
+const MARKET_CACHE_TTL_MS = 60_000; // 60 seconds
+
 /**
  * Make an HTTPS GET request to DFlow API
  */
@@ -68,50 +77,73 @@ async function dflowGet<T>(host: string, path: string): Promise<T> {
 }
 
 /**
- * Fetch all active markets with pagination
+ * Fetch all active markets with pagination and deduplication
+ * The seriesTicker parameter is broken - ignores the param and returns the same markets
+ * So we paginate ALL active markets and filter client-side
  */
 export async function getActiveMarkets(_limit: number = 5000): Promise<DFlowMarket[]> {
-  const allMarkets: DFlowMarket[] = [];
-  
-  // Fetch by category to avoid loading 6000+ markets
-  // Focus on categories we have resolvers for
-  const seriesPrefixes = [
-    'KXNCAAMB',   // NCAA Men's Basketball
-    'KXNCAAW',    // NCAA Women's Basketball
-    'KXNBA',      // NBA
-    'KXNFL',      // NFL
-    'KXNHL',      // NHL
-    'KXMLB',      // MLB
-    'KXEPL',      // EPL Soccer
-    'KXUCL',      // Champions League
-    'KXHIGH',     // Weather highs
-    'KXLOW',      // Weather lows
-    'KXBTC',      // Bitcoin
-    'KXETH',      // Ethereum
-    'KXSPY',      // S&P 500
-    'KXFED',      // Fed decisions
-    'KXATP',      // Tennis
-  ];
-  
-  for (const series of seriesPrefixes) {
-    let cursor = '';
-    let fetched = 0;
-    while (fetched < 500) { // Max 500 per category
-      const path = `/api/v1/markets?status=active&seriesTicker=${series}&limit=100${cursor ? `&cursor=${cursor}` : ''}`;
-      try {
-        const response = await dflowGet<{ markets: DFlowMarket[]; cursor?: string }>(PREDICTION_API, path);
-        if (!response.markets || response.markets.length === 0) break;
-        allMarkets.push(...response.markets);
-        fetched += response.markets.length;
-        if (!response.cursor) break;
-        cursor = response.cursor;
-      } catch {
-        break; // Skip failed series
-      }
-    }
+  // Check cache first
+  if (marketCache && Date.now() - marketCache.timestamp < MARKET_CACHE_TTL_MS) {
+    logger.debug({ count: marketCache.markets.length, age: Math.round((Date.now() - marketCache.timestamp) / 1000) }, 'Using cached DFlow markets');
+    return marketCache.markets;
   }
 
-  logger.info({ count: allMarkets.length }, 'Fetched DFlow markets');
+  const allMarkets: DFlowMarket[] = [];
+  const seenTickers = new Set<string>();
+  let cursor = '';
+  let pageCount = 0;
+  const maxPages = 100; // Safety limit
+  
+  logger.info('Fetching all active markets from DFlow (paginated)...');
+  
+  try {
+    while (pageCount < maxPages) {
+      const path = `/api/v1/markets?status=active&limit=100${cursor ? `&cursor=${cursor}` : ''}`;
+      
+      const response = await dflowGet<{ markets: DFlowMarket[]; cursor?: string }>(PREDICTION_API, path);
+      
+      if (!response.markets || response.markets.length === 0) {
+        break; // No more markets
+      }
+      
+      // Deduplicate by ticker (API returns dupes across pages)
+      let duplicates = 0;
+      for (const market of response.markets) {
+        if (!seenTickers.has(market.ticker)) {
+          seenTickers.add(market.ticker);
+          allMarkets.push(market);
+        } else {
+          duplicates++;
+        }
+      }
+      
+      pageCount++;
+      logger.debug({ page: pageCount, fetched: response.markets.length, duplicates, total: allMarkets.length }, 'DFlow page processed');
+      
+      if (!response.cursor) {
+        break; // Last page
+      }
+      cursor = response.cursor;
+    }
+    
+    // Update cache
+    marketCache = {
+      markets: allMarkets,
+      timestamp: Date.now(),
+    };
+    
+    logger.info({ 
+      pages: pageCount, 
+      uniqueMarkets: allMarkets.length,
+      totalFetched: allMarkets.length + (pageCount * 2), // Estimate including dupes
+    }, 'DFlow markets fetched and cached');
+    
+  } catch (e) {
+    logger.error({ error: e, pages: pageCount }, 'Failed to fetch DFlow markets');
+    // Return empty array on failure rather than throwing
+    return [];
+  }
+
   return allMarkets;
 }
 
@@ -261,43 +293,52 @@ export async function getNoBuyQuote(
 }
 
 /**
- * Classify a market by category based on title/series
+ * Classify a market by category based on title/ticker
+ * Updated patterns for new intraday market formats
  */
 export function classifyMarket(market: DFlowMarket): MarketCategory {
   const title = market.title.toLowerCase();
   const ticker = market.ticker.toLowerCase();
 
-  // Weather patterns
+  // Weather patterns (expanded for new city codes)
   if (
     title.includes('temperature') ||
     title.includes('temp ') ||
     title.includes('high temp') ||
+    title.includes('low temp') ||
     title.includes('weather') ||
-    ticker.includes('highny') ||
-    ticker.includes('highchi') ||
+    ticker.includes('kxhigh') ||  // KXHIGHNY, KXHIGHCHI, etc.
+    ticker.includes('kxlow') ||   // KXLOWTDEN, etc.
     ticker.includes('temp')
   ) {
     return 'weather';
   }
 
-  // Crypto patterns
+  // Crypto patterns (expanded for new intraday markets)
   if (
     title.includes('bitcoin') ||
     title.includes('btc') ||
     title.includes('ethereum') ||
     title.includes('eth ') ||
-    title.includes('crypto')
+    title.includes('solana') ||
+    title.includes('sol ') ||
+    title.includes('crypto') ||
+    ticker.includes('kxbtc') ||   // KXBTCD, KXBTC
+    ticker.includes('kxeth') ||   // KXETHD
+    ticker.includes('kxsol')      // KXSOLD
   ) {
     return 'crypto';
   }
 
-  // Stock patterns
+  // Stock patterns (expanded for new intraday markets)
   if (
     title.includes('s&p') ||
     title.includes('nasdaq') ||
     title.includes('dow ') ||
     title.includes('stock') ||
-    ticker.includes('inx')
+    ticker.includes('kxinx') ||      // KXINXU (S&P 500)
+    ticker.includes('kxnasdaq') ||   // KXNASDAQ100U
+    ticker.includes('kxdow')
   ) {
     return 'stocks';
   }
@@ -309,7 +350,10 @@ export function classifyMarket(market: DFlowMarket): MarketCategory {
     title.includes('mlb') ||
     title.includes('super bowl') ||
     title.includes(' vs ') ||
-    title.includes(' at ') // "Team A at Team B"
+    title.includes(' at ') || // "Team A at Team B"
+    ticker.includes('kxnfl') ||
+    ticker.includes('kxnba') ||
+    ticker.includes('kxmlb')
   ) {
     return 'sports';
   }

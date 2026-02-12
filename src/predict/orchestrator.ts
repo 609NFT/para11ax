@@ -38,10 +38,10 @@ const PREDICT_CONFIG = {
   MAX_OPEN_POSITIONS: 10,             // Max concurrent positions
   MAX_DAILY_LOSS_USD: 20,             // Daily loss limit (raised from $10)
   
-  // Entry criteria
-  MIN_EDGE_PCT: 0.20,                // Minimum 20% edge (was 8% — too many low-quality trades)
+  // Entry criteria — relaxed in paper mode to collect more data
+  MIN_EDGE_PCT: isPaperMode() ? 0.10 : 0.20,     // Paper: 10%, Live: 20%
   MAX_EDGE_PCT: 0.50,                // Maximum 50% edge — beyond this means illiquid/mispriced market
-  MIN_CONFIDENCE: 0.75,              // Minimum 75% data confidence
+  MIN_CONFIDENCE: isPaperMode() ? 0.60 : 0.75,    // Paper: 60%, Live: 75%
   MIN_MARKET_PRICE: 0.03,            // Minimum 3¢ market price (1¢ = no liquidity, fake edge)
   MAX_MARKET_PRICE: 0.95,            // Maximum 95¢ — near-certain markets have no upside
   MIN_HOURS_TO_EXPIRY: 0.5,           // At least 30 min to expiry
@@ -213,9 +213,21 @@ export class PredictOrchestrator {
 
       logger.info({ count: opportunities.length }, 'Found predict opportunities');
 
-      // Block markets we've already traded (open or settled — never re-enter)
+      // Block markets we've already traded
+      // In paper mode: only block today's paper trades (not old live trades)
+      // In live mode: block ALL previously traded tickers
       const allPositions = await getAllPredictPositions();
-      const tradedTickers = new Set(allPositions.map(p => p.marketTicker));
+      const tradedTickers = new Set(
+        isPaperMode()
+          ? allPositions
+              .filter(p => {
+                const createdAt = new Date(p.createdAt || 0);
+                const today = new Date();
+                return createdAt.toDateString() === today.toDateString();
+              })
+              .map(p => p.marketTicker)
+          : allPositions.map(p => p.marketTicker)
+      );
 
       // Execute best opportunities
       for (const opp of opportunities) {

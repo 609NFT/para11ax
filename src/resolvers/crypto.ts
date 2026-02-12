@@ -1,7 +1,13 @@
 /**
- * Crypto Price Resolver (Time-Aware)
+ * Crypto Price Resolver (Intraday-Aware)
  * Fetches real-time crypto prices and calculates confidence
  * based on distance from threshold AND time to resolution
+ * 
+ * Now handles INTRADAY markets resolving in hours:
+ * - KXBTCD-26FEB1117-T66999.99 = "BTC above $66,999.99 at 5pm EST Feb 11"
+ * - KXETHD-26FEB1117-T1999.99 = "ETH above $1999.99 at 5pm EST"
+ * - KXSOLD-26FEB1117-T84.9999 = "SOL above $84.99 at 5pm EST"
+ * - KXBTC-26FEB1114-B66875 = "BTC in range at 2pm EST"
  * 
  * Data sources:
  * - CoinGecko (free, no API key needed)
@@ -9,7 +15,7 @@
  * Confidence model:
  * - Distance: How far is current price from threshold in std devs?
  * - Time: How close are we to resolution? Closer = more certain
- * - Combined: Both factors multiply — close in time AND far from threshold = max confidence
+ * - Key insight: markets resolving in <2 hours where current price is far from threshold = HIGH confidence
  */
 
 import https from 'https';
@@ -27,10 +33,11 @@ import logger from '../logger';
 // CoinGecko API (free tier)
 const COINGECKO_API = 'api.coingecko.com';
 
-// Daily volatility estimates (decimal)
-const DAILY_VOLATILITY: Record<string, number> = {
-  BTC: 0.04,  // ~4% daily vol
-  ETH: 0.05,  // ~5% daily vol
+// Supported crypto assets with CoinGecko IDs
+const CRYPTO_ASSETS: Record<string, { coinId: string; symbol: string; volatility: number }> = {
+  BTC: { coinId: 'bitcoin', symbol: 'BTC', volatility: 0.04 },     // ~4% daily vol
+  ETH: { coinId: 'ethereum', symbol: 'ETH', volatility: 0.05 },    // ~5% daily vol
+  SOL: { coinId: 'solana', symbol: 'SOL', volatility: 0.08 },      // ~8% daily vol
 };
 
 // Cache prices to avoid rate limits (60 second TTL)
@@ -78,53 +85,93 @@ async function fetchCoinGeckoPrice(coinId: string): Promise<number | null> {
 }
 
 /**
- * Get Bitcoin price
+ * Get price for any supported crypto asset
+ */
+export async function getCryptoPrice(asset: string): Promise<ResolverResult | null> {
+  const assetInfo = CRYPTO_ASSETS[asset.toUpperCase()];
+  if (!assetInfo) {
+    logger.debug({ asset }, 'Unsupported crypto asset');
+    return null;
+  }
+
+  const price = await fetchCoinGeckoPrice(assetInfo.coinId);
+  if (!price) return null;
+
+  return {
+    category: 'crypto',
+    dataValue: `$${price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    numericValue: price,
+    confidence: 0.95,
+    source: 'CoinGecko',
+    sourceUrl: `https://www.coingecko.com/en/coins/${assetInfo.coinId}`,
+    timestamp: Date.now(),
+  };
+}
+
+/**
+ * Legacy getters for backward compatibility
  */
 export async function getBTCPrice(): Promise<ResolverResult | null> {
-  const price = await fetchCoinGeckoPrice('bitcoin');
-  if (!price) return null;
-
-  return {
-    category: 'crypto',
-    dataValue: `$${price.toLocaleString()}`,
-    numericValue: price,
-    confidence: 0.95,
-    source: 'CoinGecko',
-    sourceUrl: 'https://www.coingecko.com/en/coins/bitcoin',
-    timestamp: Date.now(),
-  };
+  return getCryptoPrice('BTC');
 }
 
-/**
- * Get Ethereum price
- */
 export async function getETHPrice(): Promise<ResolverResult | null> {
-  const price = await fetchCoinGeckoPrice('ethereum');
-  if (!price) return null;
-
-  return {
-    category: 'crypto',
-    dataValue: `$${price.toLocaleString()}`,
-    numericValue: price,
-    confidence: 0.95,
-    source: 'CoinGecko',
-    sourceUrl: 'https://www.coingecko.com/en/coins/ethereum',
-    timestamp: Date.now(),
-  };
+  return getCryptoPrice('ETH');
 }
 
 /**
- * Detect which crypto asset a market is about
+ * Detect which crypto asset a market is about from ticker
+ * Handles new intraday format: KXBTCD-26FEB1117-T66999.99, KXETHD-26FEB1117-T1999.99, KXSOLD-26FEB1117-T84.9999
  */
-function detectCryptoAsset(title: string, ticker: string): 'BTC' | 'ETH' | null {
+function detectCryptoAsset(title: string, ticker: string): string | null {
   const combined = (title + ' ' + ticker).toLowerCase();
-  if (combined.includes('bitcoin') || combined.includes('btc') || combined.includes('kxbtc')) {
-    return 'BTC';
-  }
-  if (combined.includes('ethereum') || combined.includes('eth') || combined.includes('kxeth')) {
-    return 'ETH';
-  }
+  
+  // Check ticker first for precise matches
+  const tickerUpper = ticker.toUpperCase();
+  
+  // Intraday patterns: KXBTCD, KXBTC, KXETHD, KXSOLD
+  if (tickerUpper.includes('KXBTC')) return 'BTC';
+  if (tickerUpper.includes('KXETH')) return 'ETH';
+  if (tickerUpper.includes('KXSOL')) return 'SOL';
+  
+  // Fallback to text patterns
+  if (combined.includes('bitcoin') || combined.includes('btc')) return 'BTC';
+  if (combined.includes('ethereum') || combined.includes('eth')) return 'ETH';
+  if (combined.includes('solana') || combined.includes('sol')) return 'SOL';
+  
   return null;
+}
+
+/**
+ * Parse intraday crypto ticker to extract resolution time
+ * Examples:
+ * - KXBTCD-26FEB1117-T66999.99 → Feb 11, 2026, 5pm EST (17 = 5pm EST)
+ * - KXBTC-26FEB1114-B66875 → Feb 11, 2026, 2pm EST (14 = 2pm EST)
+ */
+function parseIntradayResolutionTime(ticker: string): Date | null {
+  // Pattern: KXASSET[-D]-DDMMMYYTTsomething where TT is hour (14=2pm EST, 17=5pm EST)
+  const match = ticker.match(/KX\w+D?-(\d{2})(\w{3})(\d{2})(\d{2})-/);
+  if (!match) return null;
+  
+  const day = parseInt(match[1], 10);
+  const monthStr = match[2].toUpperCase();
+  const year = 2000 + parseInt(match[3], 10);
+  const hour = parseInt(match[4], 10);
+  
+  // Month mapping
+  const monthMap: Record<string, number> = {
+    JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5,
+    JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11,
+  };
+  
+  const month = monthMap[monthStr];
+  if (month === undefined) return null;
+  
+  // Convert EST hour to UTC (EST = UTC-5, so add 5 hours)
+  // Note: In practice, should handle EDT vs EST, but for February this is correct
+  const utcHour = hour + 5;
+  
+  return new Date(Date.UTC(year, month, day, utcHour, 0, 0));
 }
 
 /**
@@ -137,10 +184,14 @@ function parseCryptoThreshold(market: DFlowMarket): MarketThreshold | null {
 
 /**
  * Get the resolution time for a crypto market
- * Priority: rules text > expirationTime from API
+ * Priority: intraday ticker parsing > rules text > expirationTime from API
  */
 function getResolutionTime(market: DFlowMarket): Date {
-  // Try parsing from rules first (more precise, includes timezone)
+  // Try intraday ticker parsing first (most precise for new markets)
+  const intradayTime = parseIntradayResolutionTime(market.ticker);
+  if (intradayTime) return intradayTime;
+  
+  // Try parsing from rules text (fallback for older format)
   if (market.rulesPrimary) {
     const parsed = parseResolutionTimeFromRules(market.rulesPrimary);
     if (parsed) return parsed.date;
@@ -173,13 +224,7 @@ export async function resolveCryptoMarket(market: DFlowMarket): Promise<{
   }
 
   // Get current price
-  let priceData: ResolverResult | null = null;
-  if (asset === 'BTC') {
-    priceData = await getBTCPrice();
-  } else if (asset === 'ETH') {
-    priceData = await getETHPrice();
-  }
-
+  const priceData = await getCryptoPrice(asset);
   if (!priceData) {
     logger.warn({ asset }, 'Failed to get crypto price');
     return null;
@@ -188,9 +233,10 @@ export async function resolveCryptoMarket(market: DFlowMarket): Promise<{
   const currentPrice = priceData.numericValue;
   const resolutionTime = getResolutionTime(market);
   const hoursLeft = hoursUntilResolution(resolutionTime);
-  const vol = DAILY_VOLATILITY[asset] || 0.04;
+  const assetInfo = CRYPTO_ASSETS[asset];
+  const vol = assetInfo?.volatility || 0.04;
 
-  // Handle 'between' markets
+  // Handle 'between' markets (bracket trades)
   if (threshold.comparison === 'between' && threshold.upperValue !== undefined) {
     return resolveBetweenMarket(currentPrice, threshold.value, threshold.upperValue, vol, hoursLeft, priceData);
   }
@@ -205,7 +251,13 @@ export async function resolveCryptoMarket(market: DFlowMarket): Promise<{
   );
 
   // Time-scaled confidence
-  const finalConfidence = getTimeScaledConfidence(hoursLeft, distResult.confidence);
+  let finalConfidence = getTimeScaledConfidence(hoursLeft, distResult.confidence);
+  
+  // Intraday bonus: if resolving in <2 hours and price is far from threshold, boost confidence
+  if (hoursLeft <= 2 && distResult.confidence >= 0.85) {
+    finalConfidence = Math.min(0.95, finalConfidence * 1.05);
+    logger.debug({ asset, hoursLeft, baseConf: distResult.confidence, boosted: finalConfidence }, 'Intraday confidence boost applied');
+  }
 
   logger.info({
     asset,
@@ -216,7 +268,8 @@ export async function resolveCryptoMarket(market: DFlowMarket): Promise<{
     distanceConfidence: distResult.confidence.toFixed(3),
     finalConfidence: finalConfidence.toFixed(3),
     outcome: distResult.outcome,
-  }, 'Crypto market resolved');
+    resolutionTime: resolutionTime.toISOString(),
+  }, 'Crypto market resolved (intraday-aware)');
 
   return {
     outcome: distResult.outcome,
@@ -229,7 +282,7 @@ export async function resolveCryptoMarket(market: DFlowMarket): Promise<{
 }
 
 /**
- * Resolve a "between X and Y" crypto market
+ * Resolve a "between X and Y" crypto market (bracket trades)
  */
 function resolveBetweenMarket(
   currentPrice: number,
