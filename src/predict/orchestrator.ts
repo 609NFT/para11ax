@@ -302,8 +302,8 @@ export class PredictOrchestrator {
           tx: position.entryTxSignature,
         }, '✅ Predict position opened');
 
-        // Notify Discord
-        notifyPredictEntry({
+        // Notify Discord (live trades only)
+        if (!isPaperMode()) notifyPredictEntry({
           ticker: position.marketTicker,
           title: position.title || position.marketTicker,
           outcome: position.outcome as 'yes' | 'no',
@@ -394,8 +394,8 @@ export class PredictOrchestrator {
       pnlPct: pnlPct.toFixed(1) + '%',
     }, `${emoji} Predict position settled`);
 
-    // Notify Discord
-    notifyPredictSettlement({
+    // Notify Discord (live trades only)
+    if (!isPaperMode()) notifyPredictSettlement({
       ticker: position.marketTicker,
       title: position.title || position.marketTicker,
       outcome: position.outcome as 'yes' | 'no',
