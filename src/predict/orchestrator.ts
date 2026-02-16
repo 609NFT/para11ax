@@ -38,10 +38,10 @@ const PREDICT_CONFIG = {
   MAX_OPEN_POSITIONS: 10,             // Max concurrent positions
   MAX_DAILY_LOSS_USD: 20,             // Daily loss limit (raised from $10)
   
-  // Entry criteria — relaxed in paper mode to collect more data
-  MIN_EDGE_PCT: isPaperMode() ? 0.10 : 0.20,     // Paper: 10%, Live: 20%
+  // Entry criteria
+  MIN_EDGE_PCT: 0.20,                // Minimum 20% edge
   MAX_EDGE_PCT: 0.50,                // Maximum 50% edge — beyond this means illiquid/mispriced market
-  MIN_CONFIDENCE: isPaperMode() ? 0.60 : 0.75,    // Paper: 60%, Live: 75%
+  MIN_CONFIDENCE: 0.75,              // Minimum 75% data confidence
   MIN_MARKET_PRICE: 0.03,            // Minimum 3¢ market price (1¢ = no liquidity, fake edge)
   MAX_MARKET_PRICE: 0.95,            // Maximum 95¢ — near-certain markets have no upside
   MIN_HOURS_TO_EXPIRY: 0.5,           // At least 30 min to expiry
@@ -180,12 +180,17 @@ export class PredictOrchestrator {
       const markets = await getNearTermMarkets(PREDICT_CONFIG.MAX_HOURS_TO_EXPIRY);
       
       // Filter to tradeable markets in supported categories
+      const now = Date.now();
+      const minExpiryMs = PREDICT_CONFIG.MIN_HOURS_TO_EXPIRY * 60 * 60 * 1000;
+      const maxExpiryMs = PREDICT_CONFIG.MAX_HOURS_TO_EXPIRY * 60 * 60 * 1000;
       const tradeableMarkets = markets.filter(m => {
         const category = classifyMarket(m);
+        const timeToExpiry = m.expirationTime * 1000 - now;
         return (
           getSupportedCategories().includes(category) &&
           isMarketTradeable(m) &&
-          m.expirationTime * 1000 - Date.now() > PREDICT_CONFIG.MIN_HOURS_TO_EXPIRY * 60 * 60 * 1000
+          timeToExpiry > minExpiryMs &&
+          timeToExpiry < maxExpiryMs  // CRITICAL: block long-term futures
         );
       });
 
@@ -213,35 +218,25 @@ export class PredictOrchestrator {
 
       logger.info({ count: opportunities.length }, 'Found predict opportunities');
 
-      // Block markets we've already traded
-      // In paper mode: only block today's paper trades (not old live trades)
-      // In live mode: block ALL previously traded tickers
+      // Block ALL previously traded tickers (paper or live, all time)
       const allPositions = await getAllPredictPositions();
-      const tradedTickers = new Set(
-        isPaperMode()
-          ? allPositions
-              .filter(p => {
-                const createdAt = new Date(p.createdAt || 0);
-                const today = new Date();
-                return createdAt.toDateString() === today.toDateString();
-              })
-              .map(p => p.marketTicker)
-          : allPositions.map(p => p.marketTicker)
-      );
+      const tradedTickers = new Set(allPositions.map(p => p.marketTicker));
+
+      // Also deduplicate by event ticker — one position per event
+      const tradedEventTickers = new Set(allPositions.map(p => p.eventTicker).filter(Boolean));
 
       // Execute best opportunities (one per ticker per scan)
-      const scannedThisCycle = new Set<string>();
       for (const opp of opportunities) {
-        // Skip if already traded this ticker (DB check)
+        // Skip if already traded this exact market ticker
         if (tradedTickers.has(opp.market.ticker)) {
-          logger.debug({ ticker: opp.market.ticker }, 'Already traded this market (open or settled)');
+          logger.debug({ ticker: opp.market.ticker }, 'Already traded this market');
           continue;
         }
-        // Skip if already traded this ticker in this scan cycle
-        if (scannedThisCycle.has(opp.market.ticker)) {
+        // Skip if already traded any market in same event
+        if (opp.market.eventTicker && tradedEventTickers.has(opp.market.eventTicker)) {
+          logger.debug({ ticker: opp.market.ticker, event: opp.market.eventTicker }, 'Already traded this event');
           continue;
         }
-        scannedThisCycle.add(opp.market.ticker);
 
         // Skip if market previously failed (retry after 1 hour)
         const failedAt = this.failedMarkets.get(opp.market.ticker);
@@ -259,6 +254,10 @@ export class PredictOrchestrator {
         );
 
         await this.executeOpportunity(opp, size);
+
+        // Mark as traded so next scan cycle doesn't re-enter
+        tradedTickers.add(opp.market.ticker);
+        if (opp.market.eventTicker) tradedEventTickers.add(opp.market.eventTicker);
 
         // Only one entry per loop to be conservative
         break;
